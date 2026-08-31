@@ -26,6 +26,8 @@ TARIFE = {
 }
 START_FEE = 200
 
+BACKGROUND_IMG = "assets/backgrounds/background.png"
+
 KV = """
 #:import dp kivy.metrics.dp
 
@@ -45,7 +47,7 @@ ScreenManager:
     height: dp(40)
     font_size: '20sp'
     bold: True
-    color: 0.1, 0.1, 0.1, 1
+    color: 1, 1, 1, 1
 
 <KalkulatorScreen>:
     name: "kalkulator"
@@ -53,6 +55,11 @@ ScreenManager:
         orientation: "vertical"
         padding: dp(12)
         spacing: dp(8)
+        canvas.before:
+            Rectangle:
+                source: app.background_img
+                pos: self.pos
+                size: self.size
 
         TitleLabel:
             text: "Kalkulator voznje"
@@ -82,6 +89,7 @@ ScreenManager:
                     height: dp(24)
                     halign: "left"
                     text_size: self.size
+                    color: 1, 1, 1, 1
 
                 Spinner:
                     id: spinner_tarifa
@@ -97,6 +105,7 @@ ScreenManager:
                     height: dp(24)
                     halign: "left"
                     text_size: self.size
+                    color: 1, 1, 1, 1
 
                 TextInput:
                     id: input_km
@@ -113,6 +122,7 @@ ScreenManager:
                     height: dp(24)
                     halign: "left"
                     text_size: self.size
+                    color: 1, 1, 1, 1
 
                 TextInput:
                     id: input_od
@@ -127,6 +137,7 @@ ScreenManager:
                     height: dp(24)
                     halign: "left"
                     text_size: self.size
+                    color: 1, 1, 1, 1
 
                 TextInput:
                     id: input_do
@@ -141,6 +152,7 @@ ScreenManager:
                     height: dp(24)
                     halign: "left"
                     text_size: self.size
+                    color: 1, 1, 1, 1
 
                 TextInput:
                     id: input_napomena
@@ -178,6 +190,11 @@ ScreenManager:
         orientation: "vertical"
         padding: dp(12)
         spacing: dp(8)
+        canvas.before:
+            Rectangle:
+                source: app.background_img
+                pos: self.pos
+                size: self.size
 
         TitleLabel:
             text: "Evidencija voznji"
@@ -208,6 +225,11 @@ ScreenManager:
         orientation: "vertical"
         padding: dp(12)
         spacing: dp(8)
+        canvas.before:
+            Rectangle:
+                source: app.background_img
+                pos: self.pos
+                size: self.size
 
         TitleLabel:
             text: "Izvestaj zarade"
@@ -240,6 +262,7 @@ ScreenManager:
                 valign: "top"
                 text_size: self.size
                 padding: dp(10), dp(10)
+                color: 0.1, 0.1, 0.1, 1
 
         BoxLayout:
             size_hint_y: None
@@ -258,6 +281,7 @@ ScreenManager:
                 valign: "top"
                 text_size: self.size
                 padding: dp(10), dp(10)
+                color: 0.1, 0.1, 0.1, 1
 
         Widget:
 """
@@ -337,6 +361,7 @@ class EvidencijaScreen(Screen):
             kontejner.add_widget(Label(
                 text="Jos uvek nema evidentiranih voznji.",
                 size_hint_y=None, height=40,
+                color=(1, 1, 1, 1),
             ))
             return
 
@@ -361,6 +386,7 @@ class EvidencijaScreen(Screen):
         red.add_widget(Label(
             text=opis, markup=True, halign="left", valign="middle",
             text_size=(None, None),
+            color=(1, 1, 1, 1),
         ))
         obrisi_dugme = Button(text="Obrisi", size_hint_x=None, width=80)
         obrisi_dugme.bind(on_release=lambda inst, vid=v["id"]: self._obrisi(vid))
@@ -403,6 +429,8 @@ class IzvestajScreen(Screen):
 
 
 class TaksiApp(App):
+    background_img = StringProperty(BACKGROUND_IMG)
+
     def build(self):
         db.init_db()
         self.title = "Taksi App"
