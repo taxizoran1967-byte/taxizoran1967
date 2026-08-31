@@ -58,6 +58,12 @@ ScreenManager:
     PlaceholderScreen:
         name: "gorivo"
         naslov: "Gorivo"
+    PlaceholderScreen:
+        name: "profil"
+        naslov: "Profil vozaca"
+    PlaceholderScreen:
+        name: "poziv"
+        naslov: "Poziv / Dispecer"
 
 <NavBar@BoxLayout>:
     size_hint_y: None
@@ -76,18 +82,27 @@ ScreenManager:
     orientation: "horizontal"
     size_hint_y: None
     height: dp(64)
-    spacing: dp(12)
-    padding: dp(10)
-    canvas.before:
-        Color:
-            rgba: 0.12, 0.10, 0.24, 0.85
-        Rectangle:
-            pos: self.pos
-            size: self.size
-    Image:
-        source: root.icon_src
+    spacing: dp(14)
+    padding: dp(6)
+    BoxLayout:
         size_hint_x: None
-        width: dp(44)
+        width: dp(52)
+        canvas.before:
+            StencilPush
+            Ellipse:
+                pos: self.pos
+                size: self.size
+            StencilUse
+        canvas.after:
+            StencilUnUse
+            Ellipse:
+                pos: self.pos
+                size: self.size
+            StencilPop
+        Image:
+            source: root.icon_src
+            allow_stretch: True
+            keep_ratio: False
     Label:
         text: root.tekst
         font_size: '18sp'
@@ -443,6 +458,21 @@ ScreenManager:
                     icon_src: "assets/icons/monthly_report.png"
                     tekst: "Mesecni izvestaj"
                     on_release: app.root.current = "izvestaj"
+
+                MenuButton:
+                    icon_src: "assets/icons/calculator.png"
+                    tekst: "Kalkulator"
+                    on_release: app.root.current = "kalkulator"
+
+                MenuButton:
+                    icon_src: "assets/icons/profil.png"
+                    tekst: "Profil vozaca"
+                    on_release: app.root.current = "profil"
+
+                MenuButton:
+                    icon_src: "assets/icons/poziv.png"
+                    tekst: "Poziv / Dispecer"
+                    on_release: app.root.current = "poziv"
 
 <PlaceholderScreen>:
     naslov: ""
