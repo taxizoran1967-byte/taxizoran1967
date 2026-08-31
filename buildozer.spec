@@ -10,6 +10,8 @@ version = 0.1
 
 icon.filename = %(source.dir)s/icon.png
 presplash.filename = %(source.dir)s/presplash.png
+icon.adaptive_foreground.filename = %(source.dir)s/icon_fg.png
+icon.adaptive_background.filename = %(source.dir)s/icon_bg.png
 
 requirements = python3,kivy,sqlite3
 
