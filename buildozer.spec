@@ -8,6 +8,9 @@ source.include_exts = py,png,jpg,kv,atlas
 
 version = 0.1
 
+icon.filename = %(source.dir)s/icon.png
+presplash.filename = %(source.dir)s/presplash.png
+
 requirements = python3,kivy,sqlite3
 
 orientation = portrait
