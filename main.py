@@ -3,13 +3,19 @@ Taksi App - licna aplikacija za taksistu
 Kalkulator cene, evidencija voznji, dnevni/mesecni izvestaj zarade.
 """
 
+import os
+import sys
+import traceback
+
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
+from kivy.uix.scrollview import ScrollView
 from kivy.properties import StringProperty
 from datetime import datetime
 
@@ -66,9 +72,7 @@ ScreenManager:
     bold: True
     color: 1, 1, 1, 1
 
-<MenuButton@BoxLayout>:
-    icon_src: ""
-    tekst: ""
+<MenuButton>:
     orientation: "horizontal"
     size_hint_y: None
     height: dp(64)
@@ -470,6 +474,11 @@ ScreenManager:
 """
 
 
+class MenuButton(ButtonBehavior, BoxLayout):
+    icon_src = StringProperty("")
+    tekst = StringProperty("")
+
+
 class HomeScreen(Screen):
     pass
 
@@ -623,13 +632,73 @@ class IzvestajScreen(Screen):
         )
 
 
+def _crash_log_path():
+    try:
+        from kivy.app import App
+        base = App.get_running_app().user_data_dir if App.get_running_app() else "."
+    except Exception:
+        base = "."
+    return os.path.join(base, "crash_log.txt")
+
+
+def _zapisi_gresku(tekst):
+    try:
+        with open(_crash_log_path(), "w", encoding="utf-8") as f:
+            f.write(tekst)
+    except Exception:
+        pass
+
+
+def _prikazi_gresku_ekran(poruka):
+    """Vraca prost Kivy ekran koji ispisuje gresku umesto da app pukne bez traga."""
+    sv = ScrollView()
+    lbl = Label(
+        text=(
+            "GRESKA PRI POKRETANJU APLIKACIJE\n"
+            "Posalji ovaj tekst da se ispravi:\n\n" + poruka
+        ),
+        markup=False,
+        size_hint_y=None,
+        text_size=(None, None),
+        color=(1, 1, 1, 1),
+        padding=(20, 20),
+    )
+    lbl.bind(texture_size=lambda inst, val: setattr(lbl, "size", val))
+    lbl.bind(width=lambda inst, val: setattr(lbl, "text_size", (val - 40, None)))
+    sv.add_widget(lbl)
+    root = BoxLayout()
+    root.add_widget(sv)
+    return root
+
+
 class TaksiApp(App):
     background_img = StringProperty(BACKGROUND_IMG)
 
     def build(self):
-        db.init_db()
+        # Globalni hvatac neuhvacenih gresaka posle pokretanja (npr. u dugmadima)
+        sys.excepthook = self._globalna_greska
+
         self.title = "Taksi App"
-        return Builder.load_string(KV)
+        try:
+            db.init_db()
+            return Builder.load_string(KV)
+        except Exception:
+            greska = traceback.format_exc()
+            _zapisi_gresku(greska)
+            return _prikazi_gresku_ekran(greska)
+
+    def _globalna_greska(self, exc_type, exc_value, exc_tb):
+        greska = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        _zapisi_gresku(greska)
+        try:
+            popup = Popup(
+                title="Greska u aplikaciji",
+                content=Label(text=greska[-1500:], color=(1, 1, 1, 1)),
+                size_hint=(0.95, 0.8),
+            )
+            popup.open()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
