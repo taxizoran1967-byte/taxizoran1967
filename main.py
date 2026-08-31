@@ -32,9 +32,26 @@ KV = """
 #:import dp kivy.metrics.dp
 
 ScreenManager:
+    HomeScreen:
     KalkulatorScreen:
     EvidencijaScreen:
     IzvestajScreen:
+    PodesavanjaScreen:
+    PlaceholderScreen:
+        name: "grafik"
+        naslov: "Grafik zarade"
+    PlaceholderScreen:
+        name: "navigacija"
+        naslov: "Navigacija"
+    PlaceholderScreen:
+        name: "nocna_tarifa"
+        naslov: "Nocna tarifa"
+    PlaceholderScreen:
+        name: "servis"
+        naslov: "Servis vozila"
+    PlaceholderScreen:
+        name: "gorivo"
+        naslov: "Gorivo"
 
 <NavBar@BoxLayout>:
     size_hint_y: None
@@ -48,6 +65,81 @@ ScreenManager:
     font_size: '20sp'
     bold: True
     color: 1, 1, 1, 1
+
+<MenuButton@BoxLayout>:
+    icon_src: ""
+    tekst: ""
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(64)
+    spacing: dp(12)
+    padding: dp(10)
+    canvas.before:
+        Color:
+            rgba: 0.12, 0.10, 0.24, 0.85
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    Image:
+        source: root.icon_src
+        size_hint_x: None
+        width: dp(44)
+    Label:
+        text: root.tekst
+        font_size: '18sp'
+        bold: True
+        color: 1, 1, 1, 1
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+
+<HomeScreen>:
+    name: "home"
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(16)
+        spacing: dp(14)
+        canvas.before:
+            Rectangle:
+                source: app.background_img
+                pos: self.pos
+                size: self.size
+
+        TitleLabel:
+            text: "Taksi App"
+            font_size: '26sp'
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+
+                MenuButton:
+                    icon_src: "assets/icons/start_ride.png"
+                    tekst: "Pocetak voznje"
+                    on_release: app.root.current = "kalkulator"
+
+                MenuButton:
+                    icon_src: "assets/icons/end_ride.png"
+                    tekst: "Kraj voznje"
+                    on_release: app.root.current = "kalkulator"
+
+                MenuButton:
+                    icon_src: "assets/icons/history.png"
+                    tekst: "Istorija voznji"
+                    on_release: app.root.current = "evidencija"
+
+                MenuButton:
+                    icon_src: "assets/icons/daily_report.png"
+                    tekst: "Izvestaj"
+                    on_release: app.root.current = "izvestaj"
+
+                MenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: "Podesavanja"
+                    on_release: app.root.current = "podesavanja"
 
 <KalkulatorScreen>:
     name: "kalkulator"
@@ -66,8 +158,8 @@ ScreenManager:
 
         NavBar:
             Button:
-                text: "Kalkulator"
-                on_release: root.manager.current = "kalkulator"
+                text: "Pocetna"
+                on_release: root.manager.current = "home"
             Button:
                 text: "Evidencija"
                 on_release: root.manager.current = "evidencija"
@@ -201,11 +293,11 @@ ScreenManager:
 
         NavBar:
             Button:
+                text: "Pocetna"
+                on_release: root.manager.current = "home"
+            Button:
                 text: "Kalkulator"
                 on_release: root.manager.current = "kalkulator"
-            Button:
-                text: "Evidencija"
-                on_release: root.manager.current = "evidencija"
             Button:
                 text: "Izvestaj"
                 on_release: root.manager.current = "izvestaj"
@@ -236,14 +328,14 @@ ScreenManager:
 
         NavBar:
             Button:
+                text: "Pocetna"
+                on_release: root.manager.current = "home"
+            Button:
                 text: "Kalkulator"
                 on_release: root.manager.current = "kalkulator"
             Button:
                 text: "Evidencija"
                 on_release: root.manager.current = "evidencija"
-            Button:
-                text: "Izvestaj"
-                on_release: root.manager.current = "izvestaj"
 
         BoxLayout:
             size_hint_y: None
@@ -284,7 +376,110 @@ ScreenManager:
                 color: 0.1, 0.1, 0.1, 1
 
         Widget:
+
+<PodesavanjaScreen>:
+    name: "podesavanja"
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(16)
+        spacing: dp(14)
+        canvas.before:
+            Rectangle:
+                source: app.background_img
+                pos: self.pos
+                size: self.size
+
+        TitleLabel:
+            text: "Podesavanja"
+            font_size: '24sp'
+
+        NavBar:
+            Button:
+                text: "Pocetna"
+                on_release: root.manager.current = "home"
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+
+                MenuButton:
+                    icon_src: "assets/icons/earnings_chart.png"
+                    tekst: "Grafik zarade"
+                    on_release: app.root.current = "grafik"
+
+                MenuButton:
+                    icon_src: "assets/icons/navigation.png"
+                    tekst: "Navigacija"
+                    on_release: app.root.current = "navigacija"
+
+                MenuButton:
+                    icon_src: "assets/icons/night_tariff.png"
+                    tekst: "Nocna tarifa"
+                    on_release: app.root.current = "nocna_tarifa"
+
+                MenuButton:
+                    icon_src: "assets/icons/service.png"
+                    tekst: "Servis vozila"
+                    on_release: app.root.current = "servis"
+
+                MenuButton:
+                    icon_src: "assets/icons/fuel.png"
+                    tekst: "Gorivo"
+                    on_release: app.root.current = "gorivo"
+
+                MenuButton:
+                    icon_src: "assets/icons/weekly_report.png"
+                    tekst: "Nedeljni izvestaj"
+                    on_release: app.root.current = "izvestaj"
+
+                MenuButton:
+                    icon_src: "assets/icons/monthly_report.png"
+                    tekst: "Mesecni izvestaj"
+                    on_release: app.root.current = "izvestaj"
+
+<PlaceholderScreen>:
+    naslov: ""
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(16)
+        spacing: dp(14)
+        canvas.before:
+            Rectangle:
+                source: app.background_img
+                pos: self.pos
+                size: self.size
+
+        TitleLabel:
+            text: root.naslov
+
+        NavBar:
+            Button:
+                text: "Pocetna"
+                on_release: root.manager.current = "home"
+            Button:
+                text: "Podesavanja"
+                on_release: root.manager.current = "podesavanja"
+
+        Label:
+            text: "Uskoro..."
+            font_size: '18sp'
+            color: 1, 1, 1, 1
 """
+
+
+class HomeScreen(Screen):
+    pass
+
+
+class PodesavanjaScreen(Screen):
+    pass
+
+
+class PlaceholderScreen(Screen):
+    naslov = StringProperty("")
 
 
 class KalkulatorScreen(Screen):
