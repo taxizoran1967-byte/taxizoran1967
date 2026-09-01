@@ -37,12 +37,13 @@ DEFAULT_START_FEE = 200
 
 
 class CenePodesavanja:
-    """Drzi trenutno vazece cene tarifa i start takse, cuva ih u
-    cene.json unutar interne memorije aplikacije."""
+    """Drzi trenutno vazece cene tarifa, start taksu i status nocne
+    tarife, cuva ih u cene.json unutar interne memorije aplikacije."""
 
     def __init__(self):
         self.tarife = dict(DEFAULT_TARIFE)
         self.start_fee = DEFAULT_START_FEE
+        self.nocna_aktivna = False
 
     def _putanja(self, user_data_dir):
         return os.path.join(user_data_dir, "cene.json")
@@ -57,17 +58,60 @@ class CenePodesavanja:
                 if naziv in ucitane_tarife:
                     self.tarife[naziv] = float(ucitane_tarife[naziv])
             self.start_fee = float(podaci.get("start_fee", DEFAULT_START_FEE))
+            self.nocna_aktivna = bool(podaci.get("nocna_aktivna", False))
         except (FileNotFoundError, ValueError, json.JSONDecodeError):
             pass
 
     def sacuvaj(self, user_data_dir):
         putanja = self._putanja(user_data_dir)
-        podaci = {"tarife": self.tarife, "start_fee": self.start_fee}
+        podaci = {
+            "tarife": self.tarife,
+            "start_fee": self.start_fee,
+            "nocna_aktivna": self.nocna_aktivna,
+        }
         with open(putanja, "w", encoding="utf-8") as f:
             json.dump(podaci, f, ensure_ascii=False, indent=2)
 
 
+class JsonLog:
+    """Jednostavna lista stavki (npr. unosi goriva ili servisa) koja
+    se cuva u sopstvenom .json fajlu - odvojeno od baze i od cena,
+    tako da ne moze doci u sukob sa ostalim delovima aplikacije."""
+
+    def __init__(self, filename):
+        self.filename = filename
+        self.stavke = []
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, self.filename)
+
+    def ucitaj(self, user_data_dir):
+        try:
+            with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
+                self.stavke = json.load(f)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            self.stavke = []
+
+    def sacuvaj(self, user_data_dir):
+        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+            json.dump(self.stavke, f, ensure_ascii=False, indent=2)
+
+    def dodaj(self, user_data_dir, stavka):
+        novi_id = max((s["id"] for s in self.stavke), default=0) + 1
+        stavka["id"] = novi_id
+        self.stavke.insert(0, stavka)
+        self.sacuvaj(user_data_dir)
+        return novi_id
+
+    def obrisi(self, user_data_dir, stavka_id):
+        self.stavke = [s for s in self.stavke if s["id"] != stavka_id]
+        self.sacuvaj(user_data_dir)
+
+
 CENE = CenePodesavanja()
+GORIVO = JsonLog("gorivo.json")
+SERVIS = JsonLog("servis.json")
+
 
 BACKGROUND_IMG = "assets/backgrounds/background.png"
 
@@ -81,21 +125,15 @@ ScreenManager:
     IzvestajScreen:
     PodesavanjaScreen:
     CenovnikScreen:
+    NocnaTarifaScreen:
+    GorivoScreen:
+    ServisScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
     PlaceholderScreen:
         name: "navigacija"
         naslov: "Navigacija"
-    PlaceholderScreen:
-        name: "nocna_tarifa"
-        naslov: "Nocna tarifa"
-    PlaceholderScreen:
-        name: "servis"
-        naslov: "Servis vozila"
-    PlaceholderScreen:
-        name: "gorivo"
-        naslov: "Gorivo"
     PlaceholderScreen:
         name: "profil"
         naslov: "Profil vozaca"
@@ -623,6 +661,223 @@ ScreenManager:
                     on_release: root.sacuvaj_cene()
 
 # ============================================================
+# NOCNA TARIFA - prekidac
+# ============================================================
+
+<NocnaTarifaScreen>:
+    name: "nocna_tarifa"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Nocna tarifa"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "podesavanja"
+
+        PastelCard:
+            tint: 0.90, 0.87, 1, 0.95
+            size_hint_y: None
+            height: dp(74)
+            padding: dp(14)
+            Label:
+                id: label_status
+                text: root.tekst_status
+                font_size: '18sp'
+                bold: True
+                color: 0.18, 0.12, 0.35, 1
+
+        RoundButton:
+            id: dugme_toggle
+            label_text: root.tekst_dugme
+            tint: root.tint_dugme
+            text_color: 0.1, 0.1, 0.1, 1
+            size_hint_y: None
+            height: dp(52)
+            on_release: root.promeni()
+
+        FieldLabel:
+            text: "Kada je ukljucena, kalkulator ce pri otvaranju automatski predloziti nocnu tarifu (i dalje mozes rucno da promenis tarifu za konkretnu voznju)."
+            size_hint_y: None
+            height: dp(60)
+            text_size: self.width, None
+
+        Widget:
+
+# ============================================================
+# GORIVO
+# ============================================================
+
+<GorivoScreen>:
+    name: "gorivo"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Gorivo"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "podesavanja"
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: dp(4)
+
+                PastelCard:
+                    tint: 1, 0.93, 0.86, 0.95
+                    size_hint_y: None
+                    height: dp(56)
+                    padding: dp(12)
+                    Label:
+                        id: label_ukupno_gorivo
+                        text: root.tekst_ukupno
+                        font_size: '15sp'
+                        bold: True
+                        color: 0.30, 0.16, 0.05, 1
+
+                FieldLabel:
+                    text: "Kolicina (litara)"
+
+                PastelTextInput:
+                    id: input_litara
+                    hint_text: "npr. 30"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Cena (RSD)"
+
+                PastelTextInput:
+                    id: input_cena_goriva
+                    hint_text: "npr. 3200"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Napomena (opciono)"
+
+                PastelTextInput:
+                    id: input_napomena_gorivo
+                    hint_text: "npr. NIS pumpa"
+
+                RoundButton:
+                    label_text: "Sacuvaj unos"
+                    tint: 0.70, 0.90, 0.72, 1
+                    text_color: 0.06, 0.28, 0.10, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.sacuvaj_gorivo()
+
+                BoxLayout:
+                    id: lista_gorivo
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(4), dp(10)
+
+# ============================================================
+# SERVIS VOZILA
+# ============================================================
+
+<ServisScreen>:
+    name: "servis"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Servis vozila"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "podesavanja"
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: dp(4)
+
+                PastelCard:
+                    tint: 0.90, 0.87, 1, 0.95
+                    size_hint_y: None
+                    height: dp(56)
+                    padding: dp(12)
+                    Label:
+                        id: label_ukupno_servis
+                        text: root.tekst_ukupno
+                        font_size: '15sp'
+                        bold: True
+                        color: 0.20, 0.14, 0.35, 1
+
+                FieldLabel:
+                    text: "Vrsta servisa"
+
+                PastelTextInput:
+                    id: input_vrsta
+                    hint_text: "npr. zamena ulja"
+
+                FieldLabel:
+                    text: "Cena (RSD)"
+
+                PastelTextInput:
+                    id: input_cena_servisa
+                    hint_text: "npr. 4500"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Kilometraza (opciono)"
+
+                PastelTextInput:
+                    id: input_km_servis
+                    hint_text: "npr. 152340"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Napomena (opciono)"
+
+                PastelTextInput:
+                    id: input_napomena_servis
+                    hint_text: "npr. ime servisa"
+
+                RoundButton:
+                    label_text: "Sacuvaj servis"
+                    tint: 0.70, 0.90, 0.72, 1
+                    text_color: 0.06, 0.28, 0.10, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.sacuvaj_servis()
+
+                BoxLayout:
+                    id: lista_servis
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(4), dp(10)
+
+# ============================================================
 # PLACEHOLDER ("Uskoro")
 # ============================================================
 
@@ -714,9 +969,243 @@ class CenovnikScreen(Screen):
         popup.open()
 
 
+class NocnaTarifaScreen(Screen):
+    tekst_status = StringProperty("")
+    tekst_dugme = StringProperty("")
+    tint_dugme = (0.7, 0.9, 0.72, 1)
+
+    def on_pre_enter(self, *args):
+        self._osvezi()
+
+    def _osvezi(self):
+        if CENE.nocna_aktivna:
+            self.tekst_status = "Nocna tarifa: UKLJUCENA"
+            self.tekst_dugme = "Iskljuci nocnu tarifu"
+            self.tint_dugme = (0.96, 0.78, 0.80, 1)
+        else:
+            self.tekst_status = "Nocna tarifa: ISKLJUCENA"
+            self.tekst_dugme = "Ukljuci nocnu tarifu"
+            self.tint_dugme = (0.70, 0.90, 0.72, 1)
+
+    def promeni(self):
+        CENE.nocna_aktivna = not CENE.nocna_aktivna
+        app = App.get_running_app()
+        CENE.sacuvaj(app.user_data_dir)
+        self._osvezi()
+
+
+class GorivoScreen(Screen):
+    tekst_ukupno = StringProperty("Ukupno potroseno: 0 RSD")
+
+    def on_pre_enter(self, *args):
+        self.ucitaj_gorivo()
+
+    def ucitaj_gorivo(self):
+        kontejner = self.ids.lista_gorivo
+        kontejner.clear_widgets()
+
+        ukupno = sum(s.get("cena", 0) for s in GORIVO.stavke)
+        self.tekst_ukupno = f"Ukupno potroseno: {ukupno:.0f} RSD"
+
+        if not GORIVO.stavke:
+            kontejner.add_widget(Label(
+                text="Jos uvek nema unosa goriva.",
+                size_hint_y=None, height=40,
+                color=(1, 1, 1, 1),
+            ))
+            return
+
+        for s in GORIVO.stavke:
+            kontejner.add_widget(self._napravi_red(s))
+
+    def _napravi_red(self, s):
+        from kivy.factory import Factory
+        from kivy.metrics import dp
+
+        napomena = s.get("napomena") or "-"
+        opis = (
+            f"[b]{s.get('datum', '-')}[/b]  |  {s.get('litara', 0):g} l\n"
+            f"{napomena}\n"
+            f"[color=6b3d0d][b]{s.get('cena', 0):.0f} RSD[/b][/color]"
+        )
+        red = Factory.PastelCard(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(84),
+            padding=dp(12),
+            spacing=dp(8),
+            tint=(1, 0.95, 0.90, 0.92),
+        )
+        red.add_widget(Label(
+            text=opis, markup=True, halign="left", valign="middle",
+            text_size=(None, None),
+            color=(0.20, 0.14, 0.06, 1),
+        ))
+        obrisi_dugme = Factory.RoundButton(
+            label_text="Obrisi",
+            tint=(0.96, 0.78, 0.80, 1),
+            text_color=(0.35, 0.05, 0.08, 1),
+            size_hint_x=None,
+            width=dp(84),
+        )
+        obrisi_dugme.bind(on_release=lambda inst, sid=s["id"]: self._obrisi(sid))
+        red.add_widget(obrisi_dugme)
+        return red
+
+    def sacuvaj_gorivo(self):
+        try:
+            litara = float(self.ids.input_litara.text.replace(",", "."))
+            cena = float(self.ids.input_cena_goriva.text.replace(",", "."))
+        except (ValueError, AttributeError):
+            self._poruka("Unesi ispravne brojeve za kolicinu i cenu.")
+            return
+
+        app = App.get_running_app()
+        GORIVO.dodaj(app.user_data_dir, {
+            "datum": datetime.now().strftime("%Y-%m-%d"),
+            "litara": litara,
+            "cena": cena,
+            "napomena": self.ids.input_napomena_gorivo.text.strip(),
+        })
+
+        self.ids.input_litara.text = ""
+        self.ids.input_cena_goriva.text = ""
+        self.ids.input_napomena_gorivo.text = ""
+
+        self.ucitaj_gorivo()
+
+    def _obrisi(self, stavka_id):
+        app = App.get_running_app()
+        GORIVO.obrisi(app.user_data_dir, stavka_id)
+        self.ucitaj_gorivo()
+
+    def _poruka(self, tekst):
+        popup = Popup(
+            title="Info",
+            content=Label(text=tekst),
+            size_hint=(0.8, 0.3),
+        )
+        popup.open()
+
+
+class ServisScreen(Screen):
+    tekst_ukupno = StringProperty("Ukupno na servisima: 0 RSD")
+
+    def on_pre_enter(self, *args):
+        self.ucitaj_servis()
+
+    def ucitaj_servis(self):
+        kontejner = self.ids.lista_servis
+        kontejner.clear_widgets()
+
+        ukupno = sum(s.get("cena", 0) for s in SERVIS.stavke)
+        self.tekst_ukupno = f"Ukupno na servisima: {ukupno:.0f} RSD"
+
+        if not SERVIS.stavke:
+            kontejner.add_widget(Label(
+                text="Jos uvek nema unosa servisa.",
+                size_hint_y=None, height=40,
+                color=(1, 1, 1, 1),
+            ))
+            return
+
+        for s in SERVIS.stavke:
+            kontejner.add_widget(self._napravi_red(s))
+
+    def _napravi_red(self, s):
+        from kivy.factory import Factory
+        from kivy.metrics import dp
+
+        km = s.get("km")
+        km_deo = f"  |  {km:g} km" if km else ""
+        napomena = s.get("napomena") or "-"
+        opis = (
+            f"[b]{s.get('datum', '-')}[/b]  |  {s.get('vrsta', '-')}{km_deo}\n"
+            f"{napomena}\n"
+            f"[color=3a2570][b]{s.get('cena', 0):.0f} RSD[/b][/color]"
+        )
+        red = Factory.PastelCard(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(84),
+            padding=dp(12),
+            spacing=dp(8),
+            tint=(0.93, 0.90, 1, 0.92),
+        )
+        red.add_widget(Label(
+            text=opis, markup=True, halign="left", valign="middle",
+            text_size=(None, None),
+            color=(0.16, 0.12, 0.24, 1),
+        ))
+        obrisi_dugme = Factory.RoundButton(
+            label_text="Obrisi",
+            tint=(0.96, 0.78, 0.80, 1),
+            text_color=(0.35, 0.05, 0.08, 1),
+            size_hint_x=None,
+            width=dp(84),
+        )
+        obrisi_dugme.bind(on_release=lambda inst, sid=s["id"]: self._obrisi(sid))
+        red.add_widget(obrisi_dugme)
+        return red
+
+    def sacuvaj_servis(self):
+        vrsta = self.ids.input_vrsta.text.strip()
+        if not vrsta:
+            self._poruka("Unesi vrstu servisa.")
+            return
+        try:
+            cena = float(self.ids.input_cena_servisa.text.replace(",", "."))
+        except (ValueError, AttributeError):
+            self._poruka("Unesi ispravnu cenu servisa.")
+            return
+
+        km_tekst = self.ids.input_km_servis.text.strip()
+        km = None
+        if km_tekst:
+            try:
+                km = float(km_tekst.replace(",", "."))
+            except ValueError:
+                self._poruka("Kilometraza mora biti broj (ili ostavi prazno).")
+                return
+
+        app = App.get_running_app()
+        SERVIS.dodaj(app.user_data_dir, {
+            "datum": datetime.now().strftime("%Y-%m-%d"),
+            "vrsta": vrsta,
+            "cena": cena,
+            "km": km,
+            "napomena": self.ids.input_napomena_servis.text.strip(),
+        })
+
+        self.ids.input_vrsta.text = ""
+        self.ids.input_cena_servisa.text = ""
+        self.ids.input_km_servis.text = ""
+        self.ids.input_napomena_servis.text = ""
+
+        self.ucitaj_servis()
+
+    def _obrisi(self, stavka_id):
+        app = App.get_running_app()
+        SERVIS.obrisi(app.user_data_dir, stavka_id)
+        self.ucitaj_servis()
+
+    def _poruka(self, tekst):
+        popup = Popup(
+            title="Info",
+            content=Label(text=tekst),
+            size_hint=(0.8, 0.3),
+        )
+        popup.open()
+
+
 class KalkulatorScreen(Screen):
     tekst_cene = StringProperty("Unesi kilometrazu da vidis cenu")
     tarife_lista = list(DEFAULT_TARIFE.keys())
+
+    def on_pre_enter(self, *args):
+        if CENE.nocna_aktivna and "spinner_tarifa" in self.ids:
+            self.ids.spinner_tarifa.text = "Nocna (22-07h)"
+            self.izracunaj()
 
     def izracunaj(self):
         try:
@@ -916,6 +1405,8 @@ class TaksiApp(App):
         try:
             db.init_db()
             CENE.ucitaj(self.user_data_dir)
+            GORIVO.ucitaj(self.user_data_dir)
+            SERVIS.ucitaj(self.user_data_dir)
             return Builder.load_string(KV)
         except Exception:
             greska = traceback.format_exc()
