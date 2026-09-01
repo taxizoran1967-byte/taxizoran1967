@@ -13,12 +13,12 @@ presplash.filename = %(source.dir)s/presplash.png
 icon.adaptive_foreground.filename = %(source.dir)s/icon_fg.png
 icon.adaptive_background.filename = %(source.dir)s/icon_bg.png
 
-requirements = python3,kivy,sqlite3
+requirements = python3,kivy,sqlite3,plyer
 
 orientation = portrait
 fullscreen = 0
 
-android.permissions = INTERNET
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 
 android.archs = arm64-v8a
 
