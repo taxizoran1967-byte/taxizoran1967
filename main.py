@@ -6,10 +6,16 @@ Kalkulator cene, evidencija voznji, dnevni/mesecni izvestaj zarade.
 import os
 import sys
 import json
+import math
+import threading
 import traceback
+import urllib.request
+import urllib.parse
+import webbrowser
 
 from kivy.app import App
 from kivy.lang import Builder
+from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -21,6 +27,11 @@ from kivy.properties import StringProperty
 from datetime import datetime
 
 import database as db
+
+try:
+    from plyer import gps
+except Exception:
+    gps = None
 
 # ========================
 # TARIFE (iste kao u Telegram botu) - podrazumevane vrednosti
@@ -132,6 +143,103 @@ SERVIS = JsonLog("servis.json")
 EDIT_VOZNJA = None
 
 
+# ========================
+# GPS VOZNJA - pomocne funkcije i cuvanje stanja aktivne voznje
+# ========================
+
+def haversine_km(lat1, lon1, lat2, lon2):
+    """Udaljenost izmedju dve GPS tacke u km (haversine formula)."""
+    R = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(p1) * math.cos(p2) * math.sin(dlambda / 2) ** 2
+    )
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def reverse_geocode(lat, lon, callback):
+    """Pretvara GPS koordinate u adresu (OpenStreetMap Nominatim,
+    besplatno, bez API kljuca). Radi u pozadinskoj niti da ne
+    blokira interfejs; rezultat vraca preko callback-a na glavnoj niti."""
+
+    def posao():
+        adresa = "Adresa nije dostupna"
+        try:
+            url = (
+                "https://nominatim.openstreetmap.org/reverse?format=json"
+                f"&lat={lat}&lon={lon}&zoom=18&addressdetails=1"
+            )
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "TaksiApp/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                podaci = json.loads(resp.read().decode("utf-8"))
+            if podaci.get("display_name"):
+                adresa = podaci["display_name"]
+        except Exception:
+            pass
+        Clock.schedule_once(lambda dt: callback(adresa))
+
+    threading.Thread(target=posao, daemon=True).start()
+
+
+class AktivnaVoznjaState:
+    """Cuva stanje trenutno aktivne GPS voznje u fajl, da se ne
+    izgubi ako korisnik zatvori i ponovo otvori aplikaciju."""
+
+    def __init__(self):
+        self.aktivna = False
+        self.pocetak_vreme = None
+        self.pocetak_lat = None
+        self.pocetak_lon = None
+        self.pocetak_adresa = ""
+        self.zadnja_lat = None
+        self.zadnja_lon = None
+        self.km = 0.0
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "aktivna_voznja.json")
+
+    def ucitaj(self, user_data_dir):
+        try:
+            with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+            self.aktivna = podaci.get("aktivna", False)
+            self.pocetak_vreme = podaci.get("pocetak_vreme")
+            self.pocetak_lat = podaci.get("pocetak_lat")
+            self.pocetak_lon = podaci.get("pocetak_lon")
+            self.pocetak_adresa = podaci.get("pocetak_adresa", "")
+            self.zadnja_lat = podaci.get("zadnja_lat")
+            self.zadnja_lon = podaci.get("zadnja_lon")
+            self.km = podaci.get("km", 0.0)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        podaci = {
+            "aktivna": self.aktivna,
+            "pocetak_vreme": self.pocetak_vreme,
+            "pocetak_lat": self.pocetak_lat,
+            "pocetak_lon": self.pocetak_lon,
+            "pocetak_adresa": self.pocetak_adresa,
+            "zadnja_lat": self.zadnja_lat,
+            "zadnja_lon": self.zadnja_lon,
+            "km": self.km,
+        }
+        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+    def resetuj(self, user_data_dir):
+        self.__init__()
+        self.sacuvaj(user_data_dir)
+
+
+AKTIVNA_VOZNJA = AktivnaVoznjaState()
+
+
 BACKGROUND_IMG = "assets/backgrounds/background.png"
 
 KV = """
@@ -147,12 +255,11 @@ ScreenManager:
     NocnaTarifaScreen:
     GorivoScreen:
     ServisScreen:
+    GpsVoznjaScreen:
+    NavigacijaScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
-    PlaceholderScreen:
-        name: "navigacija"
-        naslov: "Navigacija"
     PlaceholderScreen:
         name: "profil"
         naslov: "Profil vozaca"
@@ -316,12 +423,12 @@ ScreenManager:
 
                 MenuButton:
                     icon_src: "assets/icons/start_ride.png"
-                    tekst: "Pocetak voznje"
-                    on_release: app.root.current = "kalkulator"
+                    tekst: "GPS voznja (auto)"
+                    on_release: app.root.current = "gps_voznja"
 
                 MenuButton:
                     icon_src: "assets/icons/end_ride.png"
-                    tekst: "Kraj voznje"
+                    tekst: "Pocetak voznje (rucno)"
                     on_release: app.root.current = "kalkulator"
 
                 MenuButton:
@@ -909,6 +1016,161 @@ ScreenManager:
                     padding: dp(4), dp(10)
 
 # ============================================================
+# GPS VOZNJA - automatsko pracenje
+# ============================================================
+
+<GpsVoznjaScreen>:
+    name: "gps_voznja"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "GPS voznja"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Istorija"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "evidencija"
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: dp(4)
+
+                PastelCard:
+                    tint: 0.90, 0.87, 1, 0.95
+                    size_hint_y: None
+                    height: dp(90)
+                    padding: dp(14)
+                    Label:
+                        text: "POLAZAK"
+                        font_size: '13sp'
+                        bold: True
+                        color: 0.35, 0.30, 0.55, 1
+                        size_hint_y: None
+                        height: dp(20)
+                        halign: "left"
+                        text_size: self.size
+                    Label:
+                        text: root.tekst_polazak
+                        font_size: '15sp'
+                        color: 0.18, 0.14, 0.30, 1
+                        halign: "left"
+                        valign: "top"
+                        text_size: self.width, None
+
+                PastelCard:
+                    tint: 0.87, 0.97, 0.88, 0.95
+                    size_hint_y: None
+                    height: dp(64)
+                    padding: dp(14)
+                    Label:
+                        text: root.tekst_km
+                        font_size: '20sp'
+                        bold: True
+                        color: 0.06, 0.35, 0.10, 1
+
+                PastelCard:
+                    tint: 1, 0.93, 0.86, 0.95
+                    size_hint_y: None
+                    height: dp(56)
+                    padding: dp(14)
+                    Label:
+                        text: root.tekst_trajanje
+                        font_size: '16sp'
+                        bold: True
+                        color: 0.30, 0.16, 0.05, 1
+
+                PastelCard:
+                    tint: 0.87, 0.95, 1, 0.95
+                    size_hint_y: None
+                    height: dp(64)
+                    padding: dp(14)
+                    Label:
+                        text: root.tekst_cena
+                        font_size: '20sp'
+                        bold: True
+                        color: 0.05, 0.22, 0.45, 1
+
+                Label:
+                    text: root.tekst_gps_status
+                    size_hint_y: None
+                    height: dp(30)
+                    font_size: '13sp'
+                    color: 0.85, 0.85, 0.95, 1
+
+                RoundButton:
+                    id: dugme_start
+                    label_text: "POCNI VOZNJU"
+                    tint: 0.70, 0.90, 0.72, 1
+                    text_color: 0.06, 0.28, 0.10, 1
+                    size_hint_y: None
+                    height: dp(56)
+                    disabled: root.voznja_aktivna
+                    on_release: root.pocni_voznju()
+
+                RoundButton:
+                    id: dugme_zavrsi
+                    label_text: "ZAVRSI VOZNJU"
+                    tint: 0.96, 0.78, 0.80, 1
+                    text_color: 0.35, 0.05, 0.08, 1
+                    size_hint_y: None
+                    height: dp(56)
+                    disabled: not root.voznja_aktivna
+                    on_release: root.zavrsi_voznju()
+
+# ============================================================
+# NAVIGACIJA
+# ============================================================
+
+<NavigacijaScreen>:
+    name: "navigacija"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Navigacija"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "podesavanja"
+
+        FieldLabel:
+            text: "Odrediste (adresa ili naziv mesta)"
+
+        PastelTextInput:
+            id: input_odrediste
+            hint_text: "npr. Terazije 5, Beograd"
+
+        RoundButton:
+            label_text: "Otvori navigaciju"
+            tint: 0.80, 0.87, 1, 1
+            text_color: 0.10, 0.14, 0.30, 1
+            size_hint_y: None
+            height: dp(52)
+            on_release: root.otvori_navigaciju()
+
+        FieldLabel:
+            text: "Otvorice se Google Maps (ili druga instalirana mapa) sa rutom do unetog odredista."
+            size_hint_y: None
+            height: dp(50)
+            text_size: self.width, None
+
+        Widget:
+
+# ============================================================
 # PLACEHOLDER ("Uskoro")
 # ============================================================
 
@@ -1312,6 +1574,254 @@ class ServisScreen(Screen):
         popup.open()
 
 
+class GpsVoznjaScreen(Screen):
+    tekst_polazak = StringProperty("Nije zapoceta")
+    tekst_km = StringProperty("Predjeno: 0.00 km")
+    tekst_trajanje = StringProperty("Trajanje: 00:00:00")
+    tekst_cena = StringProperty("Cena: 0 RSD")
+    tekst_gps_status = StringProperty("")
+    voznja_aktivna = False
+
+    MIN_TACNOST_M = 50       # ignorisi GPS tacke losije preciznosti od ovoga (metri)
+    MIN_POMERAJ_KM = 0.01    # ignorisi mikro-skokove manje od 10m (GPS sum)
+    MAX_BRZINA_KMH = 180     # ignorisi nerealne skokove (losa GPS tacka)
+
+    def on_pre_enter(self, *args):
+        self._tajmer = None
+        if AKTIVNA_VOZNJA.aktivna:
+            self.voznja_aktivna = True
+            self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa or "Adresa nije dostupna"
+            self._osvezi_prikaz()
+            self._pokreni_tajmer()
+        else:
+            self.voznja_aktivna = False
+            self.tekst_polazak = "Nije zapoceta"
+            self.tekst_km = "Predjeno: 0.00 km"
+            self.tekst_trajanje = "Trajanje: 00:00:00"
+            self.tekst_cena = "Cena: 0 RSD"
+
+    def on_leave(self, *args):
+        if self._tajmer:
+            self._tajmer.cancel()
+            self._tajmer = None
+
+    # ---------------- POCETAK VOZNJE ----------------
+
+    def pocni_voznju(self):
+        if gps is None:
+            self.tekst_gps_status = "GPS nije dostupan na ovom uredjaju."
+            return
+
+        try:
+            gps.configure(on_location=self._on_location, on_status=self._on_status)
+            gps.start(minTime=3000, minDistance=5)
+        except Exception as e:
+            self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}"
+            return
+
+        self.voznja_aktivna = True
+        self.tekst_gps_status = "Trazim GPS signal..."
+        AKTIVNA_VOZNJA.aktivna = True
+        AKTIVNA_VOZNJA.pocetak_vreme = datetime.now().isoformat()
+        AKTIVNA_VOZNJA.pocetak_lat = None
+        AKTIVNA_VOZNJA.pocetak_lon = None
+        AKTIVNA_VOZNJA.pocetak_adresa = "Trazim lokaciju..."
+        AKTIVNA_VOZNJA.zadnja_lat = None
+        AKTIVNA_VOZNJA.zadnja_lon = None
+        AKTIVNA_VOZNJA.km = 0.0
+
+        app = App.get_running_app()
+        AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+
+        self.tekst_polazak = "Trazim lokaciju..."
+        self._pokreni_tajmer()
+
+    # ---------------- TOKOM VOZNJE ----------------
+
+    def _on_status(self, stype, status):
+        Clock.schedule_once(lambda dt: setattr(self, "tekst_gps_status", f"GPS: {status}"))
+
+    def _on_location(self, **kwargs):
+        Clock.schedule_once(lambda dt: self._obradi_lokaciju(kwargs))
+
+    def _obradi_lokaciju(self, podaci):
+        lat = podaci.get("lat")
+        lon = podaci.get("lon")
+        tacnost = podaci.get("accuracy", 0) or 0
+        if lat is None or lon is None:
+            return
+
+        # ignorisi tacke lose preciznosti
+        if tacnost and tacnost > self.MIN_TACNOST_M:
+            self.tekst_gps_status = f"Slab GPS signal (+/-{tacnost:.0f}m), cekam bolji..."
+            return
+
+        app = App.get_running_app()
+
+        if AKTIVNA_VOZNJA.pocetak_lat is None:
+            # ovo je prva validna tacka - pocetak voznje
+            AKTIVNA_VOZNJA.pocetak_lat = lat
+            AKTIVNA_VOZNJA.pocetak_lon = lon
+            AKTIVNA_VOZNJA.zadnja_lat = lat
+            AKTIVNA_VOZNJA.zadnja_lon = lon
+            AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+            self.tekst_gps_status = "GPS aktivan, pratim voznju."
+            reverse_geocode(lat, lon, self._postavi_pocetnu_adresu)
+            return
+
+        # racunaj pomeraj od poslednje tacke
+        udaljenost = haversine_km(
+            AKTIVNA_VOZNJA.zadnja_lat, AKTIVNA_VOZNJA.zadnja_lon, lat, lon
+        )
+
+        if udaljenost < self.MIN_POMERAJ_KM:
+            return  # mikro-sum, ignorisi
+
+        # provera nerealnog skoka (losa GPS tacka)
+        brzina_kmh = udaljenost / (3.0 / 3600.0)  # priblizno, min interval ~3s
+        if brzina_kmh > self.MAX_BRZINA_KMH:
+            return  # verovatno GPS greska, ignorisi tacku
+
+        AKTIVNA_VOZNJA.km += udaljenost
+        AKTIVNA_VOZNJA.zadnja_lat = lat
+        AKTIVNA_VOZNJA.zadnja_lon = lon
+        AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+        self._osvezi_prikaz()
+
+    def _postavi_pocetnu_adresu(self, adresa):
+        AKTIVNA_VOZNJA.pocetak_adresa = adresa
+        app = App.get_running_app()
+        AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+        self.tekst_polazak = adresa
+
+    def _pokreni_tajmer(self):
+        if self._tajmer is None:
+            self._tajmer = Clock.schedule_interval(lambda dt: self._osvezi_prikaz(), 1)
+
+    def _osvezi_prikaz(self):
+        self.tekst_km = f"Predjeno: {AKTIVNA_VOZNJA.km:.2f} km"
+
+        if AKTIVNA_VOZNJA.pocetak_vreme:
+            pocetak = datetime.fromisoformat(AKTIVNA_VOZNJA.pocetak_vreme)
+            trajanje = datetime.now() - pocetak
+            ukupno_sec = int(trajanje.total_seconds())
+            h, ostatak = divmod(ukupno_sec, 3600)
+            m, s = divmod(ostatak, 60)
+            self.tekst_trajanje = f"Trajanje: {h:02d}:{m:02d}:{s:02d}"
+
+        cena_po_km = CENE.tarife.get(
+            "Nocna (22-07h)" if CENE.nocna_aktivna else "Osnovna (07-22h)",
+            CENE.tarife["Osnovna (07-22h)"],
+        )
+        cena = CENE.start_fee + AKTIVNA_VOZNJA.km * cena_po_km
+        self.tekst_cena = f"Cena: {cena:.0f} RSD"
+
+        if AKTIVNA_VOZNJA.pocetak_adresa and AKTIVNA_VOZNJA.pocetak_adresa != "Trazim lokaciju...":
+            self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa
+
+    # ---------------- KRAJ VOZNJE ----------------
+
+    def zavrsi_voznju(self):
+        if not AKTIVNA_VOZNJA.aktivna:
+            return
+
+        try:
+            if gps is not None:
+                gps.stop()
+        except Exception:
+            pass
+
+        if self._tajmer:
+            self._tajmer.cancel()
+            self._tajmer = None
+
+        self.voznja_aktivna = False
+        self.tekst_gps_status = "Trazim krajnju adresu..."
+
+        km = AKTIVNA_VOZNJA.km
+        cena_po_km = CENE.tarife.get(
+            "Nocna (22-07h)" if CENE.nocna_aktivna else "Osnovna (07-22h)",
+            CENE.tarife["Osnovna (07-22h)"],
+        )
+        ukupno = CENE.start_fee + km * cena_po_km
+        tarifa_naziv = "Nocna (22-07h)" if CENE.nocna_aktivna else "Osnovna (07-22h)"
+        polazak_adresa = AKTIVNA_VOZNJA.pocetak_adresa or ""
+
+        if AKTIVNA_VOZNJA.zadnja_lat is not None:
+            reverse_geocode(
+                AKTIVNA_VOZNJA.zadnja_lat,
+                AKTIVNA_VOZNJA.zadnja_lon,
+                lambda adresa: self._sacuvaj_zavrsenu_voznju(
+                    km, cena_po_km, ukupno, tarifa_naziv, polazak_adresa, adresa
+                ),
+            )
+        else:
+            self._sacuvaj_zavrsenu_voznju(
+                km, cena_po_km, ukupno, tarifa_naziv, polazak_adresa,
+                "Adresa nije dostupna",
+            )
+
+    def _sacuvaj_zavrsenu_voznju(self, km, cena_po_km, ukupno, tarifa_naziv,
+                                   polazak_adresa, dolazak_adresa):
+        db.dodaj_voznju(
+            od_adresa=polazak_adresa,
+            do_adresa=dolazak_adresa,
+            km=round(km, 2),
+            tarifa_naziv=tarifa_naziv,
+            cena_po_km=cena_po_km,
+            start_taksa=CENE.start_fee,
+            ukupna_cena=ukupno,
+            napomena="GPS voznja (automatski unos)",
+        )
+
+        app = App.get_running_app()
+        AKTIVNA_VOZNJA.resetuj(app.user_data_dir)
+
+        self.tekst_gps_status = ""
+        self.tekst_polazak = "Nije zapoceta"
+        self.tekst_km = "Predjeno: 0.00 km"
+        self.tekst_trajanje = "Trajanje: 00:00:00"
+        self.tekst_cena = "Cena: 0 RSD"
+
+        self._poruka(
+            f"Voznja sacuvana!\n{polazak_adresa}\n-> {dolazak_adresa}\n"
+            f"{km:.2f} km, {ukupno:.0f} RSD"
+        )
+
+    def _poruka(self, tekst):
+        popup = Popup(
+            title="Voznja zavrsena",
+            content=Label(text=tekst),
+            size_hint=(0.85, 0.4),
+        )
+        popup.open()
+
+
+class NavigacijaScreen(Screen):
+    def otvori_navigaciju(self):
+        odrediste = self.ids.input_odrediste.text.strip()
+        if not odrediste:
+            popup = Popup(
+                title="Info",
+                content=Label(text="Unesi odrediste pre otvaranja navigacije."),
+                size_hint=(0.8, 0.3),
+            )
+            popup.open()
+            return
+
+        upit = urllib.parse.quote(odrediste)
+        url = f"https://www.google.com/maps/dir/?api=1&destination={upit}&travelmode=driving"
+        try:
+            webbrowser.open(url)
+        except Exception:
+            popup = Popup(
+                title="Greska",
+                content=Label(text="Ne mogu da otvorim navigaciju na ovom uredjaju."),
+                size_hint=(0.8, 0.3),
+            )
+            popup.open()
+
+
 class KalkulatorScreen(Screen):
     tekst_cene = StringProperty("Unesi kilometrazu da vidis cenu")
     dugme_tekst = StringProperty("Sacuvaj voznju")
@@ -1564,6 +2074,7 @@ class TaksiApp(App):
             CENE.ucitaj(self.user_data_dir)
             GORIVO.ucitaj(self.user_data_dir)
             SERVIS.ucitaj(self.user_data_dir)
+            AKTIVNA_VOZNJA.ucitaj(self.user_data_dir)
             return Builder.load_string(KV)
         except Exception:
             greska = traceback.format_exc()
