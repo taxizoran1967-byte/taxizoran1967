@@ -105,33 +105,31 @@ ScreenManager:
 
 <PastelCard@BoxLayout>:
     tint: (0.97, 0.96, 1, 0.94)
-    radius: dp(20)
     canvas.before:
         Color:
             rgba: 0, 0, 0, 0.14
         RoundedRectangle:
             pos: self.x, self.y - dp(3)
             size: self.size
-            radius: [root.radius]
+            radius: [dp(20)]
         Color:
             rgba: root.tint
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [root.radius]
+            radius: [dp(20)]
 
 <RoundButton@ButtonBehavior+BoxLayout>:
     tint: (0.80, 0.87, 1, 1)
     text_color: 0.12, 0.14, 0.30, 1
     label_text: ""
-    radius: dp(16)
     canvas.before:
         Color:
             rgba: root.tint
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [root.radius]
+            radius: [dp(16)]
     Label:
         text: root.label_text
         color: root.text_color
