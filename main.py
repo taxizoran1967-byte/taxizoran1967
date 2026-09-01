@@ -65,28 +65,107 @@ ScreenManager:
         name: "poziv"
         naslov: "Poziv / Dispecer"
 
-<NavBar@BoxLayout>:
-    size_hint_y: None
-    height: dp(50)
-    spacing: dp(4)
-    padding: dp(4)
+# ============================================================
+# ZAJEDNICKI STIL - pastelne kartice, zaobljeni uglovi, tipografija
+# ============================================================
+
+<ScreenRoot@BoxLayout>:
+    orientation: "vertical"
+    padding: dp(18)
+    spacing: dp(16)
+    canvas.before:
+        Rectangle:
+            source: app.background_img
+            pos: self.pos
+            size: self.size
+        Color:
+            rgba: 0.04, 0.03, 0.09, 0.35
+        Rectangle:
+            pos: self.pos
+            size: self.size
 
 <TitleLabel@Label>:
     size_hint_y: None
-    height: dp(40)
-    font_size: '20sp'
+    height: dp(42)
+    font_size: '24sp'
     bold: True
     color: 1, 1, 1, 1
+    halign: "left"
+    text_size: self.size
+    valign: "middle"
+
+<FieldLabel@Label>:
+    size_hint_y: None
+    height: dp(22)
+    halign: "left"
+    valign: "middle"
+    text_size: self.size
+    font_size: '14sp'
+    color: 0.85, 0.85, 0.95, 1
+
+<PastelCard@BoxLayout>:
+    tint: (0.97, 0.96, 1, 0.94)
+    radius: dp(20)
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 0.14
+        RoundedRectangle:
+            pos: self.x, self.y - dp(3)
+            size: self.size
+            radius: [root.radius]
+        Color:
+            rgba: root.tint
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [root.radius]
+
+<RoundButton@ButtonBehavior+BoxLayout>:
+    tint: (0.80, 0.87, 1, 1)
+    text_color: 0.12, 0.14, 0.30, 1
+    label_text: ""
+    radius: dp(16)
+    canvas.before:
+        Color:
+            rgba: root.tint
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [root.radius]
+    Label:
+        text: root.label_text
+        color: root.text_color
+        bold: True
+        font_size: '15sp'
+
+<NavBar@BoxLayout>:
+    size_hint_y: None
+    height: dp(46)
+    spacing: dp(10)
 
 <MenuButton>:
     orientation: "horizontal"
     size_hint_y: None
-    height: dp(64)
-    spacing: dp(14)
-    padding: dp(6)
+    height: dp(72)
+    spacing: dp(16)
+    padding: dp(12)
+    radius: dp(22)
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 0.16
+        RoundedRectangle:
+            pos: self.x, self.y - dp(3)
+            size: self.size
+            radius: [root.radius]
+        Color:
+            rgba: 0.96, 0.95, 1, 0.90
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [root.radius]
     BoxLayout:
         size_hint_x: None
-        width: dp(52)
+        width: dp(48)
         canvas.before:
             StencilPush
             Ellipse:
@@ -105,35 +184,43 @@ ScreenManager:
             keep_ratio: False
     Label:
         text: root.tekst
-        font_size: '18sp'
+        font_size: '17sp'
         bold: True
-        color: 1, 1, 1, 1
+        color: 0.14, 0.14, 0.28, 1
         halign: "left"
         valign: "middle"
         text_size: self.size
 
+<PastelTextInput@TextInput>:
+    background_color: 0.97, 0.97, 1, 0.95
+    foreground_color: 0.12, 0.12, 0.22, 1
+    hint_text_color: 0.55, 0.55, 0.65, 1
+    cursor_color: 0.3, 0.3, 0.7, 1
+    padding: dp(14), dp(12)
+    size_hint_y: None
+    height: dp(48)
+    multiline: False
+
+# ============================================================
+# POCETNI EKRAN
+# ============================================================
+
 <HomeScreen>:
     name: "home"
-    BoxLayout:
-        orientation: "vertical"
-        padding: dp(16)
-        spacing: dp(14)
-        canvas.before:
-            Rectangle:
-                source: app.background_img
-                pos: self.pos
-                size: self.size
+    ScreenRoot:
 
         TitleLabel:
             text: "Taksi App"
-            font_size: '26sp'
+            font_size: '28sp'
+            height: dp(48)
 
         ScrollView:
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
                 height: self.minimum_height
-                spacing: dp(12)
+                spacing: dp(14)
+                padding: dp(2), dp(4)
 
                 MenuButton:
                     icon_src: "assets/icons/start_ride.png"
@@ -160,30 +247,29 @@ ScreenManager:
                     tekst: "Podesavanja"
                     on_release: app.root.current = "podesavanja"
 
+# ============================================================
+# KALKULATOR
+# ============================================================
+
 <KalkulatorScreen>:
     name: "kalkulator"
-    BoxLayout:
-        orientation: "vertical"
-        padding: dp(12)
-        spacing: dp(8)
-        canvas.before:
-            Rectangle:
-                source: app.background_img
-                pos: self.pos
-                size: self.size
+    ScreenRoot:
 
         TitleLabel:
             text: "Kalkulator voznje"
 
         NavBar:
-            Button:
-                text: "Pocetna"
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "home"
-            Button:
-                text: "Evidencija"
+            RoundButton:
+                label_text: "Evidencija"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "evidencija"
-            Button:
-                text: "Izvestaj"
+            RoundButton:
+                label_text: "Izvestaj"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
@@ -191,134 +277,98 @@ ScreenManager:
                 orientation: "vertical"
                 size_hint_y: None
                 height: self.minimum_height
-                spacing: dp(10)
+                spacing: dp(12)
                 padding: dp(4)
 
-                Label:
-                    text: "Tarifa:"
-                    size_hint_y: None
-                    height: dp(24)
-                    halign: "left"
-                    text_size: self.size
-                    color: 1, 1, 1, 1
+                FieldLabel:
+                    text: "Tarifa"
 
                 Spinner:
                     id: spinner_tarifa
                     text: root.tarife_lista[0]
                     values: root.tarife_lista
                     size_hint_y: None
-                    height: dp(44)
+                    height: dp(48)
+                    background_color: 0.90, 0.93, 1, 1
+                    color: 0.12, 0.12, 0.24, 1
                     on_text: root.izracunaj()
 
-                Label:
-                    text: "Kilometraza (km):"
-                    size_hint_y: None
-                    height: dp(24)
-                    halign: "left"
-                    text_size: self.size
-                    color: 1, 1, 1, 1
+                FieldLabel:
+                    text: "Kilometraza (km)"
 
-                TextInput:
+                PastelTextInput:
                     id: input_km
                     hint_text: "npr. 8.5"
                     input_filter: "float"
-                    multiline: False
-                    size_hint_y: None
-                    height: dp(44)
                     on_text: root.izracunaj()
 
-                Label:
-                    text: "Od (opciono):"
-                    size_hint_y: None
-                    height: dp(24)
-                    halign: "left"
-                    text_size: self.size
-                    color: 1, 1, 1, 1
+                FieldLabel:
+                    text: "Od (opciono)"
 
-                TextInput:
+                PastelTextInput:
                     id: input_od
                     hint_text: "adresa polazista"
-                    multiline: False
-                    size_hint_y: None
-                    height: dp(44)
 
-                Label:
-                    text: "Do (opciono):"
-                    size_hint_y: None
-                    height: dp(24)
-                    halign: "left"
-                    text_size: self.size
-                    color: 1, 1, 1, 1
+                FieldLabel:
+                    text: "Do (opciono)"
 
-                TextInput:
+                PastelTextInput:
                     id: input_do
                     hint_text: "adresa odredista"
-                    multiline: False
-                    size_hint_y: None
-                    height: dp(44)
 
-                Label:
-                    text: "Napomena (opciono):"
-                    size_hint_y: None
-                    height: dp(24)
-                    halign: "left"
-                    text_size: self.size
-                    color: 1, 1, 1, 1
+                FieldLabel:
+                    text: "Napomena (opciono)"
 
-                TextInput:
+                PastelTextInput:
                     id: input_napomena
                     hint_text: "npr. cekanje, prtljag..."
-                    multiline: False
-                    size_hint_y: None
-                    height: dp(44)
 
-                BoxLayout:
+                PastelCard:
+                    tint: 0.87, 0.97, 0.88, 0.95
                     size_hint_y: None
-                    height: dp(90)
-                    canvas.before:
-                        Color:
-                            rgba: 0.90, 0.95, 0.90, 1
-                        Rectangle:
-                            pos: self.pos
-                            size: self.size
+                    height: dp(96)
+                    padding: dp(14)
                     Label:
                         id: label_cena
                         text: root.tekst_cene
-                        font_size: '22sp'
+                        font_size: '20sp'
                         bold: True
-                        color: 0.05, 0.4, 0.05, 1
+                        color: 0.08, 0.35, 0.12, 1
+                        halign: "center"
+                        valign: "middle"
+                        text_size: self.size
 
-                Button:
-                    text: "Sacuvaj voznju"
+                RoundButton:
+                    label_text: "Sacuvaj voznju"
+                    tint: 0.70, 0.90, 0.72, 1
+                    text_color: 0.06, 0.28, 0.10, 1
                     size_hint_y: None
-                    height: dp(50)
-                    background_color: 0.2, 0.6, 0.2, 1
+                    height: dp(52)
                     on_release: root.sacuvaj_voznju()
+
+# ============================================================
+# EVIDENCIJA
+# ============================================================
 
 <EvidencijaScreen>:
     name: "evidencija"
-    BoxLayout:
-        orientation: "vertical"
-        padding: dp(12)
-        spacing: dp(8)
-        canvas.before:
-            Rectangle:
-                source: app.background_img
-                pos: self.pos
-                size: self.size
+    ScreenRoot:
 
         TitleLabel:
             text: "Evidencija voznji"
 
         NavBar:
-            Button:
-                text: "Pocetna"
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "home"
-            Button:
-                text: "Kalkulator"
+            RoundButton:
+                label_text: "Kalkulator"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "kalkulator"
-            Button:
-                text: "Izvestaj"
+            RoundButton:
+                label_text: "Izvestaj"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
@@ -327,44 +377,39 @@ ScreenManager:
                 orientation: "vertical"
                 size_hint_y: None
                 height: self.minimum_height
-                spacing: dp(6)
+                spacing: dp(10)
                 padding: dp(4)
+
+# ============================================================
+# IZVESTAJ
+# ============================================================
 
 <IzvestajScreen>:
     name: "izvestaj"
-    BoxLayout:
-        orientation: "vertical"
-        padding: dp(12)
-        spacing: dp(8)
-        canvas.before:
-            Rectangle:
-                source: app.background_img
-                pos: self.pos
-                size: self.size
+    ScreenRoot:
 
         TitleLabel:
             text: "Izvestaj zarade"
 
         NavBar:
-            Button:
-                text: "Pocetna"
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "home"
-            Button:
-                text: "Kalkulator"
+            RoundButton:
+                label_text: "Kalkulator"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "kalkulator"
-            Button:
-                text: "Evidencija"
+            RoundButton:
+                label_text: "Evidencija"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "evidencija"
 
-        BoxLayout:
+        PastelCard:
+            tint: 1, 0.93, 0.86, 0.95
             size_hint_y: None
-            height: dp(120)
-            canvas.before:
-                Color:
-                    rgba: 0.90, 0.93, 0.98, 1
-                Rectangle:
-                    pos: self.pos
-                    size: self.size
+            height: dp(128)
+            padding: dp(14)
             Label:
                 id: label_danas
                 text: root.tekst_danas
@@ -372,18 +417,13 @@ ScreenManager:
                 halign: "left"
                 valign: "top"
                 text_size: self.size
-                padding: dp(10), dp(10)
-                color: 0.1, 0.1, 0.1, 1
+                color: 0.30, 0.16, 0.05, 1
 
-        BoxLayout:
+        PastelCard:
+            tint: 0.90, 0.87, 1, 0.95
             size_hint_y: None
-            height: dp(120)
-            canvas.before:
-                Color:
-                    rgba: 0.95, 0.93, 0.90, 1
-                Rectangle:
-                    pos: self.pos
-                    size: self.size
+            height: dp(128)
+            padding: dp(14)
             Label:
                 id: label_mesec
                 text: root.tekst_mesec
@@ -391,30 +431,25 @@ ScreenManager:
                 halign: "left"
                 valign: "top"
                 text_size: self.size
-                padding: dp(10), dp(10)
-                color: 0.1, 0.1, 0.1, 1
+                color: 0.20, 0.14, 0.35, 1
 
         Widget:
 
+# ============================================================
+# PODESAVANJA
+# ============================================================
+
 <PodesavanjaScreen>:
     name: "podesavanja"
-    BoxLayout:
-        orientation: "vertical"
-        padding: dp(16)
-        spacing: dp(14)
-        canvas.before:
-            Rectangle:
-                source: app.background_img
-                pos: self.pos
-                size: self.size
+    ScreenRoot:
 
         TitleLabel:
             text: "Podesavanja"
-            font_size: '24sp'
 
         NavBar:
-            Button:
-                text: "Pocetna"
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "home"
 
         ScrollView:
@@ -422,7 +457,8 @@ ScreenManager:
                 orientation: "vertical"
                 size_hint_y: None
                 height: self.minimum_height
-                spacing: dp(12)
+                spacing: dp(14)
+                padding: dp(2), dp(4)
 
                 MenuButton:
                     icon_src: "assets/icons/earnings_chart.png"
@@ -474,33 +510,39 @@ ScreenManager:
                     tekst: "Poziv / Dispecer"
                     on_release: app.root.current = "poziv"
 
+# ============================================================
+# PLACEHOLDER ("Uskoro")
+# ============================================================
+
 <PlaceholderScreen>:
     naslov: ""
-    BoxLayout:
-        orientation: "vertical"
-        padding: dp(16)
-        spacing: dp(14)
-        canvas.before:
-            Rectangle:
-                source: app.background_img
-                pos: self.pos
-                size: self.size
+    ScreenRoot:
 
         TitleLabel:
             text: root.naslov
 
         NavBar:
-            Button:
-                text: "Pocetna"
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "home"
-            Button:
-                text: "Podesavanja"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.86, 0.90, 1, 1
                 on_release: root.manager.current = "podesavanja"
 
-        Label:
-            text: "Uskoro..."
-            font_size: '18sp'
-            color: 1, 1, 1, 1
+        PastelCard:
+            tint: 0.95, 0.95, 1, 0.9
+            size_hint_y: None
+            height: dp(70)
+            padding: dp(14)
+            Label:
+                text: "Uskoro..."
+                font_size: '17sp'
+                bold: True
+                color: 0.2, 0.2, 0.3, 1
+
+        Widget:
 """
 
 
@@ -604,25 +646,36 @@ class EvidencijaScreen(Screen):
             kontejner.add_widget(red)
 
     def _napravi_red(self, v):
+        from kivy.factory import Factory
+        from kivy.metrics import dp
+
         od = v["od_adresa"] or "-"
         do = v["do_adresa"] or "-"
         opis = (
             f"[b]{v['datum']} {v['vreme']}[/b]  |  {v['km']:g} km  |  "
             f"{v['tarifa_naziv']}\n{od} -> {do}\n"
-            f"[color=1a7a1a][b]{v['ukupna_cena']:.0f} RSD[/b][/color]"
+            f"[color=0d6b1f][b]{v['ukupna_cena']:.0f} RSD[/b][/color]"
         )
-        red = BoxLayout(
+        red = Factory.PastelCard(
             orientation="horizontal",
             size_hint_y=None,
-            height=80,
-            spacing=8,
+            height=dp(84),
+            padding=dp(12),
+            spacing=dp(8),
+            tint=(0.96, 0.95, 1, 0.92),
         )
         red.add_widget(Label(
             text=opis, markup=True, halign="left", valign="middle",
             text_size=(None, None),
-            color=(1, 1, 1, 1),
+            color=(0.14, 0.14, 0.24, 1),
         ))
-        obrisi_dugme = Button(text="Obrisi", size_hint_x=None, width=80)
+        obrisi_dugme = Factory.RoundButton(
+            label_text="Obrisi",
+            tint=(0.96, 0.78, 0.80, 1),
+            text_color=(0.35, 0.05, 0.08, 1),
+            size_hint_x=None,
+            width=dp(84),
+        )
         obrisi_dugme.bind(on_release=lambda inst, vid=v["id"]: self._obrisi(vid))
         red.add_widget(obrisi_dugme)
         return red
