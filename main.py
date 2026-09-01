@@ -103,6 +103,20 @@ class JsonLog:
         self.sacuvaj(user_data_dir)
         return novi_id
 
+    def azuriraj(self, user_data_dir, stavka_id, nova_stavka):
+        nova_stavka["id"] = stavka_id
+        for i, s in enumerate(self.stavke):
+            if s["id"] == stavka_id:
+                self.stavke[i] = nova_stavka
+                break
+        self.sacuvaj(user_data_dir)
+
+    def nadji(self, stavka_id):
+        for s in self.stavke:
+            if s["id"] == stavka_id:
+                return s
+        return None
+
     def obrisi(self, user_data_dir, stavka_id):
         self.stavke = [s for s in self.stavke if s["id"] != stavka_id]
         self.sacuvaj(user_data_dir)
@@ -111,6 +125,11 @@ class JsonLog:
 CENE = CenePodesavanja()
 GORIVO = JsonLog("gorivo.json")
 SERVIS = JsonLog("servis.json")
+
+# Kad korisnik klikne "Izmeni" na voznji u Evidenciji, podaci te
+# voznje se privremeno stave ovde da bi ih Kalkulator ekran
+# pokupio i popunio formu za ispravku.
+EDIT_VOZNJA = None
 
 
 BACKGROUND_IMG = "assets/backgrounds/background.png"
@@ -412,7 +431,7 @@ ScreenManager:
                         text_size: self.size
 
                 RoundButton:
-                    label_text: "Sacuvaj voznju"
+                    label_text: root.dugme_tekst
                     tint: 0.70, 0.90, 0.72, 1
                     text_color: 0.06, 0.28, 0.10, 1
                     size_hint_y: None
@@ -742,14 +761,26 @@ ScreenManager:
                 PastelCard:
                     tint: 1, 0.93, 0.86, 0.95
                     size_hint_y: None
-                    height: dp(56)
+                    height: dp(72)
                     padding: dp(12)
                     Label:
                         id: label_ukupno_gorivo
                         text: root.tekst_ukupno
-                        font_size: '15sp'
+                        font_size: '14sp'
                         bold: True
                         color: 0.30, 0.16, 0.05, 1
+
+                FieldLabel:
+                    text: "Vrsta goriva"
+
+                Spinner:
+                    id: spinner_tip_goriva
+                    text: "Benzin"
+                    values: ["Benzin", "TNG"]
+                    size_hint_y: None
+                    height: dp(48)
+                    background_color: 0.90, 0.93, 1, 1
+                    color: 0.12, 0.12, 0.24, 1
 
                 FieldLabel:
                     text: "Kolicina (litara)"
@@ -775,7 +806,7 @@ ScreenManager:
                     hint_text: "npr. NIS pumpa"
 
                 RoundButton:
-                    label_text: "Sacuvaj unos"
+                    label_text: root.dugme_tekst
                     tint: 0.70, 0.90, 0.72, 1
                     text_color: 0.06, 0.28, 0.10, 1
                     size_hint_y: None
@@ -862,7 +893,7 @@ ScreenManager:
                     hint_text: "npr. ime servisa"
 
                 RoundButton:
-                    label_text: "Sacuvaj servis"
+                    label_text: root.dugme_tekst
                     tint: 0.70, 0.90, 0.72, 1
                     text_color: 0.06, 0.28, 0.10, 1
                     size_hint_y: None
@@ -996,6 +1027,8 @@ class NocnaTarifaScreen(Screen):
 
 class GorivoScreen(Screen):
     tekst_ukupno = StringProperty("Ukupno potroseno: 0 RSD")
+    dugme_tekst = StringProperty("Sacuvaj unos")
+    izmena_id = None
 
     def on_pre_enter(self, *args):
         self.ucitaj_gorivo()
@@ -1005,7 +1038,16 @@ class GorivoScreen(Screen):
         kontejner.clear_widgets()
 
         ukupno = sum(s.get("cena", 0) for s in GORIVO.stavke)
-        self.tekst_ukupno = f"Ukupno potroseno: {ukupno:.0f} RSD"
+        ukupno_benzin = sum(
+            s.get("cena", 0) for s in GORIVO.stavke if s.get("tip") == "Benzin"
+        )
+        ukupno_tng = sum(
+            s.get("cena", 0) for s in GORIVO.stavke if s.get("tip") == "TNG"
+        )
+        self.tekst_ukupno = (
+            f"Ukupno: {ukupno:.0f} RSD\n"
+            f"Benzin: {ukupno_benzin:.0f} RSD   |   TNG: {ukupno_tng:.0f} RSD"
+        )
 
         if not GORIVO.stavke:
             kontejner.add_widget(Label(
@@ -1023,8 +1065,9 @@ class GorivoScreen(Screen):
         from kivy.metrics import dp
 
         napomena = s.get("napomena") or "-"
+        tip = s.get("tip", "Benzin")
         opis = (
-            f"[b]{s.get('datum', '-')}[/b]  |  {s.get('litara', 0):g} l\n"
+            f"[b]{s.get('datum', '-')}[/b]  |  {tip}  |  {s.get('litara', 0):g} l\n"
             f"{napomena}\n"
             f"[color=6b3d0d][b]{s.get('cena', 0):.0f} RSD[/b][/color]"
         )
@@ -1033,7 +1076,7 @@ class GorivoScreen(Screen):
             size_hint_y=None,
             height=dp(84),
             padding=dp(12),
-            spacing=dp(8),
+            spacing=dp(6),
             tint=(1, 0.95, 0.90, 0.92),
         )
         red.add_widget(Label(
@@ -1041,16 +1084,38 @@ class GorivoScreen(Screen):
             text_size=(None, None),
             color=(0.20, 0.14, 0.06, 1),
         ))
+        izmeni_dugme = Factory.RoundButton(
+            label_text="Izmeni",
+            tint=(0.80, 0.87, 1, 1),
+            text_color=(0.10, 0.14, 0.30, 1),
+            size_hint_x=None,
+            width=dp(76),
+        )
+        izmeni_dugme.bind(on_release=lambda inst, sid=s["id"]: self._izmeni(sid))
+        red.add_widget(izmeni_dugme)
         obrisi_dugme = Factory.RoundButton(
             label_text="Obrisi",
             tint=(0.96, 0.78, 0.80, 1),
             text_color=(0.35, 0.05, 0.08, 1),
             size_hint_x=None,
-            width=dp(84),
+            width=dp(76),
         )
         obrisi_dugme.bind(on_release=lambda inst, sid=s["id"]: self._obrisi(sid))
         red.add_widget(obrisi_dugme)
         return red
+
+    def _izmeni(self, stavka_id):
+        s = GORIVO.nadji(stavka_id)
+        if not s:
+            return
+        self.izmena_id = stavka_id
+        self.ids.input_litara.text = f"{s.get('litara', 0):g}"
+        self.ids.input_cena_goriva.text = f"{s.get('cena', 0):g}"
+        self.ids.input_napomena_gorivo.text = s.get("napomena") or ""
+        tip = s.get("tip", "Benzin")
+        if tip in self.ids.spinner_tip_goriva.values:
+            self.ids.spinner_tip_goriva.text = tip
+        self.dugme_tekst = "Sacuvaj izmenu"
 
     def sacuvaj_gorivo(self):
         try:
@@ -1061,22 +1126,36 @@ class GorivoScreen(Screen):
             return
 
         app = App.get_running_app()
-        GORIVO.dodaj(app.user_data_dir, {
+        stavka = {
             "datum": datetime.now().strftime("%Y-%m-%d"),
+            "tip": self.ids.spinner_tip_goriva.text,
             "litara": litara,
             "cena": cena,
             "napomena": self.ids.input_napomena_gorivo.text.strip(),
-        })
+        }
+
+        if self.izmena_id is not None:
+            GORIVO.azuriraj(app.user_data_dir, self.izmena_id, stavka)
+            self.izmena_id = None
+            self.dugme_tekst = "Sacuvaj unos"
+            self._poruka("Izmena sacuvana.")
+        else:
+            GORIVO.dodaj(app.user_data_dir, stavka)
+            self._poruka("Unos sacuvan.")
 
         self.ids.input_litara.text = ""
         self.ids.input_cena_goriva.text = ""
         self.ids.input_napomena_gorivo.text = ""
+        self.ids.spinner_tip_goriva.text = "Benzin"
 
         self.ucitaj_gorivo()
 
     def _obrisi(self, stavka_id):
         app = App.get_running_app()
         GORIVO.obrisi(app.user_data_dir, stavka_id)
+        if self.izmena_id == stavka_id:
+            self.izmena_id = None
+            self.dugme_tekst = "Sacuvaj unos"
         self.ucitaj_gorivo()
 
     def _poruka(self, tekst):
@@ -1090,6 +1169,8 @@ class GorivoScreen(Screen):
 
 class ServisScreen(Screen):
     tekst_ukupno = StringProperty("Ukupno na servisima: 0 RSD")
+    dugme_tekst = StringProperty("Sacuvaj servis")
+    izmena_id = None
 
     def on_pre_enter(self, *args):
         self.ucitaj_servis()
@@ -1129,7 +1210,7 @@ class ServisScreen(Screen):
             size_hint_y=None,
             height=dp(84),
             padding=dp(12),
-            spacing=dp(8),
+            spacing=dp(6),
             tint=(0.93, 0.90, 1, 0.92),
         )
         red.add_widget(Label(
@@ -1137,16 +1218,37 @@ class ServisScreen(Screen):
             text_size=(None, None),
             color=(0.16, 0.12, 0.24, 1),
         ))
+        izmeni_dugme = Factory.RoundButton(
+            label_text="Izmeni",
+            tint=(0.80, 0.87, 1, 1),
+            text_color=(0.10, 0.14, 0.30, 1),
+            size_hint_x=None,
+            width=dp(76),
+        )
+        izmeni_dugme.bind(on_release=lambda inst, sid=s["id"]: self._izmeni(sid))
+        red.add_widget(izmeni_dugme)
         obrisi_dugme = Factory.RoundButton(
             label_text="Obrisi",
             tint=(0.96, 0.78, 0.80, 1),
             text_color=(0.35, 0.05, 0.08, 1),
             size_hint_x=None,
-            width=dp(84),
+            width=dp(76),
         )
         obrisi_dugme.bind(on_release=lambda inst, sid=s["id"]: self._obrisi(sid))
         red.add_widget(obrisi_dugme)
         return red
+
+    def _izmeni(self, stavka_id):
+        s = SERVIS.nadji(stavka_id)
+        if not s:
+            return
+        self.izmena_id = stavka_id
+        self.ids.input_vrsta.text = s.get("vrsta") or ""
+        self.ids.input_cena_servisa.text = f"{s.get('cena', 0):g}"
+        km = s.get("km")
+        self.ids.input_km_servis.text = f"{km:g}" if km else ""
+        self.ids.input_napomena_servis.text = s.get("napomena") or ""
+        self.dugme_tekst = "Sacuvaj izmenu"
 
     def sacuvaj_servis(self):
         vrsta = self.ids.input_vrsta.text.strip()
@@ -1169,13 +1271,22 @@ class ServisScreen(Screen):
                 return
 
         app = App.get_running_app()
-        SERVIS.dodaj(app.user_data_dir, {
+        stavka = {
             "datum": datetime.now().strftime("%Y-%m-%d"),
             "vrsta": vrsta,
             "cena": cena,
             "km": km,
             "napomena": self.ids.input_napomena_servis.text.strip(),
-        })
+        }
+
+        if self.izmena_id is not None:
+            SERVIS.azuriraj(app.user_data_dir, self.izmena_id, stavka)
+            self.izmena_id = None
+            self.dugme_tekst = "Sacuvaj servis"
+            self._poruka("Izmena sacuvana.")
+        else:
+            SERVIS.dodaj(app.user_data_dir, stavka)
+            self._poruka("Servis sacuvan.")
 
         self.ids.input_vrsta.text = ""
         self.ids.input_cena_servisa.text = ""
@@ -1187,6 +1298,9 @@ class ServisScreen(Screen):
     def _obrisi(self, stavka_id):
         app = App.get_running_app()
         SERVIS.obrisi(app.user_data_dir, stavka_id)
+        if self.izmena_id == stavka_id:
+            self.izmena_id = None
+            self.dugme_tekst = "Sacuvaj servis"
         self.ucitaj_servis()
 
     def _poruka(self, tekst):
@@ -1200,12 +1314,31 @@ class ServisScreen(Screen):
 
 class KalkulatorScreen(Screen):
     tekst_cene = StringProperty("Unesi kilometrazu da vidis cenu")
+    dugme_tekst = StringProperty("Sacuvaj voznju")
     tarife_lista = list(DEFAULT_TARIFE.keys())
+    editing_id = None
 
     def on_pre_enter(self, *args):
-        if CENE.nocna_aktivna and "spinner_tarifa" in self.ids:
-            self.ids.spinner_tarifa.text = "Nocna (22-07h)"
+        global EDIT_VOZNJA
+        if EDIT_VOZNJA is not None:
+            v = EDIT_VOZNJA
+            self.editing_id = v.get("id")
+            self.ids.input_km.text = f"{v.get('km', 0):g}"
+            self.ids.input_od.text = v.get("od_adresa") or ""
+            self.ids.input_do.text = v.get("do_adresa") or ""
+            self.ids.input_napomena.text = v.get("napomena") or ""
+            tarifa = v.get("tarifa_naziv")
+            if tarifa in self.tarife_lista and "spinner_tarifa" in self.ids:
+                self.ids.spinner_tarifa.text = tarifa
+            self.dugme_tekst = "Sacuvaj izmenu"
             self.izracunaj()
+            EDIT_VOZNJA = None
+        else:
+            self.editing_id = None
+            self.dugme_tekst = "Sacuvaj voznju"
+            if CENE.nocna_aktivna and "spinner_tarifa" in self.ids:
+                self.ids.spinner_tarifa.text = "Nocna (22-07h)"
+                self.izracunaj()
 
     def izracunaj(self):
         try:
@@ -1235,6 +1368,9 @@ class KalkulatorScreen(Screen):
         cena_po_km = CENE.tarife.get(tarifa_naziv, CENE.tarife["Osnovna (07-22h)"])
         ukupno = CENE.start_fee + km * cena_po_km
 
+        if self.editing_id is not None:
+            db.obrisi_voznju(self.editing_id)
+
         db.dodaj_voznju(
             od_adresa=self.ids.input_od.text.strip(),
             do_adresa=self.ids.input_do.text.strip(),
@@ -1246,6 +1382,10 @@ class KalkulatorScreen(Screen):
             napomena=self.ids.input_napomena.text.strip(),
         )
 
+        bila_izmena = self.editing_id is not None
+        self.editing_id = None
+        self.dugme_tekst = "Sacuvaj voznju"
+
         # reset forme
         self.ids.input_km.text = ""
         self.ids.input_od.text = ""
@@ -1253,7 +1393,10 @@ class KalkulatorScreen(Screen):
         self.ids.input_napomena.text = ""
         self.tekst_cene = "Unesi kilometrazu da vidis cenu"
 
-        self._poruka(f"Sacuvano! Cena voznje: {ukupno:.0f} RSD")
+        if bila_izmena:
+            self._poruka(f"Izmena sacuvana! Cena voznje: {ukupno:.0f} RSD")
+        else:
+            self._poruka(f"Sacuvano! Cena voznje: {ukupno:.0f} RSD")
 
     def _poruka(self, tekst):
         popup = Popup(
@@ -1314,11 +1457,25 @@ class EvidencijaScreen(Screen):
             tint=(0.96, 0.78, 0.80, 1),
             text_color=(0.35, 0.05, 0.08, 1),
             size_hint_x=None,
-            width=dp(84),
+            width=dp(76),
         )
         obrisi_dugme.bind(on_release=lambda inst, vid=v["id"]: self._obrisi(vid))
+        izmeni_dugme = Factory.RoundButton(
+            label_text="Izmeni",
+            tint=(0.80, 0.87, 1, 1),
+            text_color=(0.10, 0.14, 0.30, 1),
+            size_hint_x=None,
+            width=dp(76),
+        )
+        izmeni_dugme.bind(on_release=lambda inst, v=v: self._izmeni(v))
+        red.add_widget(izmeni_dugme)
         red.add_widget(obrisi_dugme)
         return red
+
+    def _izmeni(self, v):
+        global EDIT_VOZNJA
+        EDIT_VOZNJA = dict(v)
+        self.manager.current = "kalkulator"
 
     def _obrisi(self, voznja_id):
         db.obrisi_voznju(voznja_id)
