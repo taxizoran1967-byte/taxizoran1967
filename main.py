@@ -149,20 +149,19 @@ ScreenManager:
     height: dp(72)
     spacing: dp(16)
     padding: dp(12)
-    radius: dp(22)
     canvas.before:
         Color:
             rgba: 0, 0, 0, 0.16
         RoundedRectangle:
             pos: self.x, self.y - dp(3)
             size: self.size
-            radius: [root.radius]
+            radius: [dp(22)]
         Color:
             rgba: 0.96, 0.95, 1, 0.90
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [root.radius]
+            radius: [dp(22)]
     BoxLayout:
         size_hint_x: None
         width: dp(48)
