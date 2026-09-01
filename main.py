@@ -5,6 +5,7 @@ Kalkulator cene, evidencija voznji, dnevni/mesecni izvestaj zarade.
 
 import os
 import sys
+import json
 import traceback
 
 from kivy.app import App
@@ -22,15 +23,51 @@ from datetime import datetime
 import database as db
 
 # ========================
-# TARIFE (iste kao u Telegram botu)
+# TARIFE (iste kao u Telegram botu) - podrazumevane vrednosti
+# Stvarne, trenutno vazece cene se cuvaju u cene.json i mogu
+# se menjati direktno u aplikaciji (Podesavanja -> Cene / Tarife).
 # ========================
-TARIFE = {
+DEFAULT_TARIFE = {
     "Osnovna (07-22h)": 80,
     "Nocna (22-07h)": 100,
     "Vikend": 90,
     "Aerodromski transfer": 120,
 }
-START_FEE = 200
+DEFAULT_START_FEE = 200
+
+
+class CenePodesavanja:
+    """Drzi trenutno vazece cene tarifa i start takse, cuva ih u
+    cene.json unutar interne memorije aplikacije."""
+
+    def __init__(self):
+        self.tarife = dict(DEFAULT_TARIFE)
+        self.start_fee = DEFAULT_START_FEE
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "cene.json")
+
+    def ucitaj(self, user_data_dir):
+        putanja = self._putanja(user_data_dir)
+        try:
+            with open(putanja, "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+            ucitane_tarife = podaci.get("tarife", {})
+            for naziv in self.tarife:
+                if naziv in ucitane_tarife:
+                    self.tarife[naziv] = float(ucitane_tarife[naziv])
+            self.start_fee = float(podaci.get("start_fee", DEFAULT_START_FEE))
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        putanja = self._putanja(user_data_dir)
+        podaci = {"tarife": self.tarife, "start_fee": self.start_fee}
+        with open(putanja, "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+
+CENE = CenePodesavanja()
 
 BACKGROUND_IMG = "assets/backgrounds/background.png"
 
@@ -43,6 +80,7 @@ ScreenManager:
     EvidencijaScreen:
     IzvestajScreen:
     PodesavanjaScreen:
+    CenovnikScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
@@ -507,6 +545,83 @@ ScreenManager:
                     tekst: "Poziv / Dispecer"
                     on_release: app.root.current = "poziv"
 
+                MenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: "Cene / Tarife"
+                    on_release: app.root.current = "cene"
+
+# ============================================================
+# CENOVNIK - izmena cena tarifa i start takse
+# ============================================================
+
+<CenovnikScreen>:
+    name: "cene"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Cene / Tarife"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.86, 0.90, 1, 1
+                on_release: root.manager.current = "podesavanja"
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: dp(4)
+
+                FieldLabel:
+                    text: "Start taksa (RSD)"
+
+                PastelTextInput:
+                    id: input_start
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Osnovna (07-22h) - cena po km"
+
+                PastelTextInput:
+                    id: input_osnovna
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Nocna (22-07h) - cena po km"
+
+                PastelTextInput:
+                    id: input_nocna
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Vikend - cena po km"
+
+                PastelTextInput:
+                    id: input_vikend
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Aerodromski transfer - cena po km"
+
+                PastelTextInput:
+                    id: input_aerodromski
+                    input_filter: "float"
+
+                RoundButton:
+                    label_text: "Sacuvaj cene"
+                    tint: 0.70, 0.90, 0.72, 1
+                    text_color: 0.06, 0.28, 0.10, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.sacuvaj_cene()
+
 # ============================================================
 # PLACEHOLDER ("Uskoro")
 # ============================================================
@@ -560,9 +675,48 @@ class PlaceholderScreen(Screen):
     naslov = StringProperty("")
 
 
+class CenovnikScreen(Screen):
+    def on_pre_enter(self, *args):
+        self.ids.input_start.text = f"{CENE.start_fee:g}"
+        self.ids.input_osnovna.text = f"{CENE.tarife['Osnovna (07-22h)']:g}"
+        self.ids.input_nocna.text = f"{CENE.tarife['Nocna (22-07h)']:g}"
+        self.ids.input_vikend.text = f"{CENE.tarife['Vikend']:g}"
+        self.ids.input_aerodromski.text = f"{CENE.tarife['Aerodromski transfer']:g}"
+
+    def sacuvaj_cene(self):
+        try:
+            start = float(self.ids.input_start.text.replace(",", "."))
+            osnovna = float(self.ids.input_osnovna.text.replace(",", "."))
+            nocna = float(self.ids.input_nocna.text.replace(",", "."))
+            vikend = float(self.ids.input_vikend.text.replace(",", "."))
+            aerodromski = float(self.ids.input_aerodromski.text.replace(",", "."))
+        except (ValueError, AttributeError):
+            self._poruka("Unesi ispravne brojeve za sve cene.")
+            return
+
+        CENE.start_fee = start
+        CENE.tarife["Osnovna (07-22h)"] = osnovna
+        CENE.tarife["Nocna (22-07h)"] = nocna
+        CENE.tarife["Vikend"] = vikend
+        CENE.tarife["Aerodromski transfer"] = aerodromski
+
+        app = App.get_running_app()
+        CENE.sacuvaj(app.user_data_dir)
+
+        self._poruka("Cene su sacuvane.")
+
+    def _poruka(self, tekst):
+        popup = Popup(
+            title="Info",
+            content=Label(text=tekst),
+            size_hint=(0.8, 0.3),
+        )
+        popup.open()
+
+
 class KalkulatorScreen(Screen):
     tekst_cene = StringProperty("Unesi kilometrazu da vidis cenu")
-    tarife_lista = list(TARIFE.keys())
+    tarife_lista = list(DEFAULT_TARIFE.keys())
 
     def izracunaj(self):
         try:
@@ -571,11 +725,11 @@ class KalkulatorScreen(Screen):
             self.tekst_cene = "Unesi kilometrazu da vidis cenu"
             return
         tarifa_naziv = self.ids.spinner_tarifa.text
-        cena_po_km = TARIFE.get(tarifa_naziv, TARIFE["Osnovna (07-22h)"])
-        ukupno = START_FEE + km * cena_po_km
+        cena_po_km = CENE.tarife.get(tarifa_naziv, CENE.tarife["Osnovna (07-22h)"])
+        ukupno = CENE.start_fee + km * cena_po_km
         self.tekst_cene = (
             f"Cena: {ukupno:.0f} RSD\n"
-            f"(start {START_FEE} + {km:g} km x {cena_po_km} RSD)"
+            f"(start {CENE.start_fee:.0f} + {km:g} km x {cena_po_km:.0f} RSD)"
         )
 
     def sacuvaj_voznju(self):
@@ -589,8 +743,8 @@ class KalkulatorScreen(Screen):
             return
 
         tarifa_naziv = self.ids.spinner_tarifa.text
-        cena_po_km = TARIFE.get(tarifa_naziv, TARIFE["Osnovna (07-22h)"])
-        ukupno = START_FEE + km * cena_po_km
+        cena_po_km = CENE.tarife.get(tarifa_naziv, CENE.tarife["Osnovna (07-22h)"])
+        ukupno = CENE.start_fee + km * cena_po_km
 
         db.dodaj_voznju(
             od_adresa=self.ids.input_od.text.strip(),
@@ -598,7 +752,7 @@ class KalkulatorScreen(Screen):
             km=km,
             tarifa_naziv=tarifa_naziv,
             cena_po_km=cena_po_km,
-            start_taksa=START_FEE,
+            start_taksa=CENE.start_fee,
             ukupna_cena=ukupno,
             napomena=self.ids.input_napomena.text.strip(),
         )
@@ -761,6 +915,7 @@ class TaksiApp(App):
         self.title = "Taksi App"
         try:
             db.init_db()
+            CENE.ucitaj(self.user_data_dir)
             return Builder.load_string(KV)
         except Exception:
             greska = traceback.format_exc()
