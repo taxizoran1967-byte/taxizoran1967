@@ -1630,12 +1630,16 @@ class GpsVoznjaScreen(Screen):
     def on_pre_enter(self, *args):
         self._tajmer = None
         self._brojac_signala = None
+        self._brojac_poll = None
         self._sekundi_bez_signala = 0
+        self._zadnje_vreme_lok = None
         if AKTIVNA_VOZNJA.aktivna:
             self.voznja_aktivna = True
             self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa or "Adresa nije dostupna"
             self._osvezi_prikaz()
             self._pokreni_tajmer()
+            self._android_gps_start()  # ponovo zakaci listener + omoguci poll
+            self._brojac_poll = Clock.schedule_interval(self._pull_lokaciju, 2)
         else:
             self.voznja_aktivna = False
             self.tekst_polazak = "Nije zapoceta"
@@ -1650,6 +1654,9 @@ class GpsVoznjaScreen(Screen):
         if getattr(self, "_brojac_signala", None):
             self._brojac_signala.cancel()
             self._brojac_signala = None
+        if getattr(self, "_brojac_poll", None):
+            self._brojac_poll.cancel()
+            self._brojac_poll = None
 
     # ---------------- POCETAK VOZNJE ----------------
 
@@ -1722,7 +1729,9 @@ class GpsVoznjaScreen(Screen):
         self.voznja_aktivna = True
         self.tekst_gps_status = "Trazim GPS signal..."
         self._sekundi_bez_signala = 0
+        self._zadnje_vreme_lok = None
         self._brojac_signala = Clock.schedule_interval(self._proveri_signal, 1)
+        self._brojac_poll = Clock.schedule_interval(self._pull_lokaciju, 2)
         AKTIVNA_VOZNJA.aktivna = True
         AKTIVNA_VOZNJA.pocetak_vreme = datetime.now().isoformat()
         AKTIVNA_VOZNJA.pocetak_lat = None
@@ -1734,6 +1743,47 @@ class GpsVoznjaScreen(Screen):
 
         app = App.get_running_app()
         AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+
+    def _pull_lokaciju(self, dt):
+        """Umesto da cekamo da Android sam posalje novu tacku (push,
+        sto se pokazalo nepouzdano - verovatno MIUI blokira stalno
+        slanje u pozadini), aktivno pitamo za trenutnu poslednju
+        poznatu lokaciju na svake 2 sekunde (pull). Isti trik koji je
+        upalio za pocetnu tacku vožnje."""
+        try:
+            from jnius import autoclass
+
+            LocationManager = autoclass("android.location.LocationManager")
+            lm = getattr(self, "_android_lm", None)
+            if lm is None:
+                return
+
+            najbolja = None
+            for provider in (LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER):
+                try:
+                    if lm.isProviderEnabled(provider):
+                        tacka = lm.getLastKnownLocation(provider)
+                        if tacka is not None:
+                            if najbolja is None or tacka.getTime() > najbolja.getTime():
+                                najbolja = tacka
+                except Exception:
+                    pass
+
+            if najbolja is None:
+                return
+
+            vreme = najbolja.getTime()
+            if self._zadnje_vreme_lok is not None and vreme <= self._zadnje_vreme_lok:
+                return  # ista tacka kao pre, nista novo
+
+            self._zadnje_vreme_lok = vreme
+            self._obradi_lokaciju({
+                "lat": najbolja.getLatitude(),
+                "lon": najbolja.getLongitude(),
+                "accuracy": najbolja.getAccuracy(),
+            })
+        except Exception:
+            pass
 
     def _android_gps_start(self):
         """Direktno preko Android sistema trazi lokaciju - i GPS i
@@ -1974,6 +2024,9 @@ class GpsVoznjaScreen(Screen):
         if getattr(self, "_brojac_signala", None):
             self._brojac_signala.cancel()
             self._brojac_signala = None
+        if getattr(self, "_brojac_poll", None):
+            self._brojac_poll.cancel()
+            self._brojac_poll = None
 
         self.voznja_aktivna = False
         self.tekst_gps_status = "Trazim krajnju adresu..."
