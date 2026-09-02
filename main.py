@@ -1589,6 +1589,8 @@ class GpsVoznjaScreen(Screen):
 
     def on_pre_enter(self, *args):
         self._tajmer = None
+        self._brojac_signala = None
+        self._sekundi_bez_signala = 0
         if AKTIVNA_VOZNJA.aktivna:
             self.voznja_aktivna = True
             self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa or "Adresa nije dostupna"
@@ -1605,23 +1607,47 @@ class GpsVoznjaScreen(Screen):
         if self._tajmer:
             self._tajmer.cancel()
             self._tajmer = None
+        if getattr(self, "_brojac_signala", None):
+            self._brojac_signala.cancel()
+            self._brojac_signala = None
 
     # ---------------- POCETAK VOZNJE ----------------
+
+    def _trazi_android_dozvolu(self):
+        """Eksplicitno trazi runtime dozvolu za lokaciju na Androidu.
+        Samo dodavanje dozvole u buildozer.spec nije dovoljno na
+        novijim verzijama Androida - mora da se zatrazi i u kodu."""
+        try:
+            from android.permissions import (
+                request_permissions, check_permission, Permission,
+            )
+            potrebne = [
+                Permission.ACCESS_FINE_LOCATION,
+                Permission.ACCESS_COARSE_LOCATION,
+            ]
+            if not all(check_permission(p) for p in potrebne):
+                request_permissions(potrebne)
+        except Exception:
+            pass  # nije Android (desktop test) ili modul nije dostupan
 
     def pocni_voznju(self):
         if gps is None:
             self.tekst_gps_status = "GPS nije dostupan na ovom uredjaju."
             return
 
+        self._trazi_android_dozvolu()
+
         try:
             gps.configure(on_location=self._on_location, on_status=self._on_status)
-            gps.start(minTime=3000, minDistance=5)
+            gps.start(minTime=1000, minDistance=3)
         except Exception as e:
             self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}"
             return
 
         self.voznja_aktivna = True
         self.tekst_gps_status = "Trazim GPS signal..."
+        self._sekundi_bez_signala = 0
+        self._brojac_signala = Clock.schedule_interval(self._proveri_signal, 1)
         AKTIVNA_VOZNJA.aktivna = True
         AKTIVNA_VOZNJA.pocetak_vreme = datetime.now().isoformat()
         AKTIVNA_VOZNJA.pocetak_lat = None
@@ -1633,6 +1659,25 @@ class GpsVoznjaScreen(Screen):
 
         app = App.get_running_app()
         AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+
+    def _proveri_signal(self, dt):
+        if AKTIVNA_VOZNJA.pocetak_lat is not None:
+            if self._brojac_signala:
+                self._brojac_signala.cancel()
+                self._brojac_signala = None
+            return
+        self._sekundi_bez_signala += 1
+        if self._sekundi_bez_signala == 15:
+            self.tekst_gps_status = (
+                "Jos uvek nema GPS signala. Proveri da li je u "
+                "Podesavanjima telefona (Lokacija) ukljucen rezim "
+                "'Visoka preciznost', i probaj napolju ili pored prozora."
+            )
+        elif self._sekundi_bez_signala > 15 and self._sekundi_bez_signala % 5 == 0:
+            self.tekst_gps_status = (
+                f"Jos uvek tražim signal... ({self._sekundi_bez_signala}s) "
+                "Mozes i da sacekas, ili probaj napolju."
+            )
 
         self.tekst_polazak = "Trazim lokaciju..."
         self._pokreni_tajmer()
@@ -1735,6 +1780,9 @@ class GpsVoznjaScreen(Screen):
         if self._tajmer:
             self._tajmer.cancel()
             self._tajmer = None
+        if getattr(self, "_brojac_signala", None):
+            self._brojac_signala.cancel()
+            self._brojac_signala = None
 
         self.voznja_aktivna = False
         self.tekst_gps_status = "Trazim krajnju adresu..."
