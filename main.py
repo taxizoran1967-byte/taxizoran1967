@@ -23,7 +23,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, BooleanProperty
 from datetime import datetime
 
 import database as db
@@ -325,6 +325,7 @@ ScreenManager:
     tint: (0.80, 0.87, 1, 1)
     text_color: 0.12, 0.14, 0.30, 1
     label_text: ""
+    opacity: 0.4 if self.disabled else 1
     canvas.before:
         Color:
             rgba: root.tint
@@ -1119,8 +1120,8 @@ ScreenManager:
                 RoundButton:
                     id: dugme_zavrsi
                     label_text: "ZAVRSI VOZNJU"
-                    tint: 0.96, 0.78, 0.80, 1
-                    text_color: 0.35, 0.05, 0.08, 1
+                    tint: 0.90, 0.30, 0.34, 1
+                    text_color: 1, 1, 1, 1
                     size_hint_y: None
                     height: dp(56)
                     disabled: not root.voznja_aktivna
@@ -1580,7 +1581,7 @@ class GpsVoznjaScreen(Screen):
     tekst_trajanje = StringProperty("Trajanje: 00:00:00")
     tekst_cena = StringProperty("Cena: 0 RSD")
     tekst_gps_status = StringProperty("")
-    voznja_aktivna = False
+    voznja_aktivna = BooleanProperty(False)
 
     MIN_TACNOST_M = 50       # ignorisi GPS tacke losije preciznosti od ovoga (metri)
     MIN_POMERAJ_KM = 0.01    # ignorisi mikro-skokove manje od 10m (GPS sum)
