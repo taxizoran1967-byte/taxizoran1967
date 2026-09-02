@@ -1866,15 +1866,13 @@ class GpsVoznjaScreen(Screen):
         if lat is None or lon is None:
             return
 
-        # ignorisi tacke lose preciznosti
-        if tacnost and tacnost > self.MIN_TACNOST_M:
-            self.tekst_gps_status = f"Slab GPS signal (+/-{tacnost:.0f}m), cekam bolji..."
-            return
-
         app = App.get_running_app()
 
         if AKTIVNA_VOZNJA.pocetak_lat is None:
-            # ovo je prva validna tacka - pocetak voznje
+            # ovo je prva validna tacka - pocetak voznje.
+            # Ne filtriramo je po preciznosti (kesirane/mrezne lokacije
+            # su cesto manje precizne od 50m, ali su i dalje mnogo
+            # bolje nego nista za pocetnu adresu i orijentaciju).
             AKTIVNA_VOZNJA.pocetak_lat = lat
             AKTIVNA_VOZNJA.pocetak_lon = lon
             AKTIVNA_VOZNJA.zadnja_lat = lat
@@ -1882,6 +1880,12 @@ class GpsVoznjaScreen(Screen):
             AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
             self.tekst_gps_status = "GPS aktivan, pratim voznju."
             reverse_geocode(lat, lon, self._postavi_pocetnu_adresu)
+            return
+
+        # od druge tacke nadalje, filtriramo lose precizne skokove
+        # (bitno za tacnost kilometraze tokom stvarne voznje)
+        if tacnost and tacnost > self.MIN_TACNOST_M:
+            self.tekst_gps_status = f"Slab GPS signal (+/-{tacnost:.0f}m), cekam bolji..."
             return
 
         # racunaj pomeraj od poslednje tacke
