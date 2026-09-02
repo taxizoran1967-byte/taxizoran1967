@@ -1613,10 +1613,39 @@ class GpsVoznjaScreen(Screen):
 
     # ---------------- POCETAK VOZNJE ----------------
 
-    def _trazi_android_dozvolu(self):
-        """Eksplicitno trazi runtime dozvolu za lokaciju na Androidu.
-        Samo dodavanje dozvole u buildozer.spec nije dovoljno na
-        novijim verzijama Androida - mora da se zatrazi i u kodu."""
+    def _dijagnostika_lokacije(self):
+        """Vraca tekst sa stvarnim stanjem dozvola i GPS-a na uredjaju,
+        da se tacno vidi gde je problem umesto nagadjanja."""
+        redovi = []
+        try:
+            from android.permissions import check_permission, Permission
+            fine = check_permission(Permission.ACCESS_FINE_LOCATION)
+            coarse = check_permission(Permission.ACCESS_COARSE_LOCATION)
+            redovi.append(f"Dozvola FINE_LOCATION: {'DA' if fine else 'NE'}")
+            redovi.append(f"Dozvola COARSE_LOCATION: {'DA' if coarse else 'NE'}")
+        except Exception as e:
+            redovi.append(f"Ne mogu da proverim dozvole: {e}")
+
+        try:
+            from jnius import autoclass
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            Context = autoclass("android.content.Context")
+            activity = PythonActivity.mActivity
+            lm = activity.getSystemService(Context.LOCATION_SERVICE)
+            gps_on = lm.isProviderEnabled("gps")
+            mreza_on = lm.isProviderEnabled("network")
+            redovi.append(f"GPS provajder ukljucen: {'DA' if gps_on else 'NE'}")
+            redovi.append(f"Mrezni provajder ukljucen: {'DA' if mreza_on else 'NE'}")
+        except Exception as e:
+            redovi.append(f"Ne mogu da proverim GPS status: {e}")
+
+        return "\n".join(redovi)
+
+    def pocni_voznju(self):
+        if gps is None:
+            self.tekst_gps_status = "GPS nije dostupan na ovom uredjaju."
+            return
+
         try:
             from android.permissions import (
                 request_permissions, check_permission, Permission,
@@ -1626,26 +1655,37 @@ class GpsVoznjaScreen(Screen):
                 Permission.ACCESS_COARSE_LOCATION,
             ]
             if not all(check_permission(p) for p in potrebne):
-                request_permissions(potrebne)
+                self.tekst_gps_status = "Trazim dozvolu za lokaciju..."
+
+                def na_odgovor(dozvole, rezultati):
+                    if all(rezultati):
+                        Clock.schedule_once(lambda dt: self._stvarno_pokreni_gps())
+                    else:
+                        self.tekst_gps_status = (
+                            "Dozvola za lokaciju NIJE odobrena. Idi u "
+                            "Podesavanja telefona -> Aplikacije -> Taksi App "
+                            "-> Dozvole -> Lokacija -> Dozvoli."
+                        )
+
+                request_permissions(potrebne, na_odgovor)
+                return
         except Exception:
             pass  # nije Android (desktop test) ili modul nije dostupan
 
-    def pocni_voznju(self):
-        if gps is None:
-            self.tekst_gps_status = "GPS nije dostupan na ovom uredjaju."
-            return
+        self._stvarno_pokreni_gps()
 
-        self._trazi_android_dozvolu()
+    def _stvarno_pokreni_gps(self):
+        dijagnoza = self._dijagnostika_lokacije()
 
         try:
             gps.configure(on_location=self._on_location, on_status=self._on_status)
             gps.start(minTime=1000, minDistance=3)
         except Exception as e:
-            self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}"
+            self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}\n\n{dijagnoza}"
             return
 
         self.voznja_aktivna = True
-        self.tekst_gps_status = "Trazim GPS signal..."
+        self.tekst_gps_status = f"Trazim GPS signal...\n\n{dijagnoza}"
         self._sekundi_bez_signala = 0
         self._brojac_signala = Clock.schedule_interval(self._proveri_signal, 1)
         AKTIVNA_VOZNJA.aktivna = True
