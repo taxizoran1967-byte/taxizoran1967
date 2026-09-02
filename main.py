@@ -1716,9 +1716,11 @@ class GpsVoznjaScreen(Screen):
             LocationManager = autoclass("android.location.LocationManager")
             PythonActivity = autoclass("org.kivy.android.PythonActivity")
             Context = autoclass("android.content.Context")
+            Looper = autoclass("android.os.Looper")
 
             activity = PythonActivity.mActivity
             lm = activity.getSystemService(Context.LOCATION_SERVICE)
+            glavni_looper = Looper.getMainLooper()
 
             ekran = self
 
@@ -1751,13 +1753,19 @@ class GpsVoznjaScreen(Screen):
             self._android_lm = lm
 
             pokrenut_bar_jedan = False
+            greske = []
             for provider in (LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER):
                 try:
                     if lm.isProviderEnabled(provider):
-                        lm.requestLocationUpdates(provider, 1000, 3.0, listener)
+                        lm.requestLocationUpdates(
+                            provider, 1000, 3.0, listener, glavni_looper
+                        )
                         pokrenut_bar_jedan = True
-                except Exception:
-                    pass
+                except Exception as pe:
+                    greske.append(f"{provider}: {pe}")
+
+            if not pokrenut_bar_jedan and greske:
+                self.tekst_dijagnoza += "\n" + "\n".join(greske)
 
             return pokrenut_bar_jedan
         except Exception as e:
