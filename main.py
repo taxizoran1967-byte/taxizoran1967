@@ -1103,9 +1103,18 @@ ScreenManager:
                 Label:
                     text: root.tekst_gps_status
                     size_hint_y: None
-                    height: dp(30)
+                    height: self.texture_size[1] + dp(10)
                     font_size: '13sp'
                     color: 0.85, 0.85, 0.95, 1
+                    text_size: self.width, None
+
+                Label:
+                    text: root.tekst_dijagnoza
+                    size_hint_y: None
+                    height: self.texture_size[1] + dp(10)
+                    font_size: '12sp'
+                    color: 0.65, 0.85, 1, 1
+                    text_size: self.width, None
 
                 RoundButton:
                     id: dugme_start
@@ -1581,6 +1590,7 @@ class GpsVoznjaScreen(Screen):
     tekst_trajanje = StringProperty("Trajanje: 00:00:00")
     tekst_cena = StringProperty("Cena: 0 RSD")
     tekst_gps_status = StringProperty("")
+    tekst_dijagnoza = StringProperty("")
     voznja_aktivna = BooleanProperty(False)
 
     MIN_TACNOST_M = 50       # ignorisi GPS tacke losije preciznosti od ovoga (metri)
@@ -1642,10 +1652,6 @@ class GpsVoznjaScreen(Screen):
         return "\n".join(redovi)
 
     def pocni_voznju(self):
-        if gps is None:
-            self.tekst_gps_status = "GPS nije dostupan na ovom uredjaju."
-            return
-
         try:
             from android.permissions import (
                 request_permissions, check_permission, Permission,
@@ -1676,16 +1682,15 @@ class GpsVoznjaScreen(Screen):
 
     def _stvarno_pokreni_gps(self):
         dijagnoza = self._dijagnostika_lokacije()
+        self.tekst_dijagnoza = dijagnoza
 
-        try:
-            gps.configure(on_location=self._on_location, on_status=self._on_status)
-            gps.start(minTime=1000, minDistance=3)
-        except Exception as e:
-            self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}\n\n{dijagnoza}"
+        pokrenuto = self._android_gps_start()
+        if not pokrenuto:
+            self.tekst_gps_status = "Greska pri pokretanju GPS-a."
             return
 
         self.voznja_aktivna = True
-        self.tekst_gps_status = f"Trazim GPS signal...\n\n{dijagnoza}"
+        self.tekst_gps_status = "Trazim GPS signal..."
         self._sekundi_bez_signala = 0
         self._brojac_signala = Clock.schedule_interval(self._proveri_signal, 1)
         AKTIVNA_VOZNJA.aktivna = True
@@ -1699,6 +1704,74 @@ class GpsVoznjaScreen(Screen):
 
         app = App.get_running_app()
         AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+
+    def _android_gps_start(self):
+        """Direktno preko Android sistema trazi lokaciju - i GPS i
+        mrezni provajder istovremeno (sta god prvo javi signal), jer
+        plyer sam po sebi koristi samo GPS provajder sto se pokazalo
+        nepouzdano na nekim uredjajima/podesavanjima."""
+        try:
+            from jnius import autoclass, PythonJavaClass, java_method
+
+            LocationManager = autoclass("android.location.LocationManager")
+            PythonActivity = autoclass("org.kivy.android.PythonActivity")
+            Context = autoclass("android.content.Context")
+
+            activity = PythonActivity.mActivity
+            lm = activity.getSystemService(Context.LOCATION_SERVICE)
+
+            ekran = self
+
+            class _Listener(PythonJavaClass):
+                __javainterfaces__ = ["android/location/LocationListener"]
+                __javacontext__ = "app"
+
+                @java_method("(Landroid/location/Location;)V")
+                def onLocationChanged(self, location):
+                    Clock.schedule_once(lambda dt: ekran._obradi_lokaciju({
+                        "lat": location.getLatitude(),
+                        "lon": location.getLongitude(),
+                        "accuracy": location.getAccuracy(),
+                    }))
+
+                @java_method("(Ljava/lang/String;)V")
+                def onProviderEnabled(self, provider):
+                    pass
+
+                @java_method("(Ljava/lang/String;)V")
+                def onProviderDisabled(self, provider):
+                    pass
+
+                @java_method("(Ljava/lang/String;ILandroid/os/Bundle;)V")
+                def onStatusChanged(self, provider, status, extras):
+                    pass
+
+            listener = _Listener()
+            self._android_listener = listener
+            self._android_lm = lm
+
+            pokrenut_bar_jedan = False
+            for provider in (LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER):
+                try:
+                    if lm.isProviderEnabled(provider):
+                        lm.requestLocationUpdates(provider, 1000, 3.0, listener)
+                        pokrenut_bar_jedan = True
+                except Exception:
+                    pass
+
+            return pokrenut_bar_jedan
+        except Exception as e:
+            self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}"
+            return False
+
+    def _android_gps_stop(self):
+        try:
+            lm = getattr(self, "_android_lm", None)
+            listener = getattr(self, "_android_listener", None)
+            if lm is not None and listener is not None:
+                lm.removeUpdates(listener)
+        except Exception:
+            pass
 
     def _proveri_signal(self, dt):
         if AKTIVNA_VOZNJA.pocetak_lat is not None:
@@ -1723,12 +1796,6 @@ class GpsVoznjaScreen(Screen):
         self._pokreni_tajmer()
 
     # ---------------- TOKOM VOZNJE ----------------
-
-    def _on_status(self, stype, status):
-        Clock.schedule_once(lambda dt: setattr(self, "tekst_gps_status", f"GPS: {status}"))
-
-    def _on_location(self, **kwargs):
-        Clock.schedule_once(lambda dt: self._obradi_lokaciju(kwargs))
 
     def _obradi_lokaciju(self, podaci):
         lat = podaci.get("lat")
@@ -1811,11 +1878,7 @@ class GpsVoznjaScreen(Screen):
         if not AKTIVNA_VOZNJA.aktivna:
             return
 
-        try:
-            if gps is not None:
-                gps.stop()
-        except Exception:
-            pass
+        self._android_gps_stop()
 
         if self._tajmer:
             self._tajmer.cancel()
