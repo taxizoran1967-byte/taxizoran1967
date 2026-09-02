@@ -240,6 +240,65 @@ class AktivnaVoznjaState:
 AKTIVNA_VOZNJA = AktivnaVoznjaState()
 
 
+def napravi_red_liste(opis_markup, tint, boja_teksta, dugmad):
+    """Pravi jedan red u listi (vožnja/gorivo/servis) sa tekstom koji
+    se PRAVILNO prelama u svom prostoru (ne prelazi preko dugmadi) i
+    karticom koja se sama proširi po visini ako je tekst duzi.
+
+    dugmad: lista (label_text, tint, text_color, callback) torki.
+    """
+    from kivy.factory import Factory
+    from kivy.metrics import dp
+    from kivy.uix.boxlayout import BoxLayout as _BoxLayout
+
+    red = Factory.PastelCard(
+        orientation="horizontal",
+        size_hint_y=None,
+        padding=dp(12),
+        spacing=dp(10),
+        tint=tint,
+    )
+
+    labela = Label(
+        text=opis_markup,
+        markup=True,
+        halign="left",
+        valign="top",
+        color=boja_teksta,
+        size_hint_x=1,
+        size_hint_y=None,
+    )
+
+    def _osvezi_velicinu(*_a):
+        labela.text_size = (labela.width, None)
+        labela.height = labela.texture_size[1]
+        red.height = max(labela.height + dp(24), dp(64))
+
+    labela.bind(width=_osvezi_velicinu, texture_size=_osvezi_velicinu)
+    red.add_widget(labela)
+
+    dugmad_kolona = _BoxLayout(
+        orientation="vertical",
+        size_hint_x=None,
+        width=dp(84),
+        spacing=dp(6),
+    )
+    for label_text, dtint, dtext_color, callback in dugmad:
+        dugme = Factory.RoundButton(
+            label_text=label_text,
+            tint=dtint,
+            text_color=dtext_color,
+            size_hint_y=None,
+            height=dp(38),
+        )
+        dugme.bind(on_release=callback)
+        dugmad_kolona.add_widget(dugme)
+
+    red.add_widget(dugmad_kolona)
+    return red
+
+
+
 BACKGROUND_IMG = "assets/backgrounds/background.png"
 
 KV = """
@@ -1363,48 +1422,25 @@ class GorivoScreen(Screen):
             kontejner.add_widget(self._napravi_red(s))
 
     def _napravi_red(self, s):
-        from kivy.factory import Factory
-        from kivy.metrics import dp
-
         napomena = s.get("napomena") or "-"
         tip = s.get("tip", "Benzin")
         opis = (
-            f"[b]{s.get('datum', '-')}[/b]  |  {tip}  |  {s.get('litara', 0):g} l\n"
+            f"[b]{s.get('datum', '-')}[/b]\n"
+            f"{tip}  |  {s.get('litara', 0):g} l\n"
             f"{napomena}\n"
             f"[color=6b3d0d][b]{s.get('cena', 0):.0f} RSD[/b][/color]"
         )
-        red = Factory.PastelCard(
-            orientation="horizontal",
-            size_hint_y=None,
-            height=dp(84),
-            padding=dp(12),
-            spacing=dp(6),
+        return napravi_red_liste(
+            opis,
             tint=(1, 0.95, 0.90, 0.92),
+            boja_teksta=(0.20, 0.14, 0.06, 1),
+            dugmad=[
+                ("Izmeni", (0.80, 0.87, 1, 1), (0.10, 0.14, 0.30, 1),
+                 lambda inst, sid=s["id"]: self._izmeni(sid)),
+                ("Obrisi", (0.96, 0.78, 0.80, 1), (0.35, 0.05, 0.08, 1),
+                 lambda inst, sid=s["id"]: self._obrisi(sid)),
+            ],
         )
-        red.add_widget(Label(
-            text=opis, markup=True, halign="left", valign="middle",
-            text_size=(None, None),
-            color=(0.20, 0.14, 0.06, 1),
-        ))
-        izmeni_dugme = Factory.RoundButton(
-            label_text="Izmeni",
-            tint=(0.80, 0.87, 1, 1),
-            text_color=(0.10, 0.14, 0.30, 1),
-            size_hint_x=None,
-            width=dp(76),
-        )
-        izmeni_dugme.bind(on_release=lambda inst, sid=s["id"]: self._izmeni(sid))
-        red.add_widget(izmeni_dugme)
-        obrisi_dugme = Factory.RoundButton(
-            label_text="Obrisi",
-            tint=(0.96, 0.78, 0.80, 1),
-            text_color=(0.35, 0.05, 0.08, 1),
-            size_hint_x=None,
-            width=dp(76),
-        )
-        obrisi_dugme.bind(on_release=lambda inst, sid=s["id"]: self._obrisi(sid))
-        red.add_widget(obrisi_dugme)
-        return red
 
     def _izmeni(self, stavka_id):
         s = GORIVO.nadji(stavka_id)
@@ -1496,49 +1532,26 @@ class ServisScreen(Screen):
             kontejner.add_widget(self._napravi_red(s))
 
     def _napravi_red(self, s):
-        from kivy.factory import Factory
-        from kivy.metrics import dp
-
         km = s.get("km")
         km_deo = f"  |  {km:g} km" if km else ""
         napomena = s.get("napomena") or "-"
         opis = (
-            f"[b]{s.get('datum', '-')}[/b]  |  {s.get('vrsta', '-')}{km_deo}\n"
+            f"[b]{s.get('datum', '-')}[/b]\n"
+            f"{s.get('vrsta', '-')}{km_deo}\n"
             f"{napomena}\n"
             f"[color=3a2570][b]{s.get('cena', 0):.0f} RSD[/b][/color]"
         )
-        red = Factory.PastelCard(
-            orientation="horizontal",
-            size_hint_y=None,
-            height=dp(84),
-            padding=dp(12),
-            spacing=dp(6),
+        return napravi_red_liste(
+            opis,
             tint=(0.93, 0.90, 1, 0.92),
+            boja_teksta=(0.16, 0.12, 0.24, 1),
+            dugmad=[
+                ("Izmeni", (0.80, 0.87, 1, 1), (0.10, 0.14, 0.30, 1),
+                 lambda inst, sid=s["id"]: self._izmeni(sid)),
+                ("Obrisi", (0.96, 0.78, 0.80, 1), (0.35, 0.05, 0.08, 1),
+                 lambda inst, sid=s["id"]: self._obrisi(sid)),
+            ],
         )
-        red.add_widget(Label(
-            text=opis, markup=True, halign="left", valign="middle",
-            text_size=(None, None),
-            color=(0.16, 0.12, 0.24, 1),
-        ))
-        izmeni_dugme = Factory.RoundButton(
-            label_text="Izmeni",
-            tint=(0.80, 0.87, 1, 1),
-            text_color=(0.10, 0.14, 0.30, 1),
-            size_hint_x=None,
-            width=dp(76),
-        )
-        izmeni_dugme.bind(on_release=lambda inst, sid=s["id"]: self._izmeni(sid))
-        red.add_widget(izmeni_dugme)
-        obrisi_dugme = Factory.RoundButton(
-            label_text="Obrisi",
-            tint=(0.96, 0.78, 0.80, 1),
-            text_color=(0.35, 0.05, 0.08, 1),
-            size_hint_x=None,
-            width=dp(76),
-        )
-        obrisi_dugme.bind(on_release=lambda inst, sid=s["id"]: self._obrisi(sid))
-        red.add_widget(obrisi_dugme)
-        return red
 
     def _izmeni(self, stavka_id):
         s = SERVIS.nadji(stavka_id)
@@ -2257,48 +2270,25 @@ class EvidencijaScreen(Screen):
             kontejner.add_widget(red)
 
     def _napravi_red(self, v):
-        from kivy.factory import Factory
-        from kivy.metrics import dp
-
         od = v["od_adresa"] or "-"
         do = v["do_adresa"] or "-"
         opis = (
-            f"[b]{v['datum']} {v['vreme']}[/b]  |  {v['km']:g} km  |  "
-            f"{v['tarifa_naziv']}\n{od} -> {do}\n"
+            f"[b]{v['datum']} {v['vreme']}[/b]\n"
+            f"{v['km']:g} km  |  {v['tarifa_naziv']}\n"
+            f"{od}\n-> {do}\n"
             f"[color=0d6b1f][b]{v['ukupna_cena']:.0f} RSD[/b][/color]"
         )
-        red = Factory.PastelCard(
-            orientation="horizontal",
-            size_hint_y=None,
-            height=dp(84),
-            padding=dp(12),
-            spacing=dp(8),
+        return napravi_red_liste(
+            opis,
             tint=(0.96, 0.95, 1, 0.92),
+            boja_teksta=(0.14, 0.14, 0.24, 1),
+            dugmad=[
+                ("Izmeni", (0.80, 0.87, 1, 1), (0.10, 0.14, 0.30, 1),
+                 lambda inst, v=v: self._izmeni(v)),
+                ("Obrisi", (0.96, 0.78, 0.80, 1), (0.35, 0.05, 0.08, 1),
+                 lambda inst, vid=v["id"]: self._obrisi(vid)),
+            ],
         )
-        red.add_widget(Label(
-            text=opis, markup=True, halign="left", valign="middle",
-            text_size=(None, None),
-            color=(0.14, 0.14, 0.24, 1),
-        ))
-        obrisi_dugme = Factory.RoundButton(
-            label_text="Obrisi",
-            tint=(0.96, 0.78, 0.80, 1),
-            text_color=(0.35, 0.05, 0.08, 1),
-            size_hint_x=None,
-            width=dp(76),
-        )
-        obrisi_dugme.bind(on_release=lambda inst, vid=v["id"]: self._obrisi(vid))
-        izmeni_dugme = Factory.RoundButton(
-            label_text="Izmeni",
-            tint=(0.80, 0.87, 1, 1),
-            text_color=(0.10, 0.14, 0.30, 1),
-            size_hint_x=None,
-            width=dp(76),
-        )
-        izmeni_dugme.bind(on_release=lambda inst, v=v: self._izmeni(v))
-        red.add_widget(izmeni_dugme)
-        red.add_widget(obrisi_dugme)
-        return red
 
     def _izmeni(self, v):
         global EDIT_VOZNJA
