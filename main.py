@@ -1894,14 +1894,16 @@ class GpsVoznjaScreen(Screen):
         self._sekundi_bez_signala += 1
         if self._sekundi_bez_signala == 15:
             self.tekst_gps_status = (
-                "Jos uvek nema GPS signala. Proveri da li je u "
-                "Podesavanjima telefona (Lokacija) ukljucen rezim "
-                "'Visoka preciznost', i probaj napolju ili pored prozora."
+                "Jos uvek nema GPS signala. NAJBRZE RESENJE: upisi "
+                "adresu ispod i klikni 'Postavi polazak rucno' - "
+                "voznja ce odmah krenuti, a GPS nastavlja da pokusava "
+                "u pozadini."
             )
-        elif self._sekundi_bez_signala > 15 and self._sekundi_bez_signala % 5 == 0:
+        elif self._sekundi_bez_signala > 15 and self._sekundi_bez_signala % 10 == 0:
             self.tekst_gps_status = (
                 f"Jos uvek tražim signal... ({self._sekundi_bez_signala}s) "
-                "Mozes i da sacekas, ili probaj napolju."
+                "Preporuka: koristi 'Postavi polazak rucno' ispod, "
+                "ne mora da se ceka."
             )
 
         self.tekst_polazak = "Trazim lokaciju..."
