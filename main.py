@@ -1067,6 +1067,21 @@ ScreenManager:
                         valign: "top"
                         text_size: self.width, None
 
+                FieldLabel:
+                    text: "Adresa polaska (rucno, ako GPS ne nadje)"
+
+                PastelTextInput:
+                    id: input_polazak_rucno
+                    hint_text: "npr. Nemanjina 4, Beograd"
+
+                RoundButton:
+                    label_text: "Postavi polazak rucno"
+                    tint: 0.80, 0.87, 1, 1
+                    text_color: 0.10, 0.14, 0.30, 1
+                    size_hint_y: None
+                    height: dp(48)
+                    on_release: root.postavi_polazak_rucno()
+
                 PastelCard:
                     tint: 0.87, 0.97, 0.88, 0.95
                     size_hint_y: None
@@ -1126,6 +1141,21 @@ ScreenManager:
                     disabled: root.voznja_aktivna
                     on_release: root.pocni_voznju()
 
+                FieldLabel:
+                    text: "Ako GPS ne uhvati kilometrazu, unesi je rucno pre kraja:"
+
+                PastelTextInput:
+                    id: input_km_rucno
+                    hint_text: "km (opciono, samo ako GPS ne radi)"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Adresa dolaska (rucno, ako GPS ne nadje)"
+
+                PastelTextInput:
+                    id: input_dolazak_rucno
+                    hint_text: "npr. Terazije 5, Beograd"
+
                 RoundButton:
                     id: dugme_zavrsi
                     label_text: "ZAVRSI VOZNJU"
@@ -1173,7 +1203,7 @@ ScreenManager:
             on_release: root.otvori_navigaciju()
 
         FieldLabel:
-            text: "Otvorice se Google Maps (ili druga instalirana mapa) sa rutom do unetog odredista."
+            text: "Otvorice se OpenStreetMap u browseru i prikazati unetu adresu na mapi (bez Google-a). Napomena: ovo je prikaz lokacije, ne glasovno navodjenje korak-po-korak."
             size_hint_y: None
             height: dp(50)
             text_size: self.width, None
@@ -1767,6 +1797,30 @@ class GpsVoznjaScreen(Screen):
             if not pokrenut_bar_jedan and greske:
                 self.tekst_dijagnoza += "\n" + "\n".join(greske)
 
+            # Odmah probaj i poslednju poznatu (keširanu) lokaciju -
+            # ne cekaj obavezno novi "zivi" signal. Google Maps i
+            # slicne app takodje prvo koriste ovo, zato deluju trenutno.
+            najbolja = None
+            for provider in (LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER):
+                try:
+                    if lm.isProviderEnabled(provider):
+                        poslednja = lm.getLastKnownLocation(provider)
+                        if poslednja is not None:
+                            if najbolja is None or poslednja.getTime() > najbolja.getTime():
+                                najbolja = poslednja
+                except Exception:
+                    pass
+
+            if najbolja is not None:
+                self.tekst_dijagnoza += "\nPronadjena keširana lokacija - koristim je."
+                Clock.schedule_once(lambda dt: self._obradi_lokaciju({
+                    "lat": najbolja.getLatitude(),
+                    "lon": najbolja.getLongitude(),
+                    "accuracy": najbolja.getAccuracy(),
+                }))
+            else:
+                self.tekst_dijagnoza += "\nNema keširane lokacije, cekam zivi signal."
+
             return pokrenut_bar_jedan
         except Exception as e:
             self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}"
@@ -1859,6 +1913,28 @@ class GpsVoznjaScreen(Screen):
         if self._tajmer is None:
             self._tajmer = Clock.schedule_interval(lambda dt: self._osvezi_prikaz(), 1)
 
+    def postavi_polazak_rucno(self):
+        """Rucni unos adrese polaska - radi odmah, ne ceka GPS."""
+        adresa = self.ids.input_polazak_rucno.text.strip()
+        if not adresa:
+            return
+
+        AKTIVNA_VOZNJA.pocetak_adresa = adresa
+        self.tekst_polazak = adresa
+
+        app = App.get_running_app()
+
+        # ako voznja jos nije ni zapoceta (nije klinuto Pocni), zapocni je sada
+        if not AKTIVNA_VOZNJA.aktivna:
+            AKTIVNA_VOZNJA.aktivna = True
+            AKTIVNA_VOZNJA.pocetak_vreme = datetime.now().isoformat()
+            AKTIVNA_VOZNJA.km = 0.0
+            self.voznja_aktivna = True
+            self._pokreni_tajmer()
+            self._android_gps_start()  # probaj GPS i dalje, u pozadini
+
+        AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
+
     def _osvezi_prikaz(self):
         self.tekst_km = f"Predjeno: {AKTIVNA_VOZNJA.km:.2f} km"
 
@@ -1898,16 +1974,35 @@ class GpsVoznjaScreen(Screen):
         self.voznja_aktivna = False
         self.tekst_gps_status = "Trazim krajnju adresu..."
 
+        # ako GPS nije uspeo da izmeri km, koristi rucni unos (ako postoji)
         km = AKTIVNA_VOZNJA.km
+        if km <= 0:
+            rucni_km_tekst = self.ids.input_km_rucno.text.strip()
+            if rucni_km_tekst:
+                try:
+                    km = float(rucni_km_tekst.replace(",", "."))
+                except ValueError:
+                    km = 0.0
+
         cena_po_km = CENE.tarife.get(
             "Nocna (22-07h)" if CENE.nocna_aktivna else "Osnovna (07-22h)",
             CENE.tarife["Osnovna (07-22h)"],
         )
         ukupno = CENE.start_fee + km * cena_po_km
         tarifa_naziv = "Nocna (22-07h)" if CENE.nocna_aktivna else "Osnovna (07-22h)"
-        polazak_adresa = AKTIVNA_VOZNJA.pocetak_adresa or ""
 
-        if AKTIVNA_VOZNJA.zadnja_lat is not None:
+        polazak_adresa = AKTIVNA_VOZNJA.pocetak_adresa or ""
+        if not polazak_adresa or polazak_adresa == "Trazim lokaciju...":
+            rucni_polazak = self.ids.input_polazak_rucno.text.strip()
+            polazak_adresa = rucni_polazak or "Adresa nije dostupna"
+
+        rucni_dolazak = self.ids.input_dolazak_rucno.text.strip()
+
+        if rucni_dolazak:
+            self._sacuvaj_zavrsenu_voznju(
+                km, cena_po_km, ukupno, tarifa_naziv, polazak_adresa, rucni_dolazak
+            )
+        elif AKTIVNA_VOZNJA.zadnja_lat is not None:
             reverse_geocode(
                 AKTIVNA_VOZNJA.zadnja_lat,
                 AKTIVNA_VOZNJA.zadnja_lon,
@@ -1938,10 +2033,14 @@ class GpsVoznjaScreen(Screen):
         AKTIVNA_VOZNJA.resetuj(app.user_data_dir)
 
         self.tekst_gps_status = ""
+        self.tekst_dijagnoza = ""
         self.tekst_polazak = "Nije zapoceta"
         self.tekst_km = "Predjeno: 0.00 km"
         self.tekst_trajanje = "Trajanje: 00:00:00"
         self.tekst_cena = "Cena: 0 RSD"
+        self.ids.input_polazak_rucno.text = ""
+        self.ids.input_km_rucno.text = ""
+        self.ids.input_dolazak_rucno.text = ""
 
         self._poruka(
             f"Voznja sacuvana!\n{polazak_adresa}\n-> {dolazak_adresa}\n"
@@ -1970,7 +2069,7 @@ class NavigacijaScreen(Screen):
             return
 
         upit = urllib.parse.quote(odrediste)
-        url = f"https://www.google.com/maps/dir/?api=1&destination={upit}&travelmode=driving"
+        url = f"https://www.openstreetmap.org/search?query={upit}"
         try:
             webbrowser.open(url)
         except Exception:
