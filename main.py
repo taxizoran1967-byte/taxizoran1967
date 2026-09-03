@@ -357,10 +357,10 @@ ScreenManager:
 
 <FieldLabel@Label>:
     size_hint_y: None
-    height: dp(22)
+    height: max(self.texture_size[1] + dp(6), dp(22))
     halign: "left"
     valign: "middle"
-    text_size: self.size
+    text_size: self.width, None
     font_size: '14sp'
     color: 0.85, 0.85, 0.95, 1
 
@@ -1105,6 +1105,7 @@ ScreenManager:
                 padding: dp(4)
 
                 PastelCard:
+                    orientation: "vertical"
                     tint: 0.90, 0.87, 1, 0.95
                     size_hint_y: None
                     height: dp(90)
