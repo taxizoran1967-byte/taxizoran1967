@@ -365,7 +365,7 @@ ScreenManager:
     color: 0.85, 0.85, 0.95, 1
 
 <PastelCard@BoxLayout>:
-    tint: (0.97, 0.96, 1, 0.94)
+    tint: (0.40, 0.38, 0.52, 0.92)
     canvas.before:
         Color:
             rgba: 0, 0, 0, 0.14
@@ -381,8 +381,8 @@ ScreenManager:
             radius: [dp(20)]
 
 <RoundButton@ButtonBehavior+BoxLayout>:
-    tint: (0.80, 0.87, 1, 1)
-    text_color: 0.12, 0.14, 0.30, 1
+    tint: (0.36, 0.46, 0.64, 1)
+    text_color: 0.95, 0.96, 1, 1
     label_text: ""
     opacity: 0.4 if self.disabled else 1
     canvas.before:
@@ -417,7 +417,7 @@ ScreenManager:
             size: self.size
             radius: [dp(22)]
         Color:
-            rgba: 0.96, 0.95, 1, 0.90
+            rgba: 0.40, 0.38, 0.52, 0.90
         RoundedRectangle:
             pos: self.pos
             size: self.size
@@ -445,13 +445,13 @@ ScreenManager:
         text: root.tekst
         font_size: '17sp'
         bold: True
-        color: 0.14, 0.14, 0.28, 1
+        color: 0.94, 0.93, 0.98, 1
         halign: "left"
         valign: "middle"
         text_size: self.size
 
 <PastelTextInput@TextInput>:
-    background_color: 0.97, 0.97, 1, 0.95
+    background_color: 0.80, 0.79, 0.88, 0.95
     foreground_color: 0.12, 0.12, 0.22, 1
     hint_text_color: 0.55, 0.55, 0.65, 1
     cursor_color: 0.3, 0.3, 0.7, 1
@@ -520,15 +520,15 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Evidencija"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
             RoundButton:
                 label_text: "Izvestaj"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
@@ -548,7 +548,7 @@ ScreenManager:
                     values: root.tarife_lista
                     size_hint_y: None
                     height: dp(48)
-                    background_color: 0.90, 0.93, 1, 1
+                    background_color: 0.78, 0.80, 0.90, 1
                     color: 0.12, 0.12, 0.24, 1
                     on_text: root.izracunaj()
 
@@ -583,7 +583,7 @@ ScreenManager:
                     hint_text: "npr. cekanje, prtljag..."
 
                 PastelCard:
-                    tint: 0.87, 0.97, 0.88, 0.95
+                    tint: 0.28, 0.48, 0.34, 0.92
                     size_hint_y: None
                     height: dp(96)
                     padding: dp(14)
@@ -592,15 +592,15 @@ ScreenManager:
                         text: root.tekst_cene
                         font_size: '20sp'
                         bold: True
-                        color: 0.08, 0.35, 0.12, 1
+                        color: 0.90, 1, 0.92, 1
                         halign: "center"
                         valign: "middle"
                         text_size: self.size
 
                 RoundButton:
                     label_text: root.dugme_tekst
-                    tint: 0.70, 0.90, 0.72, 1
-                    text_color: 0.06, 0.28, 0.10, 1
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 0.92, 1, 0.94, 1
                     size_hint_y: None
                     height: dp(52)
                     on_release: root.sacuvaj_voznju()
@@ -619,15 +619,15 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Kalkulator"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
                 label_text: "Izvestaj"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
@@ -653,19 +653,19 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Kalkulator"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
                 label_text: "Evidencija"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
 
         PastelCard:
-            tint: 1, 0.93, 0.86, 0.95
+            tint: 0.55, 0.38, 0.26, 0.92
             size_hint_y: None
             height: dp(128)
             padding: dp(14)
@@ -676,10 +676,10 @@ ScreenManager:
                 halign: "left"
                 valign: "top"
                 text_size: self.size
-                color: 0.30, 0.16, 0.05, 1
+                color: 1, 0.90, 0.80, 1
 
         PastelCard:
-            tint: 0.90, 0.87, 1, 0.95
+            tint: 0.38, 0.32, 0.52, 0.92
             size_hint_y: None
             height: dp(128)
             padding: dp(14)
@@ -690,7 +690,7 @@ ScreenManager:
                 halign: "left"
                 valign: "top"
                 text_size: self.size
-                color: 0.20, 0.14, 0.35, 1
+                color: 0.92, 0.88, 1, 1
 
         Widget:
 
@@ -708,7 +708,7 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
 
         ScrollView:
@@ -788,11 +788,11 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Podesavanja"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
@@ -840,8 +840,8 @@ ScreenManager:
 
                 RoundButton:
                     label_text: "Sacuvaj cene"
-                    tint: 0.70, 0.90, 0.72, 1
-                    text_color: 0.06, 0.28, 0.10, 1
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 0.92, 1, 0.94, 1
                     size_hint_y: None
                     height: dp(52)
                     on_release: root.sacuvaj_cene()
@@ -860,15 +860,15 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Podesavanja"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
         PastelCard:
-            tint: 0.90, 0.87, 1, 0.95
+            tint: 0.38, 0.32, 0.52, 0.92
             size_hint_y: None
             height: dp(74)
             padding: dp(14)
@@ -877,7 +877,7 @@ ScreenManager:
                 text: root.tekst_status
                 font_size: '18sp'
                 bold: True
-                color: 0.18, 0.12, 0.35, 1
+                color: 0.92, 0.88, 1, 1
 
         RoundButton:
             id: dugme_toggle
@@ -910,11 +910,11 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Podesavanja"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
@@ -926,7 +926,7 @@ ScreenManager:
                 padding: dp(4)
 
                 PastelCard:
-                    tint: 1, 0.93, 0.86, 0.95
+                    tint: 0.55, 0.38, 0.26, 0.92
                     size_hint_y: None
                     height: dp(72)
                     padding: dp(12)
@@ -935,7 +935,7 @@ ScreenManager:
                         text: root.tekst_ukupno
                         font_size: '14sp'
                         bold: True
-                        color: 0.30, 0.16, 0.05, 1
+                        color: 1, 0.90, 0.80, 1
 
                 FieldLabel:
                     text: "Vrsta goriva"
@@ -946,7 +946,7 @@ ScreenManager:
                     values: ["Benzin", "TNG"]
                     size_hint_y: None
                     height: dp(48)
-                    background_color: 0.90, 0.93, 1, 1
+                    background_color: 0.78, 0.80, 0.90, 1
                     color: 0.12, 0.12, 0.24, 1
 
                 FieldLabel:
@@ -974,8 +974,8 @@ ScreenManager:
 
                 RoundButton:
                     label_text: root.dugme_tekst
-                    tint: 0.70, 0.90, 0.72, 1
-                    text_color: 0.06, 0.28, 0.10, 1
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 0.92, 1, 0.94, 1
                     size_hint_y: None
                     height: dp(52)
                     on_release: root.sacuvaj_gorivo()
@@ -1002,11 +1002,11 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Podesavanja"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
@@ -1018,7 +1018,7 @@ ScreenManager:
                 padding: dp(4)
 
                 PastelCard:
-                    tint: 0.90, 0.87, 1, 0.95
+                    tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
                     height: dp(56)
                     padding: dp(12)
@@ -1027,7 +1027,7 @@ ScreenManager:
                         text: root.tekst_ukupno
                         font_size: '15sp'
                         bold: True
-                        color: 0.20, 0.14, 0.35, 1
+                        color: 0.92, 0.88, 1, 1
 
                 FieldLabel:
                     text: "Vrsta servisa"
@@ -1061,8 +1061,8 @@ ScreenManager:
 
                 RoundButton:
                     label_text: root.dugme_tekst
-                    tint: 0.70, 0.90, 0.72, 1
-                    text_color: 0.06, 0.28, 0.10, 1
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 0.92, 1, 0.94, 1
                     size_hint_y: None
                     height: dp(52)
                     on_release: root.sacuvaj_servis()
@@ -1089,11 +1089,11 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Istorija"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
 
         ScrollView:
@@ -1106,7 +1106,7 @@ ScreenManager:
 
                 PastelCard:
                     orientation: "vertical"
-                    tint: 0.90, 0.87, 1, 0.95
+                    tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
                     height: dp(90)
                     padding: dp(14)
@@ -1114,7 +1114,7 @@ ScreenManager:
                         text: "POLAZAK"
                         font_size: '13sp'
                         bold: True
-                        color: 0.35, 0.30, 0.55, 1
+                        color: 0.78, 0.74, 0.92, 1
                         size_hint_y: None
                         height: dp(20)
                         halign: "left"
@@ -1122,7 +1122,7 @@ ScreenManager:
                     Label:
                         text: root.tekst_polazak
                         font_size: '15sp'
-                        color: 0.18, 0.14, 0.30, 1
+                        color: 0.94, 0.91, 1, 1
                         halign: "left"
                         valign: "top"
                         text_size: self.width, None
@@ -1136,14 +1136,14 @@ ScreenManager:
 
                 RoundButton:
                     label_text: "Postavi polazak rucno"
-                    tint: 0.80, 0.87, 1, 1
-                    text_color: 0.10, 0.14, 0.30, 1
+                    tint: 0.36, 0.46, 0.64, 1
+                    text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
                     height: dp(48)
                     on_release: root.postavi_polazak_rucno()
 
                 PastelCard:
-                    tint: 0.87, 0.97, 0.88, 0.95
+                    tint: 0.28, 0.48, 0.34, 0.92
                     size_hint_y: None
                     height: dp(64)
                     padding: dp(14)
@@ -1151,10 +1151,10 @@ ScreenManager:
                         text: root.tekst_km
                         font_size: '20sp'
                         bold: True
-                        color: 0.06, 0.35, 0.10, 1
+                        color: 0.90, 1, 0.92, 1
 
                 PastelCard:
-                    tint: 1, 0.93, 0.86, 0.95
+                    tint: 0.55, 0.38, 0.26, 0.92
                     size_hint_y: None
                     height: dp(56)
                     padding: dp(14)
@@ -1162,10 +1162,10 @@ ScreenManager:
                         text: root.tekst_trajanje
                         font_size: '16sp'
                         bold: True
-                        color: 0.30, 0.16, 0.05, 1
+                        color: 1, 0.90, 0.80, 1
 
                 PastelCard:
-                    tint: 0.87, 0.95, 1, 0.95
+                    tint: 0.26, 0.40, 0.58, 0.92
                     size_hint_y: None
                     height: dp(64)
                     padding: dp(14)
@@ -1173,7 +1173,7 @@ ScreenManager:
                         text: root.tekst_cena
                         font_size: '20sp'
                         bold: True
-                        color: 0.05, 0.22, 0.45, 1
+                        color: 0.85, 0.92, 1, 1
 
                 Label:
                     text: root.tekst_gps_status
@@ -1194,8 +1194,8 @@ ScreenManager:
                 RoundButton:
                     id: dugme_start
                     label_text: "POCNI VOZNJU"
-                    tint: 0.70, 0.90, 0.72, 1
-                    text_color: 0.06, 0.28, 0.10, 1
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 0.92, 1, 0.94, 1
                     size_hint_y: None
                     height: dp(56)
                     disabled: root.voznja_aktivna
@@ -1219,7 +1219,7 @@ ScreenManager:
                 RoundButton:
                     id: dugme_zavrsi
                     label_text: "ZAVRSI VOZNJU"
-                    tint: 0.90, 0.30, 0.34, 1
+                    tint: 0.74, 0.28, 0.32, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
                     height: dp(56)
@@ -1240,11 +1240,11 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Podesavanja"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
         FieldLabel:
@@ -1256,8 +1256,8 @@ ScreenManager:
 
         RoundButton:
             label_text: "Otvori navigaciju"
-            tint: 0.80, 0.87, 1, 1
-            text_color: 0.10, 0.14, 0.30, 1
+            tint: 0.36, 0.46, 0.64, 1
+            text_color: 0.95, 0.96, 1, 1
             size_hint_y: None
             height: dp(52)
             on_release: root.otvori_navigaciju()
@@ -1284,15 +1284,15 @@ ScreenManager:
         NavBar:
             RoundButton:
                 label_text: "Pocetna"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Podesavanja"
-                tint: 0.86, 0.90, 1, 1
+                tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
         PastelCard:
-            tint: 0.95, 0.95, 1, 0.9
+            tint: 0.40, 0.38, 0.52, 0.9
             size_hint_y: None
             height: dp(70)
             padding: dp(14)
@@ -1300,7 +1300,7 @@ ScreenManager:
                 text: "Uskoro..."
                 font_size: '17sp'
                 bold: True
-                color: 0.2, 0.2, 0.3, 1
+                color: 0.92, 0.92, 0.98, 1
 
         Widget:
 """
@@ -1374,11 +1374,11 @@ class NocnaTarifaScreen(Screen):
         if CENE.nocna_aktivna:
             self.tekst_status = "Nocna tarifa: UKLJUCENA"
             self.tekst_dugme = "Iskljuci nocnu tarifu"
-            self.tint_dugme = (0.96, 0.78, 0.80, 1)
+            self.tint_dugme = (0.66, 0.30, 0.34, 1)
         else:
             self.tekst_status = "Nocna tarifa: ISKLJUCENA"
             self.tekst_dugme = "Ukljuci nocnu tarifu"
-            self.tint_dugme = (0.70, 0.90, 0.72, 1)
+            self.tint_dugme = (0.30, 0.52, 0.36, 1)
 
     def promeni(self):
         CENE.nocna_aktivna = not CENE.nocna_aktivna
@@ -1433,12 +1433,12 @@ class GorivoScreen(Screen):
         )
         return napravi_red_liste(
             opis,
-            tint=(1, 0.95, 0.90, 0.92),
-            boja_teksta=(0.20, 0.14, 0.06, 1),
+            tint=(0.55, 0.38, 0.26, 0.92),
+            boja_teksta=(1, 0.92, 0.85, 1),
             dugmad=[
-                ("Izmeni", (0.80, 0.87, 1, 1), (0.10, 0.14, 0.30, 1),
+                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, sid=s["id"]: self._izmeni(sid)),
-                ("Obrisi", (0.96, 0.78, 0.80, 1), (0.35, 0.05, 0.08, 1),
+                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
                  lambda inst, sid=s["id"]: self._obrisi(sid)),
             ],
         )
@@ -1544,12 +1544,12 @@ class ServisScreen(Screen):
         )
         return napravi_red_liste(
             opis,
-            tint=(0.93, 0.90, 1, 0.92),
-            boja_teksta=(0.16, 0.12, 0.24, 1),
+            tint=(0.38, 0.32, 0.52, 0.92),
+            boja_teksta=(0.93, 0.90, 1, 1),
             dugmad=[
-                ("Izmeni", (0.80, 0.87, 1, 1), (0.10, 0.14, 0.30, 1),
+                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, sid=s["id"]: self._izmeni(sid)),
-                ("Obrisi", (0.96, 0.78, 0.80, 1), (0.35, 0.05, 0.08, 1),
+                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
                  lambda inst, sid=s["id"]: self._obrisi(sid)),
             ],
         )
@@ -2281,12 +2281,12 @@ class EvidencijaScreen(Screen):
         )
         return napravi_red_liste(
             opis,
-            tint=(0.96, 0.95, 1, 0.92),
-            boja_teksta=(0.14, 0.14, 0.24, 1),
+            tint=(0.40, 0.38, 0.52, 0.92),
+            boja_teksta=(0.94, 0.93, 0.98, 1),
             dugmad=[
-                ("Izmeni", (0.80, 0.87, 1, 1), (0.10, 0.14, 0.30, 1),
+                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, v=v: self._izmeni(v)),
-                ("Obrisi", (0.96, 0.78, 0.80, 1), (0.35, 0.05, 0.08, 1),
+                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
                  lambda inst, vid=v["id"]: self._obrisi(vid)),
             ],
         )
