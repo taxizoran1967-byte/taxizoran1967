@@ -137,6 +137,34 @@ CENE = CenePodesavanja()
 GORIVO = JsonLog("gorivo.json")
 SERVIS = JsonLog("servis.json")
 
+
+class ApiPodesavanja:
+    """Cuva Google Geocoding API kljuc, unet direktno u aplikaciji
+    (Podesavanja -> Google API), bez potrebe za build-om da bi se
+    izmenio ili dodao."""
+
+    def __init__(self):
+        self.google_kljuc = ""
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "api.json")
+
+    def ucitaj(self, user_data_dir):
+        try:
+            with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+            self.google_kljuc = podaci.get("google_kljuc", "")
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        podaci = {"google_kljuc": self.google_kljuc}
+        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+
+API = ApiPodesavanja()
+
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji, podaci te
 # voznje se privremeno stave ovde da bi ih Kalkulator ekran
 # pokupio i popunio formu za ispravku.
@@ -161,12 +189,14 @@ def haversine_km(lat1, lon1, lat2, lon2):
 
 
 def reverse_geocode(lat, lon, callback):
-    """Pretvara GPS koordinate u adresu (OpenStreetMap Nominatim,
-    besplatno, bez API kljuca). Radi u pozadinskoj niti da ne
-    blokira interfejs; rezultat vraca preko callback-a na glavnoj niti."""
+    """Pretvara GPS koordinate u adresu. Ako je unet Google API kljuc
+    (Podesavanja -> Google API), koristi Google Geocoding (tacnije).
+    Ako kljuca nema, ili Google poziv ne uspe, koristi besplatan
+    OpenStreetMap Nominatim kao rezervu. Radi u pozadinskoj niti da
+    ne blokira interfejs; rezultat vraca preko callback-a na glavnoj
+    niti."""
 
-    def posao():
-        adresa = "Adresa nije dostupna"
+    def _osm_pokusaj():
         try:
             url = (
                 "https://nominatim.openstreetmap.org/reverse?format=json"
@@ -178,9 +208,34 @@ def reverse_geocode(lat, lon, callback):
             with urllib.request.urlopen(req, timeout=8) as resp:
                 podaci = json.loads(resp.read().decode("utf-8"))
             if podaci.get("display_name"):
-                adresa = podaci["display_name"]
+                return podaci["display_name"]
         except Exception:
             pass
+        return None
+
+    def _google_pokusaj(kljuc):
+        try:
+            url = (
+                "https://maps.googleapis.com/maps/api/geocode/json"
+                f"?latlng={lat},{lon}&key={kljuc}&language=sr"
+            )
+            with urllib.request.urlopen(url, timeout=8) as resp:
+                podaci = json.loads(resp.read().decode("utf-8"))
+            if podaci.get("status") == "OK" and podaci.get("results"):
+                return podaci["results"][0]["formatted_address"]
+        except Exception:
+            pass
+        return None
+
+    def posao():
+        adresa = None
+        kljuc = API.google_kljuc.strip()
+        if kljuc:
+            adresa = _google_pokusaj(kljuc)
+        if not adresa:
+            adresa = _osm_pokusaj()
+        if not adresa:
+            adresa = "Adresa nije dostupna"
         Clock.schedule_once(lambda dt: callback(adresa))
 
     threading.Thread(target=posao, daemon=True).start()
@@ -316,6 +371,7 @@ ScreenManager:
     ServisScreen:
     GpsVoznjaScreen:
     NavigacijaScreen:
+    GoogleApiScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
@@ -773,6 +829,11 @@ ScreenManager:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Cene / Tarife"
                     on_release: app.root.current = "cene"
+
+                MenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: "Google API"
+                    on_release: app.root.current = "google_api"
 
 # ============================================================
 # CENOVNIK - izmena cena tarifa i start takse
@@ -1266,6 +1327,50 @@ ScreenManager:
             text: "Otvorice se OpenStreetMap u browseru i prikazati unetu adresu na mapi (bez Google-a). Napomena: ovo je prikaz lokacije, ne glasovno navodjenje korak-po-korak."
             size_hint_y: None
             height: dp(50)
+            text_size: self.width, None
+
+        Widget:
+
+# ============================================================
+# GOOGLE API - unos kljuca za tacnije adrese
+# ============================================================
+
+<GoogleApiScreen>:
+    name: "google_api"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Google API"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "podesavanja"
+
+        FieldLabel:
+            text: "Google Geocoding API kljuc (opciono - ako je prazno, koristi se besplatan OpenStreetMap)"
+
+        PastelTextInput:
+            id: input_google_kljuc
+            hint_text: "npr. AIzaSy..."
+
+        RoundButton:
+            label_text: "Sacuvaj kljuc"
+            tint: 0.30, 0.52, 0.36, 1
+            text_color: 0.92, 1, 0.94, 1
+            size_hint_y: None
+            height: dp(52)
+            on_release: root.sacuvaj_kljuc()
+
+        FieldLabel:
+            text: "Kljuc pravis na console.cloud.google.com -> APIs & Services -> Credentials, i ukljucuje se Geocoding API. Ako ostavis prazno, adrese se i dalje racunaju preko besplatnog OpenStreetMap servisa."
+            size_hint_y: None
+            height: dp(70)
             text_size: self.width, None
 
         Widget:
@@ -2154,6 +2259,23 @@ class NavigacijaScreen(Screen):
             popup.open()
 
 
+class GoogleApiScreen(Screen):
+    def on_pre_enter(self, *args):
+        self.ids.input_google_kljuc.text = API.google_kljuc
+
+    def sacuvaj_kljuc(self):
+        API.google_kljuc = self.ids.input_google_kljuc.text.strip()
+        app = App.get_running_app()
+        API.sacuvaj(app.user_data_dir)
+
+        popup = Popup(
+            title="Info",
+            content=Label(text="Google API kljuc sacuvan."),
+            size_hint=(0.8, 0.3),
+        )
+        popup.open()
+
+
 class KalkulatorScreen(Screen):
     tekst_cene = StringProperty("Unesi kilometrazu da vidis cenu")
     dugme_tekst = StringProperty("Sacuvaj voznju")
@@ -2384,6 +2506,7 @@ class TaksiApp(App):
             GORIVO.ucitaj(self.user_data_dir)
             SERVIS.ucitaj(self.user_data_dir)
             AKTIVNA_VOZNJA.ucitaj(self.user_data_dir)
+            API.ucitaj(self.user_data_dir)
             return Builder.load_string(KV)
         except Exception:
             greska = traceback.format_exc()
