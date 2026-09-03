@@ -188,15 +188,16 @@ def haversine_km(lat1, lon1, lat2, lon2):
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def reverse_geocode(lat, lon, callback):
+def reverse_geocode(lat, lon, callback, dijagnoza_callback=None):
     """Pretvara GPS koordinate u adresu. Ako je unet Google API kljuc
     (Podesavanja -> Google API), koristi Google Geocoding (tacnije).
     Ako kljuca nema, ili Google poziv ne uspe, koristi besplatan
     OpenStreetMap Nominatim kao rezervu. Radi u pozadinskoj niti da
     ne blokira interfejs; rezultat vraca preko callback-a na glavnoj
-    niti."""
+    niti. Ako je prosledjen dijagnoza_callback, saljepravi razlog
+    google/osm neuspeha (za prikaz na ekranu, radi resavanja problema)."""
 
-    def _osm_pokusaj():
+    def _osm_pokusaj(dnevnik):
         try:
             url = (
                 "https://nominatim.openstreetmap.org/reverse?format=json"
@@ -209,11 +210,12 @@ def reverse_geocode(lat, lon, callback):
                 podaci = json.loads(resp.read().decode("utf-8"))
             if podaci.get("display_name"):
                 return podaci["display_name"]
-        except Exception:
-            pass
+            dnevnik.append(f"OSM: nema display_name u odgovoru ({podaci})")
+        except Exception as e:
+            dnevnik.append(f"OSM greska: {e}")
         return None
 
-    def _google_pokusaj(kljuc):
+    def _google_pokusaj(kljuc, dnevnik):
         try:
             url = (
                 "https://maps.googleapis.com/maps/api/geocode/json"
@@ -223,20 +225,28 @@ def reverse_geocode(lat, lon, callback):
                 podaci = json.loads(resp.read().decode("utf-8"))
             if podaci.get("status") == "OK" and podaci.get("results"):
                 return podaci["results"][0]["formatted_address"]
-        except Exception:
-            pass
+            dnevnik.append(
+                f"Google status: {podaci.get('status')} - "
+                f"{podaci.get('error_message', '(bez poruke)')}"
+            )
+        except Exception as e:
+            dnevnik.append(f"Google greska: {e}")
         return None
 
     def posao():
+        dnevnik = []
         adresa = None
         kljuc = API.google_kljuc.strip()
         if kljuc:
-            adresa = _google_pokusaj(kljuc)
+            adresa = _google_pokusaj(kljuc, dnevnik)
         if not adresa:
-            adresa = _osm_pokusaj()
+            adresa = _osm_pokusaj(dnevnik)
         if not adresa:
             adresa = "Adresa nije dostupna"
         Clock.schedule_once(lambda dt: callback(adresa))
+        if dijagnoza_callback and dnevnik:
+            tekst = "\n".join(dnevnik)
+            Clock.schedule_once(lambda dt: dijagnoza_callback(tekst))
 
     threading.Thread(target=posao, daemon=True).start()
 
@@ -2050,7 +2060,10 @@ class GpsVoznjaScreen(Screen):
             AKTIVNA_VOZNJA.zadnja_lon = lon
             AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
             self.tekst_gps_status = "GPS aktivan, pratim voznju."
-            reverse_geocode(lat, lon, self._postavi_pocetnu_adresu)
+            reverse_geocode(
+                lat, lon, self._postavi_pocetnu_adresu,
+                dijagnoza_callback=self._geokod_dijagnoza,
+            )
             return
 
         # od druge tacke nadalje, filtriramo lose precizne skokove
@@ -2083,6 +2096,9 @@ class GpsVoznjaScreen(Screen):
         app = App.get_running_app()
         AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
         self.tekst_polazak = adresa
+
+    def _geokod_dijagnoza(self, tekst):
+        self.tekst_dijagnoza += "\n[Adresa] " + tekst
 
     def _pokreni_tajmer(self):
         if self._tajmer is None:
@@ -2187,6 +2203,7 @@ class GpsVoznjaScreen(Screen):
                 lambda adresa: self._sacuvaj_zavrsenu_voznju(
                     km, cena_po_km, ukupno, tarifa_naziv, polazak_adresa, adresa
                 ),
+                dijagnoza_callback=self._geokod_dijagnoza,
             )
         else:
             self._sacuvaj_zavrsenu_voznju(
@@ -2523,6 +2540,33 @@ class TaksiApp(App):
                 size_hint=(0.95, 0.8),
             )
             popup.open()
+        except Exception:
+            pass
+
+    def on_pause(self):
+        # Vratiti True znaci "Android, pauziraj me ali ne gasi", tako
+        # da GPS voznja u toku (ako postoji) ne bude prekinuta kad
+        # dodje poziv ili korisnik kratko izadje iz aplikacije.
+        return True
+
+    def on_resume(self):
+        # Kad se korisnik vrati (npr. posle poziva), ponovo
+        # zakacinjemo GPS oslonac i osvezavamo prikaz ako je voznja
+        # u toku - Android ume da "otkine" listener dok je app u
+        # pozadini, pa ga vracamo rucno umesto da samo cekamo.
+        try:
+            if not AKTIVNA_VOZNJA.aktivna:
+                return
+            sm = self.root
+            if sm is None:
+                return
+            ekran = sm.get_screen("gps_voznja")
+            ekran._android_gps_start()
+            if getattr(ekran, "_tajmer", None) is None:
+                ekran._pokreni_tajmer()
+            if getattr(ekran, "_brojac_poll", None) is None:
+                ekran._brojac_poll = Clock.schedule_interval(ekran._pull_lokaciju, 2)
+            ekran._osvezi_prikaz()
         except Exception:
             pass
 
