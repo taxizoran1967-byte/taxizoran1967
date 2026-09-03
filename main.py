@@ -12,6 +12,15 @@ import traceback
 import urllib.request
 import urllib.parse
 import webbrowser
+import ssl
+
+try:
+    import certifi
+    SSL_KONTEKST = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    # Ako certifi nije instaliran, koristimo podrazumevani kontekst
+    # (moze i dalje da baci istu gresku, ali app nece pući ovde).
+    SSL_KONTEKST = ssl.create_default_context()
 
 from kivy.app import App
 from kivy.lang import Builder
@@ -206,7 +215,7 @@ def reverse_geocode(lat, lon, callback, dijagnoza_callback=None):
             req = urllib.request.Request(
                 url, headers={"User-Agent": "TaksiApp/1.0"}
             )
-            with urllib.request.urlopen(req, timeout=8) as resp:
+            with urllib.request.urlopen(req, timeout=8, context=SSL_KONTEKST) as resp:
                 podaci = json.loads(resp.read().decode("utf-8"))
             if podaci.get("display_name"):
                 return podaci["display_name"]
@@ -221,7 +230,7 @@ def reverse_geocode(lat, lon, callback, dijagnoza_callback=None):
                 "https://maps.googleapis.com/maps/api/geocode/json"
                 f"?latlng={lat},{lon}&key={kljuc}&language=sr"
             )
-            with urllib.request.urlopen(url, timeout=8) as resp:
+            with urllib.request.urlopen(url, timeout=8, context=SSL_KONTEKST) as resp:
                 podaci = json.loads(resp.read().decode("utf-8"))
             if podaci.get("status") == "OK" and podaci.get("results"):
                 return podaci["results"][0]["formatted_address"]
