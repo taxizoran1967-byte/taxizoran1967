@@ -4,7 +4,7 @@ package.name = taksiapp
 package.domain = org.licno
 
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py,png,jpg,kv,atlas,ttf
 
 version = 0.1
 
@@ -13,7 +13,7 @@ presplash.filename = %(source.dir)s/presplash.png
 icon.adaptive_foreground.filename = %(source.dir)s/icon_fg.png
 icon.adaptive_background.filename = %(source.dir)s/icon_bg.png
 
-requirements = python3,kivy,sqlite3,plyer,certifi
+requirements = python3,kivy,sqlite3,plyer,certifi,reportlab
 
 orientation = portrait
 fullscreen = 0

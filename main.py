@@ -5,6 +5,7 @@ Kalkulator cene, evidencija voznji, dnevni/mesecni izvestaj zarade.
 
 import os
 import sys
+import re
 import json
 import math
 import threading
@@ -316,6 +317,121 @@ def _zatrazi_dozvolu_svi_fajlovi():
         pass
 
 
+# ============================================================
+# PDF IZVESTAJ - mesecni izvestaj sa svim voznjama, tabelarno
+# ============================================================
+
+_PDF_FONT_REGISTROVAN = False
+
+
+def _registruj_font_za_pdf():
+    """DejaVuSans font ima sva nasa slova (c c s d z), za razliku od
+    podrazumevanih PDF fontova koji ne prikazuju kvacice ispravno.
+    Registruje se samo jednom po pokretanju app-a."""
+    global _PDF_FONT_REGISTROVAN
+    if _PDF_FONT_REGISTROVAN:
+        return
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    pdfmetrics.registerFont(TTFont("DejaVuSans", "assets/fonts/DejaVuSans.ttf"))
+    pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", "assets/fonts/DejaVuSans-Bold.ttf"))
+    _PDF_FONT_REGISTROVAN = True
+
+
+def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
+    """Pravi PDF tabelu sa svim voznjama za dati mesec (format
+    'GGGG-MM'): redni broj, datum, vreme polaska/dolaska, adrese,
+    cena - i na kraju ukupan broj voznji i ukupnu zaradu.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import ParagraphStyle
+
+    _registruj_font_za_pdf()
+
+    voznje = db.voznje_za_mesec(godina_mesec_str)
+    broj, prihod, km = db.zbir_voznji(voznje)
+
+    doc = SimpleDocTemplate(
+        putanja_fajla,
+        pagesize=A4,
+        leftMargin=15 * mm,
+        rightMargin=15 * mm,
+        topMargin=15 * mm,
+        bottomMargin=15 * mm,
+        title=f"Izvestaj {godina_mesec_str}",
+    )
+
+    stil_celija = ParagraphStyle(
+        "celija", fontName="DejaVuSans", fontSize=8.5, leading=11,
+    )
+    stil_naslov = ParagraphStyle(
+        "naslov", fontName="DejaVuSans-Bold", fontSize=16, leading=20,
+    )
+    stil_zaglavlje = ParagraphStyle(
+        "zaglavlje", fontName="DejaVuSans-Bold", fontSize=8.5, leading=11,
+        textColor=colors.white,
+    )
+    stil_zbir = ParagraphStyle(
+        "zbir", fontName="DejaVuSans-Bold", fontSize=12, leading=16,
+    )
+
+    elementi = []
+    elementi.append(Paragraph(f"Mesecni izvestaj - {godina_mesec_str}", stil_naslov))
+    elementi.append(Spacer(1, 8 * mm))
+
+    zaglavlje = [
+        Paragraph("R.br.", stil_zaglavlje),
+        Paragraph("Datum", stil_zaglavlje),
+        Paragraph("Pocetak", stil_zaglavlje),
+        Paragraph("Kraj", stil_zaglavlje),
+        Paragraph("Adresa polaska", stil_zaglavlje),
+        Paragraph("Adresa dolaska", stil_zaglavlje),
+        Paragraph("Cena", stil_zaglavlje),
+    ]
+    podaci_tabele = [zaglavlje]
+
+    for i, v in enumerate(voznje, start=1):
+        vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else "-"
+        red = [
+            Paragraph(str(i), stil_celija),
+            Paragraph(v["datum"], stil_celija),
+            Paragraph(vreme_pocetka, stil_celija),
+            Paragraph(v["vreme"], stil_celija),
+            Paragraph(v["od_adresa"] or "-", stil_celija),
+            Paragraph(v["do_adresa"] or "-", stil_celija),
+            Paragraph(formatiraj_cenu(v["ukupna_cena"]), stil_celija),
+        ]
+        podaci_tabele.append(red)
+
+    # sirine kolona u mm - A4 sirina 210mm, minus margine 2x15mm = 180mm dostupno
+    sirine = [13 * mm, 23 * mm, 17 * mm, 15 * mm, 42 * mm, 42 * mm, 21 * mm]
+
+    tabela = Table(podaci_tabele, colWidths=sirine, repeatRows=1)
+    tabela.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    elementi.append(tabela)
+    elementi.append(Spacer(1, 8 * mm))
+
+    elementi.append(Paragraph(f"Ukupan broj voznji: {broj}", stil_zbir))
+    elementi.append(Paragraph(f"Ukupno predjeno: {km:.1f} km", stil_zbir))
+    elementi.append(Paragraph(f"Ukupna zarada za mesec: {formatiraj_cenu(prihod)}", stil_zbir))
+
+    doc.build(elementi)
+
+
+
+
 
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji, podaci te
 # voznje se privremeno stave ovde da bi ih Kalkulator ekran
@@ -536,6 +652,7 @@ ScreenManager:
     GoogleApiScreen:
     ValutaScreen:
     BackupScreen:
+    IzvozPdfScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
@@ -883,6 +1000,10 @@ ScreenManager:
                 label_text: "Evidencija"
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
+            RoundButton:
+                label_text: "Izvoz PDF"
+                tint: 0.55, 0.38, 0.26, 1
+                on_release: root.manager.current = "izvoz_pdf"
 
         ScrollView:
             BoxLayout:
@@ -1480,21 +1601,6 @@ ScreenManager:
                     disabled: root.voznja_aktivna
                     on_release: root.pocni_voznju()
 
-                FieldLabel:
-                    text: "Ako GPS ne uhvati kilometrazu, unesi je rucno pre kraja:"
-
-                PastelTextInput:
-                    id: input_km_rucno
-                    hint_text: "km (opciono, samo ako GPS ne radi)"
-                    input_filter: "float"
-
-                FieldLabel:
-                    text: "Adresa dolaska (rucno, ako GPS ne nadje)"
-
-                PastelTextInput:
-                    id: input_dolazak_rucno
-                    hint_text: "npr. Terazije 5, Beograd"
-
                 RoundButton:
                     id: dugme_zavrsi
                     label_text: "ZAVRSI VOZNJU"
@@ -1735,6 +1841,68 @@ ScreenManager:
             text: "Ako menjas telefon: napravi backup na starom, prebaci fajl (WhatsApp/Drive/USB) u isti folder na novom, instaliraj app, pa klikni 'Vrati podatke'."
             size_hint_y: None
             height: dp(90)
+            text_size: self.width, None
+
+        Widget:
+
+# ============================================================
+# IZVOZ PDF - mesecni izvestaj kao PDF fajl
+# ============================================================
+
+<IzvozPdfScreen>:
+    name: "izvoz_pdf"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Izvoz PDF izvestaja"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Izvestaj"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "izvestaj"
+
+        FieldLabel:
+            text: "Pravi PDF sa svim voznjama za izabrani mesec (redni broj, vreme polaska/dolaska, adrese, cena) i ukupnim zbirom na kraju."
+
+        FieldLabel:
+            text: "Mesec (format GGGG-MM):"
+
+        PastelTextInput:
+            id: input_mesec
+            hint_text: "npr. 2026-09"
+
+        PastelCard:
+            orientation: "vertical"
+            tint: 0.30, 0.29, 0.42, 0.92
+            size_hint_y: None
+            height: self.minimum_height
+            padding: dp(14)
+            Label:
+                text: root.tekst_status
+                color: 1, 1, 1, 1
+                halign: "left"
+                valign: "top"
+                size_hint_y: None
+                text_size: self.width, None
+                height: self.texture_size[1]
+
+        RoundButton:
+            label_text: "Izvezi PDF"
+            tint: 0.30, 0.52, 0.36, 1
+            text_color: 1, 1, 1, 1
+            size_hint_y: None
+            height: dp(56)
+            on_release: root.izvezi_pdf()
+
+        FieldLabel:
+            text: "PDF se cuva u isti folder kao i backup: Preuzimanja/TaksiApp."
+            size_hint_y: None
+            height: dp(48)
             text_size: self.width, None
 
         Widget:
@@ -2771,6 +2939,73 @@ class BackupScreen(Screen):
             size_hint=(0.85, 0.4),
         )
         self._osvezi_status()
+
+
+class IzvozPdfScreen(Screen):
+    tekst_status = StringProperty("")
+
+    def on_pre_enter(self, *args):
+        if not self.ids.input_mesec.text:
+            self.ids.input_mesec.text = datetime.now().strftime("%Y-%m")
+        self._osvezi_status()
+
+    def _osvezi_status(self):
+        if _ima_dozvolu_svi_fajlovi():
+            self.tekst_status = "Dozvola za fajlove: DA"
+        else:
+            self.tekst_status = (
+                "Dozvola za fajlove: NE\n"
+                "Idi u Podesavanja -> Backup podataka i klikni "
+                "'Odobri pristup fajlovima', pa se vrati ovde."
+            )
+
+    def izvezi_pdf(self):
+        mesec = self.ids.input_mesec.text.strip()
+        if not re.match(r"^\d{4}-\d{2}$", mesec):
+            _prikazi_popup_poruku(
+                "Greska",
+                "Unesi mesec u formatu GGGG-MM, npr. 2026-09",
+                size_hint=(0.85, 0.35),
+            )
+            return
+
+        if not _ima_dozvolu_svi_fajlovi():
+            _prikazi_popup_poruku(
+                "Nedostaje dozvola",
+                "Idi u Podesavanja -> Backup podataka i klikni "
+                "'Odobri pristup fajlovima', pa se vrati ovde.",
+                size_hint=(0.88, 0.4),
+            )
+            return
+
+        try:
+            voznje = db.voznje_za_mesec(mesec)
+        except Exception as e:
+            _prikazi_popup_poruku("Greska", f"Ne mogu da procitam bazu:\n{e}", size_hint=(0.88, 0.4))
+            return
+
+        if not voznje:
+            _prikazi_popup_poruku(
+                "Nema voznji",
+                f"Nema nijedne voznje za {mesec} - PDF nije napravljen.",
+                size_hint=(0.85, 0.3),
+            )
+            return
+
+        try:
+            folder = _putanja_backup_foldera()
+            os.makedirs(folder, exist_ok=True)
+            putanja = os.path.join(folder, f"izvestaj_{mesec}.pdf")
+            generisi_mesecni_pdf(mesec, putanja)
+            _prikazi_popup_poruku(
+                "Sacuvano",
+                f"PDF izvestaj ({len(voznje)} voznji) sacuvan u:\n{putanja}",
+                size_hint=(0.88, 0.45),
+            )
+        except Exception as e:
+            _prikazi_popup_poruku(
+                "Greska", f"Pravljenje PDF-a nije uspelo:\n{e}", size_hint=(0.88, 0.45)
+            )
 
 
 class KalkulatorScreen(Screen):
