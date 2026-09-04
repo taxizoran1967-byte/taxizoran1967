@@ -44,22 +44,32 @@ def init_db():
             napomena TEXT
         )
     """)
+
+    # Migracija za stare baze: dodajemo kolonu za vreme pocetka voznje.
+    # "vreme" kolona od ranije vec sluzi kao vreme KRAJA (upisuje se
+    # onog trenutka kad se voznja sacuva, tj. kad se zavrsi), samo do
+    # sad nije postojalo posebno vreme pocetka da se prikaze pored njega.
+    cur.execute("PRAGMA table_info(voznje)")
+    postojece_kolone = [red[1] for red in cur.fetchall()]
+    if "vreme_pocetka" not in postojece_kolone:
+        cur.execute("ALTER TABLE voznje ADD COLUMN vreme_pocetka TEXT")
+
     conn.commit()
     conn.close()
 
 
-def dodaj_voznju(od_adresa, do_adresa, km, tarifa_naziv, cena_po_km, start_taksa, ukupna_cena, napomena=""):
+def dodaj_voznju(od_adresa, do_adresa, km, tarifa_naziv, cena_po_km, start_taksa, ukupna_cena, napomena="", vreme_pocetka=None):
     conn = get_connection()
     cur = conn.cursor()
     now = datetime.now()
     cur.execute("""
         INSERT INTO voznje (datum, vreme, od_adresa, do_adresa, km, tarifa_naziv,
-                             cena_po_km, start_taksa, ukupna_cena, napomena)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             cena_po_km, start_taksa, ukupna_cena, napomena, vreme_pocetka)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         now.strftime("%Y-%m-%d"), now.strftime("%H:%M"),
         od_adresa, do_adresa, km, tarifa_naziv,
-        cena_po_km, start_taksa, ukupna_cena, napomena
+        cena_po_km, start_taksa, ukupna_cena, napomena, vreme_pocetka
     ))
     conn.commit()
     conn.close()

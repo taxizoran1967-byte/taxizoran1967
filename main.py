@@ -174,6 +174,90 @@ class ApiPodesavanja:
 
 API = ApiPodesavanja()
 
+
+class KursPodesavanja:
+    """Drzi izabranu valutu za prikaz (RSD ili EUR) i poslednji
+    povuceni kurs evro->dinar. Kurs se povlaci sa besplatnog,
+    javnog servisa (exchangerate-api.com, open pristup, bez
+    kljuca) najvise jednom dnevno - ne zove se internet svaki put
+    kad se otvori ekran, nego samo ako je poslednji kurs stariji
+    od danas.
+    """
+
+    KURS_URL = "https://open.er-api.com/v6/latest/EUR"
+
+    def __init__(self):
+        self.valuta = "RSD"          # "RSD" ili "EUR"
+        self.kurs_eur_rsd = None     # koliko dinara je 1 evro
+        self.datum_kursa = ""        # kad je kurs poslednji put povucen
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "kurs.json")
+
+    def ucitaj(self, user_data_dir):
+        try:
+            with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+            self.valuta = podaci.get("valuta", "RSD")
+            self.kurs_eur_rsd = podaci.get("kurs_eur_rsd")
+            self.datum_kursa = podaci.get("datum_kursa", "")
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        podaci = {
+            "valuta": self.valuta,
+            "kurs_eur_rsd": self.kurs_eur_rsd,
+            "datum_kursa": self.datum_kursa,
+        }
+        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+    def osvezi_ako_treba(self, user_data_dir, prinudno=False):
+        """Povlaci svez kurs sa interneta samo ako danas jos nije
+        povucen (ili ako je prinudno=True, npr. korisnik rucno
+        klikne 'Osvezi kurs'). Ako internet ne radi, tiho zadrzava
+        stari kurs i ne baca gresku dalje.
+        Vraca (uspeh: bool, poruka_greske ili None).
+        """
+        danas = datetime.now().strftime("%Y-%m-%d")
+        if not prinudno and self.datum_kursa == danas and self.kurs_eur_rsd:
+            return True, None
+
+        try:
+            req = urllib.request.Request(
+                self.KURS_URL,
+                headers={"User-Agent": "TaksiApp/1.0"},
+            )
+            with urllib.request.urlopen(req, timeout=8, context=SSL_KONTEKST) as resp:
+                podaci = json.loads(resp.read().decode("utf-8"))
+            novi_kurs = podaci.get("rates", {}).get("RSD")
+            if not novi_kurs:
+                return False, "Kurs RSD nije pronadjen u odgovoru servisa."
+            self.kurs_eur_rsd = float(novi_kurs)
+            self.datum_kursa = danas
+            self.sacuvaj(user_data_dir)
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
+
+KURS = KursPodesavanja()
+
+
+def formatiraj_cenu(iznos_rsd):
+    """Pretvara iznos (koji se u bazi/racunici uvek drzi u dinarima)
+    u tekst za prikaz - u dinarima ili u evrima, zavisno od toga sta
+    je korisnik izabrao u Podesavanja -> Valuta.
+    """
+    try:
+        if KURS.valuta == "EUR" and KURS.kurs_eur_rsd:
+            eur = iznos_rsd / KURS.kurs_eur_rsd
+            return f"{eur:.2f} EUR"
+    except Exception:
+        pass
+    return f"{iznos_rsd:.0f} RSD"
+
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji, podaci te
 # voznje se privremeno stave ovde da bi ih Kalkulator ekran
 # pokupio i popunio formu za ispravku.
@@ -391,6 +475,7 @@ ScreenManager:
     GpsVoznjaScreen:
     NavigacijaScreen:
     GoogleApiScreen:
+    ValutaScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
@@ -854,6 +939,11 @@ ScreenManager:
                     tekst: "Google API"
                     on_release: app.root.current = "google_api"
 
+                MenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: "Valuta"
+                    on_release: app.root.current = "valuta"
+
 # ============================================================
 # CENOVNIK - izmena cena tarifa i start takse
 # ============================================================
@@ -1188,11 +1278,9 @@ ScreenManager:
                     orientation: "vertical"
                     tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
-                    height: label_polazak_naslov.height + label_polazak_tekst.height + dp(32)
+                    height: dp(90)
                     padding: dp(14)
-                    spacing: dp(4)
                     Label:
-                        id: label_polazak_naslov
                         text: "POLAZAK"
                         font_size: '13sp'
                         bold: True
@@ -1202,15 +1290,12 @@ ScreenManager:
                         halign: "left"
                         text_size: self.size
                     Label:
-                        id: label_polazak_tekst
                         text: root.tekst_polazak
                         font_size: '15sp'
                         color: 0.94, 0.91, 1, 1
                         halign: "left"
                         valign: "top"
-                        size_hint_y: None
                         text_size: self.width, None
-                        height: self.texture_size[1]
 
                 FieldLabel:
                     text: "Adresa polaska (rucno, ako GPS ne nadje)"
@@ -1400,6 +1485,81 @@ ScreenManager:
         Widget:
 
 # ============================================================
+# VALUTA - izbor prikaza cena (RSD ili EUR) i kurs
+# ============================================================
+
+<ValutaScreen>:
+    name: "valuta"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Valuta"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "podesavanja"
+
+        FieldLabel:
+            text: "Cene se u aplikaciji uvek racunaju i cuvaju u dinarima. Ovde bira se samo u kojoj valuti da se PRIKAZUJU."
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(80)
+            padding: dp(10)
+            canvas.before:
+                Color:
+                    rgba: 0.30, 0.29, 0.42, 0.85
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [dp(14)]
+            Label:
+                text: root.tekst_kurs
+                color: 1, 1, 1, 1
+                halign: "center"
+                valign: "middle"
+                text_size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            spacing: dp(10)
+
+            RoundButton:
+                label_text: "Prikazuj u RSD"
+                tint: (0.30, 0.52, 0.36, 1) if root.valuta_izbor == "RSD" else (0.36, 0.35, 0.48, 1)
+                text_color: 0.95, 1, 0.96, 1
+                on_release: root.izaberi_valutu("RSD")
+
+            RoundButton:
+                label_text: "Prikazuj u EUR"
+                tint: (0.30, 0.52, 0.36, 1) if root.valuta_izbor == "EUR" else (0.36, 0.35, 0.48, 1)
+                text_color: 0.95, 1, 0.96, 1
+                on_release: root.izaberi_valutu("EUR")
+
+        RoundButton:
+            label_text: "Osvezi kurs sada"
+            tint: 0.36, 0.46, 0.64, 1
+            text_color: 1, 1, 1, 1
+            size_hint_y: None
+            height: dp(52)
+            on_release: root.osvezi_kurs_rucno()
+
+        FieldLabel:
+            text: "Kurs se automatski osvezava jednom dnevno (kad prvi put otvoris app tog dana). Ovde mozes rucno da ga povuces ponovo, npr. ako juce nije bilo interneta."
+            size_hint_y: None
+            height: dp(70)
+            text_size: self.width, None
+
+        Widget:
+
+# ============================================================
 # PLACEHOLDER ("Uskoro")
 # ============================================================
 
@@ -1483,12 +1643,7 @@ class CenovnikScreen(Screen):
         self._poruka("Cene su sacuvane.")
 
     def _poruka(self, tekst):
-        popup = Popup(
-            title="Info",
-            content=Label(text=tekst),
-            size_hint=(0.8, 0.3),
-        )
-        popup.open()
+        _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
 
 
 class NocnaTarifaScreen(Screen):
@@ -1536,8 +1691,8 @@ class GorivoScreen(Screen):
             s.get("cena", 0) for s in GORIVO.stavke if s.get("tip") == "TNG"
         )
         self.tekst_ukupno = (
-            f"Ukupno: {ukupno:.0f} RSD\n"
-            f"Benzin: {ukupno_benzin:.0f} RSD   |   TNG: {ukupno_tng:.0f} RSD"
+            f"Ukupno: {formatiraj_cenu(ukupno)}\n"
+            f"Benzin: {formatiraj_cenu(ukupno_benzin)}   |   TNG: {formatiraj_cenu(ukupno_tng)}"
         )
 
         if not GORIVO.stavke:
@@ -1558,7 +1713,7 @@ class GorivoScreen(Screen):
             f"[b]{s.get('datum', '-')}[/b]\n"
             f"{tip}  |  {s.get('litara', 0):g} l\n"
             f"{napomena}\n"
-            f"[color=6b3d0d][b]{s.get('cena', 0):.0f} RSD[/b][/color]"
+            f"[color=6b3d0d][b]{formatiraj_cenu(s.get('cena', 0))}[/b][/color]"
         )
         return napravi_red_liste(
             opis,
@@ -1627,12 +1782,7 @@ class GorivoScreen(Screen):
         self.ucitaj_gorivo()
 
     def _poruka(self, tekst):
-        popup = Popup(
-            title="Info",
-            content=Label(text=tekst),
-            size_hint=(0.8, 0.3),
-        )
-        popup.open()
+        _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
 
 
 class ServisScreen(Screen):
@@ -1648,7 +1798,7 @@ class ServisScreen(Screen):
         kontejner.clear_widgets()
 
         ukupno = sum(s.get("cena", 0) for s in SERVIS.stavke)
-        self.tekst_ukupno = f"Ukupno na servisima: {ukupno:.0f} RSD"
+        self.tekst_ukupno = f"Ukupno na servisima: {formatiraj_cenu(ukupno)}"
 
         if not SERVIS.stavke:
             kontejner.add_widget(Label(
@@ -1669,7 +1819,7 @@ class ServisScreen(Screen):
             f"[b]{s.get('datum', '-')}[/b]\n"
             f"{s.get('vrsta', '-')}{km_deo}\n"
             f"{napomena}\n"
-            f"[color=3a2570][b]{s.get('cena', 0):.0f} RSD[/b][/color]"
+            f"[color=3a2570][b]{formatiraj_cenu(s.get('cena', 0))}[/b][/color]"
         )
         return napravi_red_liste(
             opis,
@@ -1749,12 +1899,7 @@ class ServisScreen(Screen):
         self.ucitaj_servis()
 
     def _poruka(self, tekst):
-        popup = Popup(
-            title="Info",
-            content=Label(text=tekst),
-            size_hint=(0.8, 0.3),
-        )
-        popup.open()
+        _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
 
 
 class GpsVoznjaScreen(Screen):
@@ -2156,7 +2301,7 @@ class GpsVoznjaScreen(Screen):
             CENE.tarife["Osnovna (07-22h)"],
         )
         cena = CENE.start_fee + AKTIVNA_VOZNJA.km * cena_po_km
-        self.tekst_cena = f"Cena: {cena:.0f} RSD"
+        self.tekst_cena = f"Cena: {formatiraj_cenu(cena)}"
 
         if AKTIVNA_VOZNJA.pocetak_adresa and AKTIVNA_VOZNJA.pocetak_adresa != "Trazim lokaciju...":
             self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa
@@ -2227,6 +2372,15 @@ class GpsVoznjaScreen(Screen):
 
     def _sacuvaj_zavrsenu_voznju(self, km, cena_po_km, ukupno, tarifa_naziv,
                                    polazak_adresa, dolazak_adresa):
+        vreme_pocetka_txt = None
+        if AKTIVNA_VOZNJA.pocetak_vreme:
+            try:
+                vreme_pocetka_txt = datetime.fromisoformat(
+                    AKTIVNA_VOZNJA.pocetak_vreme
+                ).strftime("%H:%M")
+            except Exception:
+                vreme_pocetka_txt = None
+
         db.dodaj_voznju(
             od_adresa=polazak_adresa,
             do_adresa=dolazak_adresa,
@@ -2236,6 +2390,7 @@ class GpsVoznjaScreen(Screen):
             start_taksa=CENE.start_fee,
             ukupna_cena=ukupno,
             napomena="GPS voznja (automatski unos)",
+            vreme_pocetka=vreme_pocetka_txt,
         )
 
         app = App.get_running_app()
@@ -2246,35 +2401,25 @@ class GpsVoznjaScreen(Screen):
         self.tekst_polazak = "Nije zapoceta"
         self.tekst_km = "Predjeno: 0.00 km"
         self.tekst_trajanje = "Trajanje: 00:00:00"
-        self.tekst_cena = "Cena: 0 RSD"
+        self.tekst_cena = f"Cena: {formatiraj_cenu(0)}"
         self.ids.input_polazak_rucno.text = ""
         self.ids.input_km_rucno.text = ""
         self.ids.input_dolazak_rucno.text = ""
 
         self._poruka(
             f"Voznja sacuvana!\n{polazak_adresa}\n-> {dolazak_adresa}\n"
-            f"{km:.2f} km, {ukupno:.0f} RSD"
+            f"{km:.2f} km, {formatiraj_cenu(ukupno)}"
         )
 
     def _poruka(self, tekst):
-        popup = Popup(
-            title="Voznja zavrsena",
-            content=Label(text=tekst),
-            size_hint=(0.85, 0.4),
-        )
-        popup.open()
+        _prikazi_popup_poruku("Voznja zavrsena", tekst, size_hint=(0.85, 0.4))
 
 
 class NavigacijaScreen(Screen):
     def otvori_navigaciju(self):
         odrediste = self.ids.input_odrediste.text.strip()
         if not odrediste:
-            popup = Popup(
-                title="Info",
-                content=Label(text="Unesi odrediste pre otvaranja navigacije."),
-                size_hint=(0.8, 0.3),
-            )
-            popup.open()
+            _prikazi_popup_poruku("Info", "Unesi odrediste pre otvaranja navigacije.", size_hint=(0.8, 0.3))
             return
 
         upit = urllib.parse.quote(odrediste)
@@ -2282,12 +2427,7 @@ class NavigacijaScreen(Screen):
         try:
             webbrowser.open(url)
         except Exception:
-            popup = Popup(
-                title="Greska",
-                content=Label(text="Ne mogu da otvorim navigaciju na ovom uredjaju."),
-                size_hint=(0.8, 0.3),
-            )
-            popup.open()
+            _prikazi_popup_poruku("Greska", "Ne mogu da otvorim navigaciju na ovom uredjaju.", size_hint=(0.8, 0.3))
 
 
 class GoogleApiScreen(Screen):
@@ -2299,12 +2439,51 @@ class GoogleApiScreen(Screen):
         app = App.get_running_app()
         API.sacuvaj(app.user_data_dir)
 
-        popup = Popup(
-            title="Info",
-            content=Label(text="Google API kljuc sacuvan."),
-            size_hint=(0.8, 0.3),
-        )
-        popup.open()
+        _prikazi_popup_poruku("Info", "Google API kljuc sacuvan.", size_hint=(0.8, 0.3))
+
+
+class ValutaScreen(Screen):
+    tekst_kurs = StringProperty("")
+    valuta_izbor = StringProperty("RSD")
+
+    def on_pre_enter(self, *args):
+        self.valuta_izbor = KURS.valuta
+        self._osvezi_tekst()
+
+    def _osvezi_tekst(self):
+        if KURS.kurs_eur_rsd:
+            self.tekst_kurs = (
+                f"1 EUR = {KURS.kurs_eur_rsd:.2f} RSD\n"
+                f"(kurs od {KURS.datum_kursa or 'nepoznatog datuma'})"
+            )
+        else:
+            self.tekst_kurs = "Kurs jos nije povucen sa interneta."
+
+    def izaberi_valutu(self, valuta):
+        self.valuta_izbor = valuta
+        KURS.valuta = valuta
+        app = App.get_running_app()
+        KURS.sacuvaj(app.user_data_dir)
+
+    def osvezi_kurs_rucno(self):
+        app = App.get_running_app()
+
+        def posao():
+            uspeh, greska = KURS.osvezi_ako_treba(app.user_data_dir, prinudno=True)
+            Clock.schedule_once(lambda dt: self._posle_osvezavanja(uspeh, greska))
+
+        threading.Thread(target=posao, daemon=True).start()
+
+    def _posle_osvezavanja(self, uspeh, greska):
+        self._osvezi_tekst()
+        if uspeh:
+            _prikazi_popup_poruku("Info", "Kurs je osvezen.", size_hint=(0.8, 0.3))
+        else:
+            _prikazi_popup_poruku(
+                "Greska",
+                f"Nije uspelo povlacenje kursa:\n{greska}",
+                size_hint=(0.85, 0.4),
+            )
 
 
 class KalkulatorScreen(Screen):
@@ -2345,8 +2524,8 @@ class KalkulatorScreen(Screen):
         cena_po_km = CENE.tarife.get(tarifa_naziv, CENE.tarife["Osnovna (07-22h)"])
         ukupno = CENE.start_fee + km * cena_po_km
         self.tekst_cene = (
-            f"Cena: {ukupno:.0f} RSD\n"
-            f"(start {CENE.start_fee:.0f} + {km:g} km x {cena_po_km:.0f} RSD)"
+            f"Cena: {formatiraj_cenu(ukupno)}\n"
+            f"(start {formatiraj_cenu(CENE.start_fee)} + {km:g} km x {formatiraj_cenu(cena_po_km)})"
         )
 
     def sacuvaj_voznju(self):
@@ -2389,17 +2568,12 @@ class KalkulatorScreen(Screen):
         self.tekst_cene = "Unesi kilometrazu da vidis cenu"
 
         if bila_izmena:
-            self._poruka(f"Izmena sacuvana! Cena voznje: {ukupno:.0f} RSD")
+            self._poruka(f"Izmena sacuvana! Cena voznje: {formatiraj_cenu(ukupno)}")
         else:
-            self._poruka(f"Sacuvano! Cena voznje: {ukupno:.0f} RSD")
+            self._poruka(f"Sacuvano! Cena voznje: {formatiraj_cenu(ukupno)}")
 
     def _poruka(self, tekst):
-        popup = Popup(
-            title="Info",
-            content=Label(text=tekst),
-            size_hint=(0.8, 0.3),
-        )
-        popup.open()
+        _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
 
 
 class EvidencijaScreen(Screen):
@@ -2426,11 +2600,18 @@ class EvidencijaScreen(Screen):
     def _napravi_red(self, v):
         od = v["od_adresa"] or "-"
         do = v["do_adresa"] or "-"
+
+        vreme_pocetka = v["vreme_pocetka"] if "vreme_pocetka" in v.keys() else None
+        if vreme_pocetka:
+            vreme_txt = f"Pocetak {vreme_pocetka}  |  Kraj {v['vreme']}"
+        else:
+            vreme_txt = f"Kraj {v['vreme']}"
+
         opis = (
-            f"[b]{v['datum']} {v['vreme']}[/b]\n"
+            f"[b]{v['datum']}[/b]  {vreme_txt}\n"
             f"{v['km']:g} km  |  {v['tarifa_naziv']}\n"
             f"{od}\n-> {do}\n"
-            f"[color=0d6b1f][b]{v['ukupna_cena']:.0f} RSD[/b][/color]"
+            f"[color=cc8a00][b]{formatiraj_cenu(v['ukupna_cena'])}[/b][/color]"
         )
         return napravi_red_liste(
             opis,
@@ -2471,7 +2652,7 @@ class IzvestajScreen(Screen):
             f"DANAS ({danas})\n"
             f"Broj voznji: {broj_d}\n"
             f"Ukupno km: {km_d:.1f}\n"
-            f"Ukupna zarada: {prihod_d:.0f} RSD"
+            f"Ukupna zarada: {formatiraj_cenu(prihod_d)}"
         )
 
         voznje_mesec = db.voznje_za_mesec(mesec)
@@ -2480,7 +2661,7 @@ class IzvestajScreen(Screen):
             f"OVAJ MESEC ({mesec})\n"
             f"Broj voznji: {broj_m}\n"
             f"Ukupno km: {km_m:.1f}\n"
-            f"Ukupna zarada: {prihod_m:.0f} RSD"
+            f"Ukupna zarada: {formatiraj_cenu(prihod_m)}"
         )
 
 
@@ -2499,6 +2680,33 @@ def _zapisi_gresku(tekst):
             f.write(tekst)
     except Exception:
         pass
+
+
+def _prikazi_popup_poruku(naslov, tekst, size_hint=(0.85, 0.5)):
+    """Otvara Popup sa tekstom koji se pravilno prelama u novi red i,
+    ako je predugacak, moze da se skroluje - umesto da tekst 'iscuri'
+    van okvira popupa kao ranije.
+    """
+    sv = ScrollView()
+    lbl = Label(
+        text=tekst,
+        size_hint_y=None,
+        halign="center",
+        valign="middle",
+        color=(1, 1, 1, 1),
+        padding=(10, 10),
+    )
+    lbl.bind(texture_size=lambda inst, val: setattr(lbl, "height", val[1]))
+    lbl.bind(width=lambda inst, val: setattr(lbl, "text_size", (val, None)))
+    sv.add_widget(lbl)
+
+    popup = Popup(
+        title=naslov,
+        content=sv,
+        size_hint=size_hint,
+    )
+    popup.open()
+    return popup
 
 
 def _prikazi_gresku_ekran(poruka):
@@ -2538,6 +2746,14 @@ class TaksiApp(App):
             SERVIS.ucitaj(self.user_data_dir)
             AKTIVNA_VOZNJA.ucitaj(self.user_data_dir)
             API.ucitaj(self.user_data_dir)
+            KURS.ucitaj(self.user_data_dir)
+            # Kurs se povlaci sa interneta u pozadini (posebna nit), da
+            # app ne "visi" na pokretanju ako je internet spor ili ga
+            # nema - u tom slucaju samo ostaje poslednji sacuvani kurs.
+            threading.Thread(
+                target=lambda: KURS.osvezi_ako_treba(self.user_data_dir),
+                daemon=True,
+            ).start()
             return Builder.load_string(KV)
         except Exception:
             greska = traceback.format_exc()
@@ -2548,12 +2764,7 @@ class TaksiApp(App):
         greska = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         _zapisi_gresku(greska)
         try:
-            popup = Popup(
-                title="Greska u aplikaciji",
-                content=Label(text=greska[-1500:], color=(1, 1, 1, 1)),
-                size_hint=(0.95, 0.8),
-            )
-            popup.open()
+            _prikazi_popup_poruku("Greska u aplikaciji", greska[-1500:], size_hint=(0.95, 0.8))
         except Exception:
             pass
 
