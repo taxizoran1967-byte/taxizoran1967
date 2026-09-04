@@ -1278,8 +1278,9 @@ ScreenManager:
                     orientation: "vertical"
                     tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
-                    height: dp(90)
+                    height: self.minimum_height
                     padding: dp(14)
+                    spacing: dp(4)
                     Label:
                         text: "POLAZAK"
                         font_size: '13sp'
@@ -1295,7 +1296,9 @@ ScreenManager:
                         color: 0.94, 0.91, 1, 1
                         halign: "left"
                         valign: "top"
+                        size_hint_y: None
                         text_size: self.width, None
+                        height: self.texture_size[1]
 
                 FieldLabel:
                     text: "Adresa polaska (rucno, ako GPS ne nadje)"
