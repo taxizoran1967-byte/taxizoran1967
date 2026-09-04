@@ -833,9 +833,10 @@ ScreenManager:
                 padding: dp(2), dp(4)
 
                 PastelCard:
+                    orientation: "vertical"
                     tint: 0.55, 0.38, 0.26, 0.92
                     size_hint_y: None
-                    height: dp(128)
+                    height: self.minimum_height
                     padding: dp(14)
                     Label:
                         id: label_danas
@@ -843,7 +844,9 @@ ScreenManager:
                         font_size: '16sp'
                         halign: "left"
                         valign: "top"
-                        text_size: self.size
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
                         color: 1, 0.90, 0.80, 1
 
                 FieldLabel:
@@ -859,9 +862,10 @@ ScreenManager:
                     spacing: dp(8)
 
                 PastelCard:
+                    orientation: "vertical"
                     tint: 0.26, 0.48, 0.44, 0.92
                     size_hint_y: None
-                    height: dp(128)
+                    height: self.minimum_height
                     padding: dp(14)
                     Label:
                         id: label_nedelja
@@ -869,13 +873,16 @@ ScreenManager:
                         font_size: '16sp'
                         halign: "left"
                         valign: "top"
-                        text_size: self.size
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
                         color: 0.86, 1, 0.96, 1
 
                 PastelCard:
+                    orientation: "vertical"
                     tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
-                    height: dp(128)
+                    height: self.minimum_height
                     padding: dp(14)
                     Label:
                         id: label_mesec
@@ -883,7 +890,9 @@ ScreenManager:
                         font_size: '16sp'
                         halign: "left"
                         valign: "top"
-                        text_size: self.size
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
                         color: 0.92, 0.88, 1, 1
 
 # ============================================================
