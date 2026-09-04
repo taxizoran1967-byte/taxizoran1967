@@ -112,6 +112,20 @@ def voznje_za_mesec(godina_mesec_str):
     return rows
 
 
+def voznje_izmedju(pocetak_str, kraj_str):
+    """pocetak_str i kraj_str format YYYY-MM-DD, oba kraja ukljucena.
+    Koristi se npr. za nedeljni izvestaj (ponedeljak - danas)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM voznje WHERE datum BETWEEN ? AND ? ORDER BY datum, vreme",
+        (pocetak_str, kraj_str),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
 def zbir_voznji(rows):
     """Vraca (broj_voznji, ukupan_prihod, ukupno_km)"""
     broj = len(rows)

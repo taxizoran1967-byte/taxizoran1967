@@ -33,7 +33,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.properties import StringProperty, BooleanProperty
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import database as db
 
@@ -824,35 +824,67 @@ ScreenManager:
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
 
-        PastelCard:
-            tint: 0.55, 0.38, 0.26, 0.92
-            size_hint_y: None
-            height: dp(128)
-            padding: dp(14)
-            Label:
-                id: label_danas
-                text: root.tekst_danas
-                font_size: '16sp'
-                halign: "left"
-                valign: "top"
-                text_size: self.size
-                color: 1, 0.90, 0.80, 1
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(10)
+                padding: dp(2), dp(4)
 
-        PastelCard:
-            tint: 0.38, 0.32, 0.52, 0.92
-            size_hint_y: None
-            height: dp(128)
-            padding: dp(14)
-            Label:
-                id: label_mesec
-                text: root.tekst_mesec
-                font_size: '16sp'
-                halign: "left"
-                valign: "top"
-                text_size: self.size
-                color: 0.92, 0.88, 1, 1
+                PastelCard:
+                    tint: 0.55, 0.38, 0.26, 0.92
+                    size_hint_y: None
+                    height: dp(128)
+                    padding: dp(14)
+                    Label:
+                        id: label_danas
+                        text: root.tekst_danas
+                        font_size: '16sp'
+                        halign: "left"
+                        valign: "top"
+                        text_size: self.size
+                        color: 1, 0.90, 0.80, 1
 
-        Widget:
+                FieldLabel:
+                    text: "Voznje danas (pocetak - kraj, cena):"
+                    size_hint_y: None
+                    height: dp(28)
+
+                BoxLayout:
+                    id: lista_danas_voznje
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(8)
+
+                PastelCard:
+                    tint: 0.26, 0.48, 0.44, 0.92
+                    size_hint_y: None
+                    height: dp(128)
+                    padding: dp(14)
+                    Label:
+                        id: label_nedelja
+                        text: root.tekst_nedelja
+                        font_size: '16sp'
+                        halign: "left"
+                        valign: "top"
+                        text_size: self.size
+                        color: 0.86, 1, 0.96, 1
+
+                PastelCard:
+                    tint: 0.38, 0.32, 0.52, 0.92
+                    size_hint_y: None
+                    height: dp(128)
+                    padding: dp(14)
+                    Label:
+                        id: label_mesec
+                        text: root.tekst_mesec
+                        font_size: '16sp'
+                        halign: "left"
+                        valign: "top"
+                        text_size: self.size
+                        color: 0.92, 0.88, 1, 1
 
 # ============================================================
 # PODESAVANJA
@@ -2640,14 +2672,17 @@ class EvidencijaScreen(Screen):
 
 class IzvestajScreen(Screen):
     tekst_danas = StringProperty("")
+    tekst_nedelja = StringProperty("")
     tekst_mesec = StringProperty("")
 
     def on_pre_enter(self, *args):
         self.osvezi()
 
     def osvezi(self):
-        danas = datetime.now().strftime("%Y-%m-%d")
-        mesec = datetime.now().strftime("%Y-%m")
+        danas_dt = datetime.now()
+        danas = danas_dt.strftime("%Y-%m-%d")
+        mesec = danas_dt.strftime("%Y-%m")
+        pocetak_nedelje = (danas_dt - timedelta(days=danas_dt.weekday())).strftime("%Y-%m-%d")
 
         voznje_danas = db.voznje_za_datum(danas)
         broj_d, prihod_d, km_d = db.zbir_voznji(voznje_danas)
@@ -2656,6 +2691,16 @@ class IzvestajScreen(Screen):
             f"Broj voznji: {broj_d}\n"
             f"Ukupno km: {km_d:.1f}\n"
             f"Ukupna zarada: {formatiraj_cenu(prihod_d)}"
+        )
+        self._prikazi_voznje_danas(voznje_danas)
+
+        voznje_nedelje = db.voznje_izmedju(pocetak_nedelje, danas)
+        broj_n, prihod_n, km_n = db.zbir_voznji(voznje_nedelje)
+        self.tekst_nedelja = (
+            f"OVA NEDELJA ({pocetak_nedelje} - {danas})\n"
+            f"Broj voznji: {broj_n}\n"
+            f"Ukupno km: {km_n:.1f}\n"
+            f"Ukupna zarada: {formatiraj_cenu(prihod_n)}"
         )
 
         voznje_mesec = db.voznje_za_mesec(mesec)
@@ -2666,6 +2711,29 @@ class IzvestajScreen(Screen):
             f"Ukupno km: {km_m:.1f}\n"
             f"Ukupna zarada: {formatiraj_cenu(prihod_m)}"
         )
+
+    def _prikazi_voznje_danas(self, voznje):
+        kontejner = self.ids.lista_danas_voznje
+        kontejner.clear_widgets()
+
+        if not voznje:
+            kontejner.add_widget(Label(
+                text="Jos uvek nema voznji danas.",
+                size_hint_y=None, height=32,
+                color=(1, 1, 1, 1),
+            ))
+            return
+
+        for v in voznje:
+            vreme_pocetka = v["vreme_pocetka"] if "vreme_pocetka" in v.keys() else None
+            vreme_txt = f"{vreme_pocetka} -> {v['vreme']}" if vreme_pocetka else f"Kraj {v['vreme']}"
+            opis = f"{vreme_txt}   |   [b]{formatiraj_cenu(v['ukupna_cena'])}[/b]"
+            kontejner.add_widget(napravi_red_liste(
+                opis,
+                tint=(0.30, 0.40, 0.36, 0.85),
+                boja_teksta=(0.92, 0.98, 0.94, 1),
+                dugmad=[],
+            ))
 
 
 def _crash_log_path():
