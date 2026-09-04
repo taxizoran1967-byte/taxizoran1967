@@ -1188,9 +1188,11 @@ ScreenManager:
                     orientation: "vertical"
                     tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
-                    height: dp(90)
+                    height: label_polazak_naslov.height + label_polazak_tekst.height + dp(32)
                     padding: dp(14)
+                    spacing: dp(4)
                     Label:
+                        id: label_polazak_naslov
                         text: "POLAZAK"
                         font_size: '13sp'
                         bold: True
@@ -1200,12 +1202,15 @@ ScreenManager:
                         halign: "left"
                         text_size: self.size
                     Label:
+                        id: label_polazak_tekst
                         text: root.tekst_polazak
                         font_size: '15sp'
                         color: 0.94, 0.91, 1, 1
                         halign: "left"
                         valign: "top"
+                        size_hint_y: None
                         text_size: self.width, None
+                        height: self.texture_size[1]
 
                 FieldLabel:
                     text: "Adresa polaska (rucno, ako GPS ne nadje)"
