@@ -258,6 +258,65 @@ def formatiraj_cenu(iznos_rsd):
         pass
     return f"{iznos_rsd:.0f} RSD"
 
+
+# ============================================================
+# BACKUP - trajno cuvanje voznji van aplikacije (prezivi
+# deinstalaciju i promenu telefona)
+# ============================================================
+
+BACKUP_FOLDER_NAZIV = "TaksiApp"
+BACKUP_FAJL_NAZIV = "backup_taksi.json"
+
+
+def _putanja_backup_foldera():
+    """Vraca putanju do JAVNOG foldera 'Preuzimanja/TaksiApp' na
+    telefonu - to je fiksno, uvek isto mesto, van same aplikacije,
+    pa ostaje na telefonu i posle deinstalacije app-a.
+    Van Android-a (npr. ovde na racunaru radi testiranja) vraca
+    obican lokalni folder.
+    """
+    try:
+        from jnius import autoclass
+        Environment = autoclass("android.os.Environment")
+        javni_download = Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DOWNLOADS
+        ).getAbsolutePath()
+        return os.path.join(javni_download, BACKUP_FOLDER_NAZIV)
+    except Exception:
+        return os.path.join(os.path.expanduser("~"), BACKUP_FOLDER_NAZIV)
+
+
+def _ima_dozvolu_svi_fajlovi():
+    """Proverava da li app ima Android-ovu dozvolu 'pristup svim
+    fajlovima' (potrebno da bi se pisalo van app-a, u Preuzimanja)."""
+    try:
+        from jnius import autoclass
+        Environment = autoclass("android.os.Environment")
+        return bool(Environment.isExternalStorageManager())
+    except Exception:
+        return True  # nije Android (desktop test) - ne blokiraj
+
+
+def _zatrazi_dozvolu_svi_fajlovi():
+    """Otvara Android-ovo sistemsko podesavanje gde korisnik rucno
+    ukljuci 'Dozvoli pristup svim fajlovima' za ovu app - ovo Android
+    trazi da bude rucno uradjeno u Podesavanjima, ne moze se
+    automatski odobriti kao obicna dozvola."""
+    try:
+        from jnius import autoclass
+        from android import mActivity
+        Intent = autoclass("android.content.Intent")
+        Settings = autoclass("android.provider.Settings")
+        Uri = autoclass("android.net.Uri")
+        intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+        uri = Uri.parse("package:" + mActivity.getPackageName())
+        intent.setData(uri)
+        mActivity.startActivity(intent)
+    except Exception:
+        pass
+
+
+
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji, podaci te
 # voznje se privremeno stave ovde da bi ih Kalkulator ekran
 # pokupio i popunio formu za ispravku.
@@ -476,6 +535,7 @@ ScreenManager:
     NavigacijaScreen:
     GoogleApiScreen:
     ValutaScreen:
+    BackupScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
@@ -984,6 +1044,11 @@ ScreenManager:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Valuta"
                     on_release: app.root.current = "valuta"
+
+                MenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: "Backup podataka"
+                    on_release: app.root.current = "backup"
 
 # ============================================================
 # CENOVNIK - izmena cena tarifa i start takse
@@ -1599,6 +1664,77 @@ ScreenManager:
             text: "Kurs se automatski osvezava jednom dnevno (kad prvi put otvoris app tog dana). Ovde mozes rucno da ga povuces ponovo, npr. ako juce nije bilo interneta."
             size_hint_y: None
             height: dp(70)
+            text_size: self.width, None
+
+        Widget:
+
+# ============================================================
+# BACKUP - trajno cuvanje/vracanje voznji
+# ============================================================
+
+<BackupScreen>:
+    name: "backup"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Backup podataka"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "podesavanja"
+
+        FieldLabel:
+            text: "Cuva sve voznje (km, cene, adrese) u jedan fajl van aplikacije, da ne nestanu ako obrises app ili promenis telefon."
+
+        PastelCard:
+            orientation: "vertical"
+            tint: 0.30, 0.29, 0.42, 0.92
+            size_hint_y: None
+            height: self.minimum_height
+            padding: dp(14)
+            Label:
+                text: root.tekst_status
+                color: 1, 1, 1, 1
+                halign: "left"
+                valign: "top"
+                size_hint_y: None
+                text_size: self.width, None
+                height: self.texture_size[1]
+
+        RoundButton:
+            label_text: "Odobri pristup fajlovima"
+            tint: 0.36, 0.46, 0.64, 1
+            text_color: 1, 1, 1, 1
+            size_hint_y: None
+            height: dp(52)
+            on_release: root.zatrazi_dozvolu()
+
+        RoundButton:
+            label_text: "Sacuvaj backup sada"
+            tint: 0.30, 0.52, 0.36, 1
+            text_color: 1, 1, 1, 1
+            size_hint_y: None
+            height: dp(56)
+            on_release: root.sacuvaj_backup()
+
+        RoundButton:
+            label_text: "Vrati podatke iz backupa"
+            tint: 0.55, 0.38, 0.26, 1
+            text_color: 1, 1, 1, 1
+            size_hint_y: None
+            height: dp(56)
+            on_release: root.ucitaj_backup()
+
+        FieldLabel:
+            text: "Ako menjas telefon: napravi backup na starom, prebaci fajl (WhatsApp/Drive/USB) u isti folder na novom, instaliraj app, pa klikni 'Vrati podatke'."
+            size_hint_y: None
+            height: dp(90)
             text_size: self.width, None
 
         Widget:
@@ -2528,6 +2664,113 @@ class ValutaScreen(Screen):
                 f"Nije uspelo povlacenje kursa:\n{greska}",
                 size_hint=(0.85, 0.4),
             )
+
+
+class BackupScreen(Screen):
+    tekst_status = StringProperty("")
+
+    def on_pre_enter(self, *args):
+        self._osvezi_status()
+
+    def _osvezi_status(self):
+        putanja = os.path.join(_putanja_backup_foldera(), BACKUP_FAJL_NAZIV)
+        if _ima_dozvolu_svi_fajlovi():
+            dozvola_txt = "Dozvola za fajlove: DA"
+        else:
+            dozvola_txt = "Dozvola za fajlove: NE (klikni dugme ispod)"
+
+        try:
+            broj = db.broj_voznji()
+        except Exception:
+            broj = "?"
+
+        self.tekst_status = (
+            f"{dozvola_txt}\n\n"
+            f"Backup fajl se cuva ovde:\n{putanja}\n\n"
+            f"Voznji trenutno u bazi: {broj}"
+        )
+
+    def zatrazi_dozvolu(self):
+        _zatrazi_dozvolu_svi_fajlovi()
+        Clock.schedule_once(lambda dt: self._osvezi_status(), 1)
+
+    def sacuvaj_backup(self):
+        if not _ima_dozvolu_svi_fajlovi():
+            _prikazi_popup_poruku(
+                "Nedostaje dozvola",
+                "Prvo klikni 'Odobri pristup fajlovima', potvrdi na sledecem "
+                "ekranu, pa se vrati ovde i probaj ponovo.",
+                size_hint=(0.88, 0.4),
+            )
+            return
+        try:
+            voznje = db.sve_voznje_za_izvoz()
+            podaci = [dict(v) for v in voznje]
+            folder = _putanja_backup_foldera()
+            os.makedirs(folder, exist_ok=True)
+            putanja = os.path.join(folder, BACKUP_FAJL_NAZIV)
+            with open(putanja, "w", encoding="utf-8") as f:
+                json.dump(podaci, f, ensure_ascii=False, indent=2)
+            _prikazi_popup_poruku(
+                "Sacuvano",
+                f"Sacuvano {len(podaci)} voznji u:\n{putanja}",
+                size_hint=(0.88, 0.45),
+            )
+        except Exception as e:
+            _prikazi_popup_poruku(
+                "Greska", f"Backup nije uspeo:\n{e}", size_hint=(0.88, 0.4)
+            )
+        self._osvezi_status()
+
+    def ucitaj_backup(self):
+        if not _ima_dozvolu_svi_fajlovi():
+            _prikazi_popup_poruku(
+                "Nedostaje dozvola",
+                "Prvo klikni 'Odobri pristup fajlovima', potvrdi na sledecem "
+                "ekranu, pa se vrati ovde i probaj ponovo.",
+                size_hint=(0.88, 0.4),
+            )
+            return
+
+        putanja = os.path.join(_putanja_backup_foldera(), BACKUP_FAJL_NAZIV)
+        try:
+            with open(putanja, "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+        except FileNotFoundError:
+            _prikazi_popup_poruku(
+                "Nema backup fajla",
+                f"Nije pronadjen fajl:\n{putanja}\n\n"
+                f"Prvo napravi backup na starom telefonu, pa taj fajl "
+                f"prebaci u isti folder na ovom telefonu.",
+                size_hint=(0.88, 0.5),
+            )
+            return
+        except Exception as e:
+            _prikazi_popup_poruku(
+                "Greska", f"Ne mogu da procitam backup:\n{e}", size_hint=(0.88, 0.4)
+            )
+            return
+
+        dodato = 0
+        preskoceno = 0
+        for v in podaci:
+            try:
+                if db.voznja_postoji(
+                    v.get("datum"), v.get("vreme"), v.get("km"), v.get("ukupna_cena")
+                ):
+                    preskoceno += 1
+                    continue
+                db.uvezi_voznju_sirovo(v)
+                dodato += 1
+            except Exception:
+                preskoceno += 1
+
+        _prikazi_popup_poruku(
+            "Vraceno iz backupa",
+            f"Dodato: {dodato} voznji\nPreskoceno (vec postoje): {preskoceno}",
+            size_hint=(0.85, 0.4),
+        )
+        self._osvezi_status()
 
 
 class KalkulatorScreen(Screen):

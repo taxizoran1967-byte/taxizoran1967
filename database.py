@@ -126,6 +126,61 @@ def voznje_izmedju(pocetak_str, kraj_str):
     return rows
 
 
+def sve_voznje_za_izvoz():
+    """Vraca BAS SVE voznje, bez limita - koristi se za pravljenje
+    backup fajla (za razliku od sve_voznje() koja ima limit za prikaz
+    u Evidenciji)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM voznje ORDER BY id")
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def broj_voznji():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) AS n FROM voznje")
+    n = cur.fetchone()["n"]
+    conn.close()
+    return n
+
+
+def voznja_postoji(datum, vreme, km, ukupna_cena):
+    """Provera da li vec postoji ista voznja u bazi - koristi se pri
+    vracanju iz backup fajla, da se ista voznja ne doda dvaput ako se
+    backup ucita vise puta."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id FROM voznje WHERE datum = ? AND vreme = ? AND km = ? AND ukupna_cena = ? LIMIT 1",
+        (datum, vreme, km, ukupna_cena),
+    )
+    red = cur.fetchone()
+    conn.close()
+    return red is not None
+
+
+def uvezi_voznju_sirovo(v):
+    """Ubacuje voznju sa TACNO onim vrednostima iz backup fajla - za
+    razliku od dodaj_voznju(), ne stavlja 'sada' kao datum/vreme, nego
+    zadrzava original (jer se ovde vraca stara, vec zavrsena voznja)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO voznje (datum, vreme, od_adresa, do_adresa, km, tarifa_naziv,
+                             cena_po_km, start_taksa, ukupna_cena, napomena, vreme_pocetka)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        v.get("datum"), v.get("vreme"), v.get("od_adresa"), v.get("do_adresa"),
+        v.get("km"), v.get("tarifa_naziv"), v.get("cena_po_km"), v.get("start_taksa"),
+        v.get("ukupna_cena"), v.get("napomena", ""), v.get("vreme_pocetka"),
+    ))
+    conn.commit()
+    conn.close()
+
+
 def zbir_voznji(rows):
     """Vraca (broj_voznji, ukupan_prihod, ukupno_km)"""
     broj = len(rows)

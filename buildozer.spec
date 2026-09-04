@@ -18,7 +18,7 @@ requirements = python3,kivy,sqlite3,plyer,certifi
 orientation = portrait
 fullscreen = 0
 
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,MANAGE_EXTERNAL_STORAGE
 
 android.archs = arm64-v8a
 
@@ -28,3 +28,4 @@ android.minapi = 21
 [buildozer]
 log_level = 2
 warn_on_root = 1
+
