@@ -419,28 +419,41 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
     stil_zbir = ParagraphStyle(
         "zbir", fontName="DejaVuSans-Bold", fontSize=12, leading=16,
     )
-    stil_vozac = ParagraphStyle(
-        "vozac", fontName="DejaVuSans", fontSize=10, leading=14,
+    stil_vozac_ime = ParagraphStyle(
+        "vozac_ime", fontName="DejaVuSans-Bold", fontSize=12, leading=15,
+    )
+    stil_vozac_red = ParagraphStyle(
+        "vozac_red", fontName="DejaVuSans", fontSize=9.5, leading=13,
     )
 
     elementi = []
     elementi.append(Paragraph(f"Mesecni izvestaj - {godina_mesec_str}", stil_naslov))
 
-    linije_vozaca = []
+    redovi_vozaca = []
     if VOZAC.ime_prezime:
-        linije_vozaca.append(f"Vozac: {VOZAC.ime_prezime}")
+        redovi_vozaca.append(Paragraph(VOZAC.ime_prezime, stil_vozac_ime))
     if VOZAC.telefon:
-        linije_vozaca.append(f"Telefon: {VOZAC.telefon}")
+        redovi_vozaca.append(Paragraph(f"Telefon: {VOZAC.telefon}", stil_vozac_red))
     if VOZAC.broj_licence:
-        linije_vozaca.append(f"Licenca: {VOZAC.broj_licence}")
+        redovi_vozaca.append(Paragraph(f"Licenca: {VOZAC.broj_licence}", stil_vozac_red))
     if VOZAC.vozilo:
-        linije_vozaca.append(f"Vozilo: {VOZAC.vozilo}")
+        redovi_vozaca.append(Paragraph(f"Vozilo: {VOZAC.vozilo}", stil_vozac_red))
     if VOZAC.tablice:
-        linije_vozaca.append(f"Tablice: {VOZAC.tablice}")
+        redovi_vozaca.append(Paragraph(f"Tablice: {VOZAC.tablice}", stil_vozac_red))
 
-    if linije_vozaca:
+    if redovi_vozaca:
         elementi.append(Spacer(1, 3 * mm))
-        elementi.append(Paragraph(" &nbsp;|&nbsp; ".join(linije_vozaca), stil_vozac))
+        box_vozac = Table([[redovi_vozaca]], colWidths=[85 * mm])
+        box_vozac.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#3a3560")),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f2f1f8")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        elementi.append(box_vozac)
 
     elementi.append(Spacer(1, 8 * mm))
 
