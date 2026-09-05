@@ -793,7 +793,11 @@ ScreenManager:
         text: root.label_text
         color: root.text_color
         bold: True
-        font_size: '15sp'
+        font_size: '14sp'
+        halign: "center"
+        valign: "middle"
+        text_size: self.width - dp(6), self.height
+        padding: dp(3), 0
 
 <NavBar@BoxLayout>:
     size_hint_y: None
