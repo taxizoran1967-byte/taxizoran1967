@@ -8,6 +8,7 @@ import sys
 import re
 import json
 import math
+import calendar
 import threading
 import traceback
 import urllib.request
@@ -384,11 +385,60 @@ def _registruj_font_za_pdf():
     _PDF_FONT_REGISTROVAN = True
 
 
-def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
-    """Pravi PDF tabelu sa svim voznjama za dati mesec (format
-    'GGGG-MM'): redni broj, datum, vreme polaska/dolaska, adrese,
-    cena - i na kraju ukupan broj voznji i ukupnu zaradu.
-    """
+def _stavke_izmedju(stavke, pocetak_str, kraj_str):
+    """Filtrira listu stavki (gorivo ili servis) po polju 'datum' - vraca
+    samo one izmedju pocetak_str i kraj_str (format GGGG-MM-DD), oba
+    kraja ukljucena. Poredjenje teksta radi ispravno jer je format
+    datuma takav da abecedno poredjenje odgovara hronoloskom."""
+    return [
+        s for s in stavke
+        if s.get("datum") and pocetak_str <= s["datum"] <= kraj_str
+    ]
+
+
+def _izracunaj_potrosnju_intervale(sve_stavke_goriva):
+    """Racuna potrosnju goriva (l/100km) izmedju uzastopnih sipanja, na
+    osnovu kilometraze sa pumpe (km_pumpe). Uzima se CELA istorija
+    goriva (ne samo izabrani period) da bi se ispravno uparila dva
+    uzastopna sipanja, cak i kad jedno od njih pada van perioda.
+
+    Vraca listu recnika sa kljucevima: datum, km_predjeno, litara,
+    potrosnja (l/100km), cena. 'datum' je datum DRUGOG (kasnijeg) od
+    dva uzastopna sipanja - to je datum kad je taj interval "zavrsen".
+
+    Sipanja bez upisane kilometraze (km_pumpe) se preskacu - ne mogu
+    uci u racunicu jer nemaju tacku od koje bi se merila predjena
+    kilometraza."""
+    sa_km = [s for s in sve_stavke_goriva if s.get("km_pumpe")]
+    sa_km.sort(key=lambda s: (s["km_pumpe"], s.get("datum", "")))
+
+    intervali = []
+    for prethodno, trenutno in zip(sa_km, sa_km[1:]):
+        km_predjeno = trenutno["km_pumpe"] - prethodno["km_pumpe"]
+        if km_predjeno <= 0:
+            continue
+        litara = trenutno.get("litara", 0)
+        intervali.append({
+            "datum": trenutno.get("datum", "-"),
+            "km_predjeno": km_predjeno,
+            "litara": litara,
+            "potrosnja": litara / km_predjeno * 100,
+            "cena": trenutno.get("cena", 0),
+        })
+    return intervali
+
+
+def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla):
+    """Pravi kompletan PDF izvestaj za izabrani period (pocetak_str i
+    kraj_str, format GGGG-MM-DD, oba kraja ukljucena). Sadrzi, tim
+    redosledom: podatke o vozacu, servise u periodu, potrosnju goriva
+    (l/100km izmedju uzastopnih sipanja) i sve unose goriva u periodu,
+    pa na kraju voznje u periodu (adrese, cene, datumi) sa ukupnim
+    zbirom.
+
+    Ista funkcija se koristi za dnevni, nedeljni, mesecni, polugodisnji
+    i godisnji izvestaj - jedina razlika je koji se pocetak_str/
+    kraj_str prosledi (to racuna _izracunaj_period u IzvozPdfScreen)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
@@ -397,8 +447,16 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
 
     _registruj_font_za_pdf()
 
-    voznje = db.voznje_za_mesec(godina_mesec_str)
+    voznje = db.voznje_izmedju(pocetak_str, kraj_str)
     broj, prihod, km = db.zbir_voznji(voznje)
+
+    gorivo_period = _stavke_izmedju(GORIVO.stavke, pocetak_str, kraj_str)
+    servisi_period = _stavke_izmedju(SERVIS.stavke, pocetak_str, kraj_str)
+
+    svi_intervali_potrosnje = _izracunaj_potrosnju_intervale(GORIVO.stavke)
+    intervali_perioda = [
+        i for i in svi_intervali_potrosnje if pocetak_str <= i["datum"] <= kraj_str
+    ]
 
     doc = SimpleDocTemplate(
         putanja_fajla,
@@ -407,7 +465,7 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
         rightMargin=15 * mm,
         topMargin=15 * mm,
         bottomMargin=15 * mm,
-        title=f"Izvestaj {godina_mesec_str}",
+        title=naslov_izvestaja,
     )
 
     stil_celija = ParagraphStyle(
@@ -415,6 +473,10 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
     )
     stil_naslov = ParagraphStyle(
         "naslov", fontName="DejaVuSans-Bold", fontSize=16, leading=20,
+    )
+    stil_podnaslov = ParagraphStyle(
+        "podnaslov", fontName="DejaVuSans", fontSize=10, leading=14,
+        textColor=colors.HexColor("#444444"),
     )
     stil_zaglavlje = ParagraphStyle(
         "zaglavlje", fontName="DejaVuSans-Bold", fontSize=8.5, leading=11,
@@ -427,9 +489,25 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
         "vozac", fontName="DejaVuSans", fontSize=10, leading=14,
     )
 
-    elementi = []
-    elementi.append(Paragraph(f"Mesecni izvestaj - {godina_mesec_str}", stil_naslov))
+    def _tabela_stil():
+        return TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ])
 
+    elementi = []
+    elementi.append(Paragraph(naslov_izvestaja, stil_naslov))
+    elementi.append(Paragraph(f"Period: {pocetak_str} do {kraj_str}", stil_podnaslov))
+
+    # ------------------------------------------------------------
+    # PODACI O VOZACU
+    # ------------------------------------------------------------
     linije_vozaca = []
     if VOZAC.ime_prezime:
         linije_vozaca.append(f"Ime i prezime: {VOZAC.ime_prezime}")
@@ -456,13 +534,13 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
         elementi.append(box_vozaca)
 
     # ------------------------------------------------------------
-    # SERVISI - kompletan istorijat (ne samo za ovaj mesec)
+    # SERVISI u periodu
     # ------------------------------------------------------------
     elementi.append(PageBreak())
-    elementi.append(Paragraph("Servisi vozila (kompletan istorijat)", stil_naslov))
+    elementi.append(Paragraph("Servisi vozila u periodu", stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
-    if SERVIS.stavke:
+    if servisi_period:
         zaglavlje_servis = [
             Paragraph("R.br.", stil_zaglavlje),
             Paragraph("Datum", stil_zaglavlje),
@@ -473,7 +551,7 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
         ]
         podaci_servis = [zaglavlje_servis]
         ukupno_servis = 0.0
-        for i, s in enumerate(reversed(SERVIS.stavke), start=1):
+        for i, s in enumerate(sorted(servisi_period, key=lambda s: s.get("datum", "")), start=1):
             km_s = s.get("km")
             podaci_servis.append([
                 Paragraph(str(i), stil_celija),
@@ -487,30 +565,68 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
 
         sirine_servis = [12 * mm, 22 * mm, 45 * mm, 25 * mm, 25 * mm, 51 * mm]
         tabela_servis = Table(podaci_servis, colWidths=sirine_servis, repeatRows=1)
-        tabela_servis.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
-            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ]))
+        tabela_servis.setStyle(_tabela_stil())
         elementi.append(tabela_servis)
         elementi.append(Spacer(1, 6 * mm))
-        elementi.append(Paragraph(f"Ukupno potroseno na servise: {formatiraj_cenu(ukupno_servis)}", stil_zbir))
+        elementi.append(Paragraph(f"Ukupno potroseno na servise u periodu: {formatiraj_cenu(ukupno_servis)}", stil_zbir))
     else:
-        elementi.append(Paragraph("Nema unetih servisa.", stil_celija))
+        elementi.append(Paragraph("Nema unetih servisa u ovom periodu.", stil_celija))
 
     # ------------------------------------------------------------
-    # GORIVO - kompletan istorijat (ne samo za ovaj mesec)
+    # POTROSNJA GORIVA + svi unosi goriva u periodu
     # ------------------------------------------------------------
     elementi.append(PageBreak())
-    elementi.append(Paragraph("Gorivo (kompletan istorijat)", stil_naslov))
+    elementi.append(Paragraph("Potrosnja goriva", stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
-    if GORIVO.stavke:
+    if intervali_perioda:
+        zaglavlje_potrosnja = [
+            Paragraph("Datum", stil_zaglavlje),
+            Paragraph("Predjeno (od proslog sipanja)", stil_zaglavlje),
+            Paragraph("Sipano", stil_zaglavlje),
+            Paragraph("Potrosnja", stil_zaglavlje),
+            Paragraph("Cena sipanja", stil_zaglavlje),
+        ]
+        podaci_potrosnja = [zaglavlje_potrosnja]
+        ukupno_km_potrosnja = 0.0
+        ukupno_litara_potrosnja = 0.0
+        for interval in intervali_perioda:
+            podaci_potrosnja.append([
+                Paragraph(interval["datum"], stil_celija),
+                Paragraph(f"{interval['km_predjeno']:g} km", stil_celija),
+                Paragraph(f"{interval['litara']:g} l", stil_celija),
+                Paragraph(f"{interval['potrosnja']:.1f} l/100km", stil_celija),
+                Paragraph(formatiraj_cenu(interval["cena"]), stil_celija),
+            ])
+            ukupno_km_potrosnja += interval["km_predjeno"]
+            ukupno_litara_potrosnja += interval["litara"]
+
+        sirine_potrosnja = [22 * mm, 45 * mm, 25 * mm, 35 * mm, 30 * mm]
+        tabela_potrosnja = Table(podaci_potrosnja, colWidths=sirine_potrosnja, repeatRows=1)
+        tabela_potrosnja.setStyle(_tabela_stil())
+        elementi.append(tabela_potrosnja)
+        elementi.append(Spacer(1, 6 * mm))
+
+        if ukupno_km_potrosnja > 0:
+            prosek = ukupno_litara_potrosnja / ukupno_km_potrosnja * 100
+            elementi.append(Paragraph(
+                f"Prosecna potrosnja za period: {prosek:.1f} l/100km "
+                f"({ukupno_litara_potrosnja:g} l na {ukupno_km_potrosnja:g} km)",
+                stil_zbir,
+            ))
+    else:
+        elementi.append(Paragraph(
+            "Nema izracunate potrosnje za ovaj period - potrebna su bar dva "
+            "uzastopna sipanja sa upisanom kilometrazom (km na pumpi), pri "
+            "cemu drugo od njih pada u izabrani period.",
+            stil_celija,
+        ))
+
+    elementi.append(Spacer(1, 8 * mm))
+    elementi.append(Paragraph("Gorivo - svi unosi u periodu", stil_naslov))
+    elementi.append(Spacer(1, 5 * mm))
+
+    if gorivo_period:
         zaglavlje_gorivo = [
             Paragraph("R.br.", stil_zaglavlje),
             Paragraph("Datum", stil_zaglavlje),
@@ -523,7 +639,7 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
         podaci_gorivo = [zaglavlje_gorivo]
         ukupno_gorivo_cena = 0.0
         ukupno_gorivo_litara = 0.0
-        for i, s in enumerate(reversed(GORIVO.stavke), start=1):
+        for i, s in enumerate(sorted(gorivo_period, key=lambda s: s.get("datum", "")), start=1):
             km_pumpe = s.get("km_pumpe")
             podaci_gorivo.append([
                 Paragraph(str(i), stil_celija),
@@ -539,24 +655,20 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
 
         sirine_gorivo = [10 * mm, 20 * mm, 18 * mm, 16 * mm, 22 * mm, 22 * mm, 42 * mm]
         tabela_gorivo = Table(podaci_gorivo, colWidths=sirine_gorivo, repeatRows=1)
-        tabela_gorivo.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
-            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ]))
+        tabela_gorivo.setStyle(_tabela_stil())
         elementi.append(tabela_gorivo)
         elementi.append(Spacer(1, 6 * mm))
-        elementi.append(Paragraph(f"Ukupno potroseno na gorivo: {formatiraj_cenu(ukupno_gorivo_cena)}", stil_zbir))
-        elementi.append(Paragraph(f"Ukupno litara: {ukupno_gorivo_litara:g} l", stil_zbir))
+        elementi.append(Paragraph(f"Ukupno potroseno na gorivo u periodu: {formatiraj_cenu(ukupno_gorivo_cena)}", stil_zbir))
+        elementi.append(Paragraph(f"Ukupno litara u periodu: {ukupno_gorivo_litara:g} l", stil_zbir))
     else:
-        elementi.append(Paragraph("Nema unetih goriva.", stil_celija))
+        elementi.append(Paragraph("Nema unetih goriva u ovom periodu.", stil_celija))
+
+    # ------------------------------------------------------------
+    # VOZNJE u periodu
+    # ------------------------------------------------------------
     elementi.append(PageBreak())
-    elementi.append(Spacer(1, 3 * mm))
+    elementi.append(Paragraph("Voznje u periodu", stil_naslov))
+    elementi.append(Spacer(1, 5 * mm))
 
     zaglavlje = [
         Paragraph("R.br.", stil_zaglavlje),
@@ -582,27 +694,20 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
         ]
         podaci_tabele.append(red)
 
-    # sirine kolona u mm - A4 sirina 210mm, minus margine 2x15mm = 180mm dostupno
-    sirine = [13 * mm, 23 * mm, 17 * mm, 15 * mm, 42 * mm, 42 * mm, 21 * mm]
-
-    tabela = Table(podaci_tabele, colWidths=sirine, repeatRows=1)
-    tabela.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elementi.append(tabela)
-    elementi.append(Spacer(1, 8 * mm))
+    if voznje:
+        # sirine kolona u mm - A4 sirina 210mm, minus margine 2x15mm = 180mm dostupno
+        sirine = [13 * mm, 23 * mm, 17 * mm, 15 * mm, 42 * mm, 42 * mm, 21 * mm]
+        tabela = Table(podaci_tabele, colWidths=sirine, repeatRows=1)
+        tabela.setStyle(_tabela_stil())
+        elementi.append(tabela)
+        elementi.append(Spacer(1, 8 * mm))
+    else:
+        elementi.append(Paragraph("Nema voznji u ovom periodu.", stil_celija))
+        elementi.append(Spacer(1, 8 * mm))
 
     elementi.append(Paragraph(f"Ukupan broj voznji: {broj}", stil_zbir))
-    elementi.append(Paragraph(f"Ukupno predjeno: {km:.1f} km", stil_zbir))
-    elementi.append(Paragraph(f"Ukupna zarada za mesec: {formatiraj_cenu(prihod)}", stil_zbir))
-
+    elementi.append(Paragraph(f"Ukupno predjeno (voznje): {km:.1f} km", stil_zbir))
+    elementi.append(Paragraph(f"Ukupna zarada za period: {formatiraj_cenu(prihod)}", stil_zbir))
 
     doc.build(elementi)
 
@@ -2141,14 +2246,27 @@ ScreenManager:
                 on_release: root.manager.current = "izvestaj"
 
         FieldLabel:
-            text: "Pravi PDF sa svim voznjama za izabrani mesec (redni broj, vreme polaska/dolaska, adrese, cena) i ukupnim zbirom na kraju."
+            text: "Pravi PDF sa svim voznjama, gorivom, servisima i potrosnjom za izabrani period, sa ukupnim zbirom na kraju."
 
         FieldLabel:
-            text: "Mesec (format GGGG-MM):"
+            text: "Vrsta perioda:"
+
+        Spinner:
+            id: spinner_period
+            text: "Mesecno"
+            values: ["Dnevno", "Nedeljno", "Mesecno", "Polugodisnje", "Godisnje"]
+            size_hint_y: None
+            height: dp(48)
+            background_color: 0.78, 0.80, 0.90, 1
+            color: 0.12, 0.12, 0.24, 1
+            on_text: root.promeni_period(self.text)
+
+        FieldLabel:
+            text: root.tekst_format_perioda
 
         PastelTextInput:
-            id: input_mesec
-            hint_text: "npr. 2026-09"
+            id: input_period
+            hint_text: root.hint_perioda
 
         PastelCard:
             orientation: "vertical"
@@ -3341,13 +3459,117 @@ class BackupScreen(Screen):
         self._osvezi_status()
 
 
+def _izracunaj_period(tip, unos):
+    """Na osnovu izabranog tipa perioda ('Dnevno', 'Nedeljno', 'Mesecno',
+    'Polugodisnje', 'Godisnje') i teksta koji je korisnik uneo, vraca
+    (pocetak_str, kraj_str, naslov) - pocetak/kraj u formatu GGGG-MM-DD,
+    oba kraja ukljucena, spremni da se proslede generisi_izvestaj_pdf().
+    Baca ValueError sa razumljivom porukom ako format unosa ne odgovara
+    izabranom tipu perioda."""
+    unos = unos.strip()
+
+    if tip == "Dnevno":
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", unos):
+            raise ValueError("Unesi datum u formatu GGGG-MM-DD, npr. 2026-09-05")
+        pocetak = kraj = unos
+        naslov = f"Dnevni izvestaj - {unos}"
+        return pocetak, kraj, naslov
+
+    if tip == "Nedeljno":
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", unos):
+            raise ValueError("Unesi datum u formatu GGGG-MM-DD, npr. 2026-09-05")
+        try:
+            dan = datetime.strptime(unos, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("Datum ne postoji - proveri dan i mesec.")
+        pocetak_dt = dan - timedelta(days=dan.weekday())
+        kraj_dt = pocetak_dt + timedelta(days=6)
+        pocetak = pocetak_dt.strftime("%Y-%m-%d")
+        kraj = kraj_dt.strftime("%Y-%m-%d")
+        naslov = f"Nedeljni izvestaj - {pocetak} do {kraj}"
+        return pocetak, kraj, naslov
+
+    if tip == "Mesecno":
+        if not re.match(r"^\d{4}-\d{2}$", unos):
+            raise ValueError("Unesi mesec u formatu GGGG-MM, npr. 2026-09")
+        godina_str, mesec_str = unos.split("-")
+        godina_i, mesec_i = int(godina_str), int(mesec_str)
+        if not (1 <= mesec_i <= 12):
+            raise ValueError("Mesec mora biti izmedju 01 i 12.")
+        pocetak = f"{godina_str}-{mesec_str}-01"
+        poslednji_dan = calendar.monthrange(godina_i, mesec_i)[1]
+        kraj = f"{godina_str}-{mesec_str}-{poslednji_dan:02d}"
+        naslov = f"Mesecni izvestaj - {unos}"
+        return pocetak, kraj, naslov
+
+    if tip == "Polugodisnje":
+        if not re.match(r"^\d{4}-[12]$", unos):
+            raise ValueError("Unesi u formatu GGGG-P gde je P 1 ili 2, npr. 2026-1")
+        godina_str, pol_str = unos.split("-")
+        if pol_str == "1":
+            pocetak = f"{godina_str}-01-01"
+            kraj = f"{godina_str}-06-30"
+            naslov = f"Polugodisnji izvestaj - {godina_str} (januar-jun)"
+        else:
+            pocetak = f"{godina_str}-07-01"
+            kraj = f"{godina_str}-12-31"
+            naslov = f"Polugodisnji izvestaj - {godina_str} (jul-decembar)"
+        return pocetak, kraj, naslov
+
+    if tip == "Godisnje":
+        if not re.match(r"^\d{4}$", unos):
+            raise ValueError("Unesi godinu u formatu GGGG, npr. 2026")
+        pocetak = f"{unos}-01-01"
+        kraj = f"{unos}-12-31"
+        naslov = f"Godisnji izvestaj - {unos}"
+        return pocetak, kraj, naslov
+
+    raise ValueError("Nepoznat tip perioda.")
+
+
 class IzvozPdfScreen(Screen):
     tekst_status = StringProperty("")
+    tekst_format_perioda = StringProperty("Mesec (format GGGG-MM):")
+    hint_perioda = StringProperty("npr. 2026-09")
 
     def on_pre_enter(self, *args):
-        if not self.ids.input_mesec.text:
-            self.ids.input_mesec.text = datetime.now().strftime("%Y-%m")
+        if not self.ids.input_period.text:
+            self._popuni_podrazumevano()
         self._osvezi_status()
+
+    def promeni_period(self, tip):
+        """Poziva se iz KV-a kad korisnik promeni izbor u spinneru za
+        tip perioda - menja natpis/hint iznad polja i upisuje
+        podrazumevanu vrednost (danas/ovaj mesec/ova godina...)."""
+        if tip == "Dnevno":
+            self.tekst_format_perioda = "Datum (format GGGG-MM-DD):"
+            self.hint_perioda = "npr. 2026-09-05"
+        elif tip == "Nedeljno":
+            self.tekst_format_perioda = "Bilo koji datum iz te nedelje (format GGGG-MM-DD):"
+            self.hint_perioda = "npr. 2026-09-05"
+        elif tip == "Mesecno":
+            self.tekst_format_perioda = "Mesec (format GGGG-MM):"
+            self.hint_perioda = "npr. 2026-09"
+        elif tip == "Polugodisnje":
+            self.tekst_format_perioda = "Godina i polugodiste, P je 1 ili 2 (format GGGG-P):"
+            self.hint_perioda = "2026-1 = jan-jun, 2026-2 = jul-dec"
+        elif tip == "Godisnje":
+            self.tekst_format_perioda = "Godina (format GGGG):"
+            self.hint_perioda = "npr. 2026"
+        self._popuni_podrazumevano()
+
+    def _popuni_podrazumevano(self):
+        tip = self.ids.spinner_period.text
+        danas = datetime.now()
+        if tip in ("Dnevno", "Nedeljno"):
+            self.ids.input_period.text = danas.strftime("%Y-%m-%d")
+        elif tip == "Mesecno":
+            self.ids.input_period.text = danas.strftime("%Y-%m")
+        elif tip == "Polugodisnje":
+            polugodiste = 1 if danas.month <= 6 else 2
+            self.ids.input_period.text = f"{danas.year}-{polugodiste}"
+        elif tip == "Godisnje":
+            self.ids.input_period.text = danas.strftime("%Y")
 
     def _osvezi_status(self):
         if _ima_dozvolu_svi_fajlovi():
@@ -3360,13 +3582,13 @@ class IzvozPdfScreen(Screen):
             )
 
     def izvezi_pdf(self):
-        mesec = self.ids.input_mesec.text.strip()
-        if not re.match(r"^\d{4}-\d{2}$", mesec):
-            _prikazi_popup_poruku(
-                "Greska",
-                "Unesi mesec u formatu GGGG-MM, npr. 2026-09",
-                size_hint=(0.85, 0.35),
-            )
+        tip = self.ids.spinner_period.text
+        unos = self.ids.input_period.text.strip()
+
+        try:
+            pocetak, kraj, naslov = _izracunaj_period(tip, unos)
+        except ValueError as e:
+            _prikazi_popup_poruku("Greska", str(e), size_hint=(0.85, 0.4))
             return
 
         if not _ima_dozvolu_svi_fajlovi():
@@ -3379,28 +3601,34 @@ class IzvozPdfScreen(Screen):
             return
 
         try:
-            voznje = db.voznje_za_mesec(mesec)
+            voznje = db.voznje_izmedju(pocetak, kraj)
         except Exception as e:
             _prikazi_popup_poruku("Greska", f"Ne mogu da procitam bazu:\n{e}", size_hint=(0.88, 0.4))
             return
 
-        if not voznje:
+        gorivo_period = _stavke_izmedju(GORIVO.stavke, pocetak, kraj)
+        servisi_period = _stavke_izmedju(SERVIS.stavke, pocetak, kraj)
+
+        if not voznje and not gorivo_period and not servisi_period:
             _prikazi_popup_poruku(
-                "Nema voznji",
-                f"Nema nijedne voznje za {mesec} - PDF nije napravljen.",
-                size_hint=(0.85, 0.3),
+                "Nema podataka",
+                f"Nema nijedne voznje, unosa goriva ni servisa za period "
+                f"{pocetak} do {kraj} - PDF nije napravljen.",
+                size_hint=(0.88, 0.45),
             )
             return
 
         try:
             folder = _putanja_backup_foldera()
             os.makedirs(folder, exist_ok=True)
-            putanja = os.path.join(folder, f"izvestaj_{mesec}.pdf")
-            generisi_mesecni_pdf(mesec, putanja)
+            putanja = os.path.join(folder, f"izvestaj_{pocetak}_do_{kraj}.pdf")
+            generisi_izvestaj_pdf(naslov, pocetak, kraj, putanja)
             _prikazi_popup_poruku(
                 "Sacuvano",
-                f"PDF izvestaj ({len(voznje)} voznji) sacuvan u:\n{putanja}",
-                size_hint=(0.88, 0.45),
+                f"PDF izvestaj sacuvan u:\n{putanja}\n\n"
+                f"Voznji: {len(voznje)}   Gorivo: {len(gorivo_period)}   "
+                f"Servisi: {len(servisi_period)}",
+                size_hint=(0.88, 0.5),
             )
         except Exception as e:
             _prikazi_popup_poruku(
