@@ -52,6 +52,31 @@ def poveži_valutu(format_cena_fn):
 
 
 # ============================================================
+# GORIVO/SERVISI - main.py ovo postavlja posle uvoza (izbegava kruzni
+# import, isti obrazac kao poveži_valutu iznad)
+# ============================================================
+
+_STAVKE_IZMEDJU = None
+_POTROSNJA_INTERVALI = None
+_GORIVO_REF = None
+_SERVIS_REF = None
+
+
+def poveži_gorivo_servis(stavke_izmedju_fn, potrosnja_intervali_fn, gorivo_obj, servis_obj):
+    """main.py poziva ovo jednom, odmah posle 'import grafik_zarade', da
+    bi ovaj ekran mogao da prikaze gorivo/servise/potrosnju za isti
+    period koji je trenutno prikazan (dan/nedelja/mesec) - bez kruznog
+    uvoza. stavke_izmedju_fn i potrosnja_intervali_fn su iste funkcije
+    koje main.py koristi za PDF izvestaj, gorivo_obj/servis_obj su
+    GORIVO/SERVIS objekti (JsonLog) iz main.py."""
+    global _STAVKE_IZMEDJU, _POTROSNJA_INTERVALI, _GORIVO_REF, _SERVIS_REF
+    _STAVKE_IZMEDJU = stavke_izmedju_fn
+    _POTROSNJA_INTERVALI = potrosnja_intervali_fn
+    _GORIVO_REF = gorivo_obj
+    _SERVIS_REF = servis_obj
+
+
+# ============================================================
 # FORMATIRANJE BROJEVA (tacka kao hiljadni razdvajac, bez suvisnih
 # decimala - po specifikaciji ekrana)
 # ============================================================
@@ -425,6 +450,8 @@ class GrafikZaradeScreen(Screen):
     tekst_extra_3 = StringProperty("")
     tekst_extra_4 = StringProperty("")
 
+    tekst_gorivo_servis = StringProperty("")
+
     def on_pre_enter(self, *args):
         danas = date.today()
         self._dnevni_datum = danas
@@ -503,6 +530,57 @@ class GrafikZaradeScreen(Screen):
         self.graf_podaci = podaci.get(kljuc, [])
 
         self._popuni_extra(podaci)
+        self._popuni_gorivo_servis(podaci["ukupno_prihod"])
+
+    def _opseg_perioda(self):
+        """Vraca (pocetak_str, kraj_str) za trenutno prikazani period
+        (dan/nedelja/mesec), format GGGG-MM-DD, oba kraja ukljucena -
+        koristi se da se gorivo/servisi filtriraju za isti period koji
+        je trenutno prikazan na grafiku."""
+        if self.period == "dan":
+            p = self._dnevni_datum
+            return p.strftime("%Y-%m-%d"), p.strftime("%Y-%m-%d")
+        elif self.period == "nedelja":
+            p = self._nedeljni_pocetak
+            k = p + timedelta(days=6)
+            return p.strftime("%Y-%m-%d"), k.strftime("%Y-%m-%d")
+        else:
+            p = date(self._mesecni_godina, self._mesecni_mesec, 1)
+            poslednji_dan = calendar.monthrange(self._mesecni_godina, self._mesecni_mesec)[1]
+            k = date(self._mesecni_godina, self._mesecni_mesec, poslednji_dan)
+            return p.strftime("%Y-%m-%d"), k.strftime("%Y-%m-%d")
+
+    def _popuni_gorivo_servis(self, ukupan_prihod):
+        if _STAVKE_IZMEDJU is None or _GORIVO_REF is None or _SERVIS_REF is None:
+            # main.py jos nije pozvao poveži_gorivo_servis() - karticu
+            # jednostavno ne prikazujemo (vidi height/opacity u KV-u).
+            self.tekst_gorivo_servis = ""
+            return
+
+        pocetak, kraj = self._opseg_perioda()
+        gorivo_p = _STAVKE_IZMEDJU(_GORIVO_REF.stavke, pocetak, kraj)
+        servisi_p = _STAVKE_IZMEDJU(_SERVIS_REF.stavke, pocetak, kraj)
+        cena_gorivo = sum(s.get("cena", 0) for s in gorivo_p)
+        litara_gorivo = sum(s.get("litara", 0) for s in gorivo_p)
+        cena_servis = sum(s.get("cena", 0) for s in servisi_p)
+
+        intervali = [
+            i for i in _POTROSNJA_INTERVALI(_GORIVO_REF.stavke)
+            if pocetak <= i["datum"] <= kraj
+        ]
+        if intervali:
+            ukupno_km_pot = sum(i["km_predjeno"] for i in intervali)
+            ukupno_l_pot = sum(i["litara"] for i in intervali)
+            potrosnja_txt = f"{(ukupno_l_pot / ukupno_km_pot * 100):.1f} l/100km" if ukupno_km_pot > 0 else "-"
+        else:
+            potrosnja_txt = "nema podataka"
+
+        neto = ukupan_prihod - cena_gorivo - cena_servis
+
+        self.tekst_gorivo_servis = (
+            f"Gorivo: {_novac_puno(cena_gorivo)} ({litara_gorivo:g} l)   |   Servisi: {_novac_puno(cena_servis)}\n"
+            f"Potrosnja: {potrosnja_txt}   |   Neto zarada: {_novac_puno(neto)}"
+        )
 
     def _popuni_extra(self, podaci):
         if self.period == "dan":
@@ -784,6 +862,13 @@ GRAFIK_KV = """
                     size_hint_y: None
                     height: dp(48) if root.tekst_extra_4 else 0
                     opacity: 1 if root.tekst_extra_4 else 0
+
+                ExtraCard:
+                    tint: 0.46, 0.34, 0.24, 0.9
+                    tekst: root.tekst_gorivo_servis
+                    size_hint_y: None
+                    height: dp(64) if root.tekst_gorivo_servis else 0
+                    opacity: 1 if root.tekst_gorivo_servis else 0
 
                 Widget:
                     size_hint_y: None

@@ -428,6 +428,9 @@ def _izracunaj_potrosnju_intervale(sve_stavke_goriva):
     return intervali
 
 
+grafik_zarade.poveži_gorivo_servis(_stavke_izmedju, _izracunaj_potrosnju_intervale, GORIVO, SERVIS)
+
+
 def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla):
     """Pravi kompletan PDF izvestaj za izabrani period (pocetak_str i
     kraj_str, format GGGG-MM-DD, oba kraja ukljucena). Sadrzi, tim
@@ -536,7 +539,7 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     # ------------------------------------------------------------
     # SERVISI u periodu
     # ------------------------------------------------------------
-    elementi.append(PageBreak())
+    elementi.append(Spacer(1, 10 * mm))
     elementi.append(Paragraph("Servisi vozila u periodu", stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
@@ -575,7 +578,7 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     # ------------------------------------------------------------
     # POTROSNJA GORIVA + svi unosi goriva u periodu
     # ------------------------------------------------------------
-    elementi.append(PageBreak())
+    elementi.append(Spacer(1, 10 * mm))
     elementi.append(Paragraph("Potrosnja goriva", stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
@@ -666,7 +669,7 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     # ------------------------------------------------------------
     # VOZNJE u periodu
     # ------------------------------------------------------------
-    elementi.append(PageBreak())
+    elementi.append(Spacer(1, 10 * mm))
     elementi.append(Paragraph("Voznje u periodu", stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
@@ -3793,11 +3796,42 @@ class IzvestajScreen(Screen):
     def on_pre_enter(self, *args):
         self.osvezi()
 
+    def _dodatne_linije_perioda(self, pocetak, kraj, prihod):
+        """Vraca gotov tekst (gorivo, servisi, potrosnja, neto zarada)
+        za dati period - koristi se ispod osnovnih brojeva (broj
+        voznji/km/zarada) na sve tri kartice (danas/nedelja/mesec)."""
+        gorivo_p = _stavke_izmedju(GORIVO.stavke, pocetak, kraj)
+        servisi_p = _stavke_izmedju(SERVIS.stavke, pocetak, kraj)
+        cena_gorivo = sum(s.get("cena", 0) for s in gorivo_p)
+        litara_gorivo = sum(s.get("litara", 0) for s in gorivo_p)
+        cena_servis = sum(s.get("cena", 0) for s in servisi_p)
+
+        intervali = [
+            i for i in _izracunaj_potrosnju_intervale(GORIVO.stavke)
+            if pocetak <= i["datum"] <= kraj
+        ]
+        if intervali:
+            ukupno_km_pot = sum(i["km_predjeno"] for i in intervali)
+            ukupno_l_pot = sum(i["litara"] for i in intervali)
+            potrosnja_txt = f"{(ukupno_l_pot / ukupno_km_pot * 100):.1f} l/100km" if ukupno_km_pot > 0 else "-"
+        else:
+            potrosnja_txt = "nema dovoljno podataka"
+
+        neto = prihod - cena_gorivo - cena_servis
+
+        return (
+            f"Gorivo: {formatiraj_cenu(cena_gorivo)} ({litara_gorivo:g} l)\n"
+            f"Servisi: {formatiraj_cenu(cena_servis)}\n"
+            f"Potrosnja: {potrosnja_txt}\n"
+            f"Neto (zarada - gorivo - servisi): {formatiraj_cenu(neto)}"
+        )
+
     def osvezi(self):
         danas_dt = datetime.now()
         danas = danas_dt.strftime("%Y-%m-%d")
         mesec = danas_dt.strftime("%Y-%m")
         pocetak_nedelje = (danas_dt - timedelta(days=danas_dt.weekday())).strftime("%Y-%m-%d")
+        pocetak_meseca = danas_dt.strftime("%Y-%m-01")
 
         voznje_danas = db.voznje_za_datum(danas)
         broj_d, prihod_d, km_d = db.zbir_voznji(voznje_danas)
@@ -3805,7 +3839,8 @@ class IzvestajScreen(Screen):
             f"DANAS ({danas})\n"
             f"Broj voznji: {broj_d}\n"
             f"Ukupno km: {km_d:.1f}\n"
-            f"Ukupna zarada: {formatiraj_cenu(prihod_d)}"
+            f"Ukupna zarada: {formatiraj_cenu(prihod_d)}\n\n"
+            + self._dodatne_linije_perioda(danas, danas, prihod_d)
         )
         self._prikazi_voznje_danas(voznje_danas)
 
@@ -3815,7 +3850,8 @@ class IzvestajScreen(Screen):
             f"OVA NEDELJA ({pocetak_nedelje} - {danas})\n"
             f"Broj voznji: {broj_n}\n"
             f"Ukupno km: {km_n:.1f}\n"
-            f"Ukupna zarada: {formatiraj_cenu(prihod_n)}"
+            f"Ukupna zarada: {formatiraj_cenu(prihod_n)}\n\n"
+            + self._dodatne_linije_perioda(pocetak_nedelje, danas, prihod_n)
         )
 
         voznje_mesec = db.voznje_za_mesec(mesec)
@@ -3824,7 +3860,8 @@ class IzvestajScreen(Screen):
             f"OVAJ MESEC ({mesec})\n"
             f"Broj voznji: {broj_m}\n"
             f"Ukupno km: {km_m:.1f}\n"
-            f"Ukupna zarada: {formatiraj_cenu(prihod_m)}"
+            f"Ukupna zarada: {formatiraj_cenu(prihod_m)}\n\n"
+            + self._dodatne_linije_perioda(pocetak_meseca, danas, prihod_m)
         )
 
     def _prikazi_voznje_danas(self, voznje):
