@@ -3158,6 +3158,29 @@ class ValutaScreen(Screen):
             )
 
 
+def _stavka_bez_id(stavka):
+    """Vraca kopiju stavke (gorivo/servis) bez 'id' kljuca - koristi se
+    da se dve stavke uporede po sadrzaju, bez obzira na to koji im je
+    id dodeljen (jer se id razlikuje izmedju telefona)."""
+    return {k: v for k, v in stavka.items() if k != "id"}
+
+
+def _dodaj_stavke_bez_duplikata(log_obj, user_data_dir, nove_stavke):
+    """Dodaje stavke iz backupa (gorivo ili servis) u JsonLog, preskacuci
+    one koje po sadrzaju vec postoje (da se backup moze ucitati vise puta
+    bez pravljenja duplikata). Vraca broj stvarno dodatih stavki."""
+    postojece_bez_id = [_stavka_bez_id(s) for s in log_obj.stavke]
+    dodato = 0
+    for nova in nove_stavke:
+        bez_id = _stavka_bez_id(nova)
+        if bez_id in postojece_bez_id:
+            continue
+        log_obj.dodaj(user_data_dir, dict(bez_id))
+        postojece_bez_id.append(bez_id)
+        dodato += 1
+    return dodato
+
+
 class BackupScreen(Screen):
     tekst_status = StringProperty("")
 
@@ -3176,10 +3199,15 @@ class BackupScreen(Screen):
         except Exception:
             broj = "?"
 
+        vozac_txt = "popunjeni" if VOZAC.ime_prezime else "nisu popunjeni"
+
         self.tekst_status = (
             f"{dozvola_txt}\n\n"
             f"Backup fajl se cuva ovde:\n{putanja}\n\n"
-            f"Voznji trenutno u bazi: {broj}"
+            f"Voznji trenutno u bazi: {broj}\n"
+            f"Unosa goriva: {len(GORIVO.stavke)}\n"
+            f"Unosa servisa: {len(SERVIS.stavke)}\n"
+            f"Podaci o vozacu: {vozac_txt}"
         )
 
     def zatrazi_dozvolu(self):
@@ -3197,7 +3225,23 @@ class BackupScreen(Screen):
             return
         try:
             voznje = db.sve_voznje_za_izvoz()
-            podaci = [dict(v) for v in voznje]
+            podaci_voznje = [dict(v) for v in voznje]
+
+            podaci_vozac = {
+                "ime_prezime": VOZAC.ime_prezime,
+                "telefon": VOZAC.telefon,
+                "broj_licence": VOZAC.broj_licence,
+                "tablice": VOZAC.tablice,
+                "vozilo": VOZAC.vozilo,
+            }
+
+            podaci = {
+                "voznje": podaci_voznje,
+                "vozac": podaci_vozac,
+                "gorivo": GORIVO.stavke,
+                "servisi": SERVIS.stavke,
+            }
+
             folder = _putanja_backup_foldera()
             os.makedirs(folder, exist_ok=True)
             putanja = os.path.join(folder, BACKUP_FAJL_NAZIV)
@@ -3205,8 +3249,13 @@ class BackupScreen(Screen):
                 json.dump(podaci, f, ensure_ascii=False, indent=2)
             _prikazi_popup_poruku(
                 "Sacuvano",
-                f"Sacuvano {len(podaci)} voznji u:\n{putanja}",
-                size_hint=(0.88, 0.45),
+                f"Sacuvano u backup:\n"
+                f"- {len(podaci_voznje)} voznji\n"
+                f"- {len(GORIVO.stavke)} unosa goriva\n"
+                f"- {len(SERVIS.stavke)} unosa servisa\n"
+                f"- podaci o vozacu\n\n"
+                f"Fajl:\n{putanja}",
+                size_hint=(0.88, 0.55),
             )
         except Exception as e:
             _prikazi_popup_poruku(
@@ -3243,9 +3292,20 @@ class BackupScreen(Screen):
             )
             return
 
+        # Stari backup fajlovi su bili obicna lista voznji (bez vozaca,
+        # goriva i servisa) - ako je ucitani fajl takav, samo ga
+        # "umotamo" u isti oblik kao novi format, da dole radi isti kod.
+        if isinstance(podaci, list):
+            podaci = {"voznje": podaci}
+
+        voznje_podaci = podaci.get("voznje", [])
+        vozac_podaci = podaci.get("vozac")
+        gorivo_podaci = podaci.get("gorivo", [])
+        servisi_podaci = podaci.get("servisi", [])
+
         dodato = 0
         preskoceno = 0
-        for v in podaci:
+        for v in voznje_podaci:
             try:
                 if db.voznja_postoji(
                     v.get("datum"), v.get("vreme"), v.get("km"), v.get("ukupna_cena")
@@ -3257,10 +3317,26 @@ class BackupScreen(Screen):
             except Exception:
                 preskoceno += 1
 
+        app = App.get_running_app()
+
+        if vozac_podaci:
+            VOZAC.ime_prezime = vozac_podaci.get("ime_prezime", VOZAC.ime_prezime)
+            VOZAC.telefon = vozac_podaci.get("telefon", VOZAC.telefon)
+            VOZAC.broj_licence = vozac_podaci.get("broj_licence", VOZAC.broj_licence)
+            VOZAC.tablice = vozac_podaci.get("tablice", VOZAC.tablice)
+            VOZAC.vozilo = vozac_podaci.get("vozilo", VOZAC.vozilo)
+            VOZAC.sacuvaj(app.user_data_dir)
+
+        dodato_gorivo = _dodaj_stavke_bez_duplikata(GORIVO, app.user_data_dir, gorivo_podaci)
+        dodato_servisi = _dodaj_stavke_bez_duplikata(SERVIS, app.user_data_dir, servisi_podaci)
+
         _prikazi_popup_poruku(
             "Vraceno iz backupa",
-            f"Dodato: {dodato} voznji\nPreskoceno (vec postoje): {preskoceno}",
-            size_hint=(0.85, 0.4),
+            f"Voznje - dodato: {dodato}, preskoceno (vec postoje): {preskoceno}\n"
+            f"Gorivo - dodato novih unosa: {dodato_gorivo}\n"
+            f"Servisi - dodato novih unosa: {dodato_servisi}\n"
+            f"Podaci o vozacu: {'azurirani' if vozac_podaci else 'nije bilo u ovom backupu'}",
+            size_hint=(0.88, 0.55),
         )
         self._osvezi_status()
 
