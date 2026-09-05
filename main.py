@@ -432,11 +432,11 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
 
     linije_vozaca = []
     if VOZAC.ime_prezime:
-        linije_vozaca.append(f"Vozac: {VOZAC.ime_prezime}")
-    if VOZAC.telefon:
-        linije_vozaca.append(f"Telefon: {VOZAC.telefon}")
+        linije_vozaca.append(f"Ime i prezime: {VOZAC.ime_prezime}")
     if VOZAC.broj_licence:
         linije_vozaca.append(f"Licenca: {VOZAC.broj_licence}")
+    if VOZAC.telefon:
+        linije_vozaca.append(f"Telefon: {VOZAC.telefon}")
     if VOZAC.vozilo:
         linije_vozaca.append(f"Vozilo: {VOZAC.vozilo}")
     if VOZAC.tablice:
@@ -444,54 +444,16 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
 
     if linije_vozaca:
         elementi.append(Spacer(1, 3 * mm))
-        elementi.append(Paragraph(" &nbsp;|&nbsp; ".join(linije_vozaca), stil_vozac))
-
-    elementi.append(Spacer(1, 8 * mm))
-
-    zaglavlje = [
-        Paragraph("R.br.", stil_zaglavlje),
-        Paragraph("Datum", stil_zaglavlje),
-        Paragraph("Pocetak", stil_zaglavlje),
-        Paragraph("Kraj", stil_zaglavlje),
-        Paragraph("Adresa polaska", stil_zaglavlje),
-        Paragraph("Adresa dolaska", stil_zaglavlje),
-        Paragraph("Cena", stil_zaglavlje),
-    ]
-    podaci_tabele = [zaglavlje]
-
-    for i, v in enumerate(voznje, start=1):
-        vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else "-"
-        red = [
-            Paragraph(str(i), stil_celija),
-            Paragraph(v["datum"], stil_celija),
-            Paragraph(vreme_pocetka, stil_celija),
-            Paragraph(v["vreme"], stil_celija),
-            Paragraph(v["od_adresa"] or "-", stil_celija),
-            Paragraph(v["do_adresa"] or "-", stil_celija),
-            Paragraph(formatiraj_cenu(v["ukupna_cena"]), stil_celija),
-        ]
-        podaci_tabele.append(red)
-
-    # sirine kolona u mm - A4 sirina 210mm, minus margine 2x15mm = 180mm dostupno
-    sirine = [13 * mm, 23 * mm, 17 * mm, 15 * mm, 42 * mm, 42 * mm, 21 * mm]
-
-    tabela = Table(podaci_tabele, colWidths=sirine, repeatRows=1)
-    tabela.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    elementi.append(tabela)
-    elementi.append(Spacer(1, 8 * mm))
-
-    elementi.append(Paragraph(f"Ukupan broj voznji: {broj}", stil_zbir))
-    elementi.append(Paragraph(f"Ukupno predjeno: {km:.1f} km", stil_zbir))
-    elementi.append(Paragraph(f"Ukupna zarada za mesec: {formatiraj_cenu(prihod)}", stil_zbir))
+        redovi_vozaca = [[Paragraph(linija, stil_vozac)] for linija in linije_vozaca]
+        box_vozaca = Table(redovi_vozaca, colWidths=[80 * mm])
+        box_vozaca.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#3a3560")),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        elementi.append(box_vozaca)
 
     # ------------------------------------------------------------
     # SERVISI - kompletan istorijat (ne samo za ovaj mesec)
@@ -593,6 +555,54 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
         elementi.append(Paragraph(f"Ukupno litara: {ukupno_gorivo_litara:g} l", stil_zbir))
     else:
         elementi.append(Paragraph("Nema unetih goriva.", stil_celija))
+    elementi.append(PageBreak())
+    elementi.append(Spacer(1, 3 * mm))
+
+    zaglavlje = [
+        Paragraph("R.br.", stil_zaglavlje),
+        Paragraph("Datum", stil_zaglavlje),
+        Paragraph("Pocetak", stil_zaglavlje),
+        Paragraph("Kraj", stil_zaglavlje),
+        Paragraph("Adresa polaska", stil_zaglavlje),
+        Paragraph("Adresa dolaska", stil_zaglavlje),
+        Paragraph("Cena", stil_zaglavlje),
+    ]
+    podaci_tabele = [zaglavlje]
+
+    for i, v in enumerate(voznje, start=1):
+        vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else "-"
+        red = [
+            Paragraph(str(i), stil_celija),
+            Paragraph(v["datum"], stil_celija),
+            Paragraph(vreme_pocetka, stil_celija),
+            Paragraph(v["vreme"], stil_celija),
+            Paragraph(v["od_adresa"] or "-", stil_celija),
+            Paragraph(v["do_adresa"] or "-", stil_celija),
+            Paragraph(formatiraj_cenu(v["ukupna_cena"]), stil_celija),
+        ]
+        podaci_tabele.append(red)
+
+    # sirine kolona u mm - A4 sirina 210mm, minus margine 2x15mm = 180mm dostupno
+    sirine = [13 * mm, 23 * mm, 17 * mm, 15 * mm, 42 * mm, 42 * mm, 21 * mm]
+
+    tabela = Table(podaci_tabele, colWidths=sirine, repeatRows=1)
+    tabela.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    elementi.append(tabela)
+    elementi.append(Spacer(1, 8 * mm))
+
+    elementi.append(Paragraph(f"Ukupan broj voznji: {broj}", stil_zbir))
+    elementi.append(Paragraph(f"Ukupno predjeno: {km:.1f} km", stil_zbir))
+    elementi.append(Paragraph(f"Ukupna zarada za mesec: {formatiraj_cenu(prihod)}", stil_zbir))
+
 
     doc.build(elementi)
 
