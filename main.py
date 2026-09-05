@@ -176,6 +176,48 @@ class ApiPodesavanja:
 API = ApiPodesavanja()
 
 
+class VozacPodesavanja:
+    """Cuva podatke o vozacu - ime, telefon, broj licence, registarske
+    tablice i vozilo. Koristi se za prikaz u app-u i u zaglavlju PDF
+    mesecnog izvestaja."""
+
+    def __init__(self):
+        self.ime_prezime = ""
+        self.telefon = ""
+        self.broj_licence = ""
+        self.tablice = ""
+        self.vozilo = ""
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "vozac.json")
+
+    def ucitaj(self, user_data_dir):
+        try:
+            with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+            self.ime_prezime = podaci.get("ime_prezime", "")
+            self.telefon = podaci.get("telefon", "")
+            self.broj_licence = podaci.get("broj_licence", "")
+            self.tablice = podaci.get("tablice", "")
+            self.vozilo = podaci.get("vozilo", "")
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        podaci = {
+            "ime_prezime": self.ime_prezime,
+            "telefon": self.telefon,
+            "broj_licence": self.broj_licence,
+            "tablice": self.tablice,
+            "vozilo": self.vozilo,
+        }
+        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+
+VOZAC = VozacPodesavanja()
+
+
 class KursPodesavanja:
     """Drzi izabranu valutu za prikaz (RSD ili EUR) i poslednji
     povuceni kurs evro->dinar. Kurs se povlaci sa besplatnog,
@@ -377,9 +419,29 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
     stil_zbir = ParagraphStyle(
         "zbir", fontName="DejaVuSans-Bold", fontSize=12, leading=16,
     )
+    stil_vozac = ParagraphStyle(
+        "vozac", fontName="DejaVuSans", fontSize=10, leading=14,
+    )
 
     elementi = []
     elementi.append(Paragraph(f"Mesecni izvestaj - {godina_mesec_str}", stil_naslov))
+
+    linije_vozaca = []
+    if VOZAC.ime_prezime:
+        linije_vozaca.append(f"Vozac: {VOZAC.ime_prezime}")
+    if VOZAC.telefon:
+        linije_vozaca.append(f"Telefon: {VOZAC.telefon}")
+    if VOZAC.broj_licence:
+        linije_vozaca.append(f"Licenca: {VOZAC.broj_licence}")
+    if VOZAC.vozilo:
+        linije_vozaca.append(f"Vozilo: {VOZAC.vozilo}")
+    if VOZAC.tablice:
+        linije_vozaca.append(f"Tablice: {VOZAC.tablice}")
+
+    if linije_vozaca:
+        elementi.append(Spacer(1, 3 * mm))
+        elementi.append(Paragraph(" &nbsp;|&nbsp; ".join(linije_vozaca), stil_vozac))
+
     elementi.append(Spacer(1, 8 * mm))
 
     zaglavlje = [
@@ -650,15 +712,13 @@ ScreenManager:
     GpsVoznjaScreen:
     NavigacijaScreen:
     GoogleApiScreen:
+    ProfilScreen:
     ValutaScreen:
     BackupScreen:
     IzvozPdfScreen:
     PlaceholderScreen:
         name: "grafik"
         naslov: "Grafik zarade"
-    PlaceholderScreen:
-        name: "profil"
-        naslov: "Profil vozaca"
     PlaceholderScreen:
         name: "poziv"
         naslov: "Poziv / Dispecer"
@@ -837,6 +897,11 @@ ScreenManager:
                     icon_src: "assets/icons/daily_report.png"
                     tekst: "Izvestaj"
                     on_release: app.root.current = "izvestaj"
+
+                MenuButton:
+                    icon_src: "assets/icons/profil.png"
+                    tekst: "Profil vozaca"
+                    on_release: app.root.current = "profil"
 
                 MenuButton:
                     icon_src: "assets/icons/settings.png"
@@ -1696,6 +1761,82 @@ ScreenManager:
             size_hint_y: None
             height: dp(70)
             text_size: self.width, None
+
+        Widget:
+
+# ============================================================
+# PROFIL VOZACA
+# ============================================================
+
+<ProfilScreen>:
+    name: "profil"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Profil vozaca"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(8)
+                padding: dp(2), dp(4)
+
+                FieldLabel:
+                    text: "Ime i prezime"
+
+                PastelTextInput:
+                    id: input_ime
+                    hint_text: "npr. Petar Petrovic"
+
+                FieldLabel:
+                    text: "Telefon"
+
+                PastelTextInput:
+                    id: input_telefon
+                    hint_text: "npr. 065 123 4567"
+
+                FieldLabel:
+                    text: "Broj licence / dozvole za taksi"
+
+                PastelTextInput:
+                    id: input_licenca
+                    hint_text: "npr. TX-00123"
+
+                FieldLabel:
+                    text: "Registarske tablice"
+
+                PastelTextInput:
+                    id: input_tablice
+                    hint_text: "npr. BG-1234-AB"
+
+                FieldLabel:
+                    text: "Vozilo (marka i model)"
+
+                PastelTextInput:
+                    id: input_vozilo
+                    hint_text: "npr. Skoda Octavia"
+
+                RoundButton:
+                    label_text: "Sacuvaj profil"
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(56)
+                    on_release: root.sacuvaj_profil()
+
+                FieldLabel:
+                    text: "Ovi podaci se prikazuju u zaglavlju PDF mesecnog izvestaja (Izvestaj -> Izvoz PDF)."
+                    size_hint_y: None
+                    height: dp(60)
+                    text_size: self.width, None
 
         Widget:
 
@@ -2790,6 +2931,27 @@ class GoogleApiScreen(Screen):
         _prikazi_popup_poruku("Info", "Google API kljuc sacuvan.", size_hint=(0.8, 0.3))
 
 
+class ProfilScreen(Screen):
+    def on_pre_enter(self, *args):
+        self.ids.input_ime.text = VOZAC.ime_prezime
+        self.ids.input_telefon.text = VOZAC.telefon
+        self.ids.input_licenca.text = VOZAC.broj_licence
+        self.ids.input_tablice.text = VOZAC.tablice
+        self.ids.input_vozilo.text = VOZAC.vozilo
+
+    def sacuvaj_profil(self):
+        VOZAC.ime_prezime = self.ids.input_ime.text.strip()
+        VOZAC.telefon = self.ids.input_telefon.text.strip()
+        VOZAC.broj_licence = self.ids.input_licenca.text.strip()
+        VOZAC.tablice = self.ids.input_tablice.text.strip()
+        VOZAC.vozilo = self.ids.input_vozilo.text.strip()
+
+        app = App.get_running_app()
+        VOZAC.sacuvaj(app.user_data_dir)
+
+        _prikazi_popup_poruku("Info", "Profil vozaca je sacuvan.", size_hint=(0.8, 0.3))
+
+
 class ValutaScreen(Screen):
     tekst_kurs = StringProperty("")
     valuta_izbor = StringProperty("RSD")
@@ -3304,6 +3466,7 @@ class TaksiApp(App):
             SERVIS.ucitaj(self.user_data_dir)
             AKTIVNA_VOZNJA.ucitaj(self.user_data_dir)
             API.ucitaj(self.user_data_dir)
+            VOZAC.ucitaj(self.user_data_dir)
             KURS.ucitaj(self.user_data_dir)
             # Kurs se povlaci sa interneta u pozadini (posebna nit), da
             # app ne "visi" na pokretanju ako je internet spor ili ga
