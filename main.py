@@ -794,6 +794,12 @@ ScreenManager:
         color: root.text_color
         bold: True
         font_size: '15sp'
+        text_size: self.width - dp(6), self.height
+        halign: "center"
+        valign: "middle"
+        shorten: True
+        shorten_from: "right"
+        max_lines: 1
 
 <NavBar@BoxLayout>:
     size_hint_y: None
@@ -1058,15 +1064,15 @@ ScreenManager:
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Kalkulator"
+                label_text: "Kalkul."
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
-                label_text: "Evidencija"
+                label_text: "Evid."
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
             RoundButton:
-                label_text: "Izvoz PDF"
+                label_text: "PDF"
                 tint: 0.55, 0.38, 0.26, 1
                 on_release: root.manager.current = "izvoz_pdf"
 
