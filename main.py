@@ -801,7 +801,7 @@ ScreenManager:
 
 <NavBar@BoxLayout>:
     size_hint_y: None
-    height: dp(46)
+    height: dp(58)
     spacing: dp(10)
 
 <MenuButton>:
@@ -994,12 +994,12 @@ ScreenManager:
                 PastelCard:
                     tint: 0.28, 0.48, 0.34, 0.92
                     size_hint_y: None
-                    height: dp(96)
+                    height: dp(112)
                     padding: dp(14)
                     Label:
                         id: label_cena
                         text: root.tekst_cene
-                        font_size: '20sp'
+                        font_size: '17sp'
                         bold: True
                         color: 0.90, 1, 0.92, 1
                         halign: "center"
@@ -1066,22 +1066,22 @@ ScreenManager:
             RoundButton:
                 label_text: "Pocetna"
                 tint: 0.36, 0.46, 0.64, 1
-                font_size: '11sp'
+                font_size: '12sp'
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Kalkulator"
                 tint: 0.36, 0.46, 0.64, 1
-                font_size: '11sp'
+                font_size: '12sp'
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
                 label_text: "Evidencija"
                 tint: 0.36, 0.46, 0.64, 1
-                font_size: '11sp'
+                font_size: '12sp'
                 on_release: root.manager.current = "evidencija"
             RoundButton:
                 label_text: "Izvoz PDF"
                 tint: 0.55, 0.38, 0.26, 1
-                font_size: '11sp'
+                font_size: '12sp'
                 on_release: root.manager.current = "izvoz_pdf"
 
         ScrollView:
@@ -3234,9 +3234,15 @@ class KalkulatorScreen(Screen):
         tarifa_naziv = self.ids.spinner_tarifa.text
         cena_po_km = CENE.tarife.get(tarifa_naziv, CENE.tarife["Osnovna (07-22h)"])
         ukupno = CENE.start_fee + km * cena_po_km
+
+        linija_cena = f"Cena: {ukupno:.0f} RSD"
+        if KURS.kurs_eur_rsd:
+            eur = ukupno / KURS.kurs_eur_rsd
+            linija_cena += f"  (~{eur:.2f} EUR)"
+
         self.tekst_cene = (
-            f"Cena: {formatiraj_cenu(ukupno)}\n"
-            f"(start {formatiraj_cenu(CENE.start_fee)} + {km:g} km x {formatiraj_cenu(cena_po_km)})"
+            f"{linija_cena}\n"
+            f"(start {CENE.start_fee:.0f} RSD + {km:g} km x {cena_po_km:.0f} RSD)"
         )
 
     def sacuvaj_voznju(self):
