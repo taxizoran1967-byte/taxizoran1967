@@ -33,14 +33,11 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.widget import Widget
-from kivy.properties import StringProperty, BooleanProperty, ListProperty
-from kivy.graphics import Color, Rectangle
-from kivy.core.text import Label as CoreLabel
-from kivy.metrics import dp
+from kivy.properties import StringProperty, BooleanProperty
 from datetime import datetime, timedelta
 
 import database as db
+import grafik_zarade
 
 try:
     from plyer import gps
@@ -306,6 +303,9 @@ def formatiraj_cenu(iznos_rsd):
     return f"{iznos_rsd:.0f} RSD"
 
 
+grafik_zarade.poveži_valutu(formatiraj_cenu)
+
+
 # ============================================================
 # BACKUP - trajno cuvanje voznji van aplikacije (prezivi
 # deinstalaciju i promenu telefona)
@@ -392,7 +392,7 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
     from reportlab.lib.styles import ParagraphStyle
 
     _registruj_font_za_pdf()
@@ -423,41 +423,28 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
     stil_zbir = ParagraphStyle(
         "zbir", fontName="DejaVuSans-Bold", fontSize=12, leading=16,
     )
-    stil_vozac_ime = ParagraphStyle(
-        "vozac_ime", fontName="DejaVuSans-Bold", fontSize=12, leading=15,
-    )
-    stil_vozac_red = ParagraphStyle(
-        "vozac_red", fontName="DejaVuSans", fontSize=9.5, leading=13,
+    stil_vozac = ParagraphStyle(
+        "vozac", fontName="DejaVuSans", fontSize=10, leading=14,
     )
 
     elementi = []
     elementi.append(Paragraph(f"Mesecni izvestaj - {godina_mesec_str}", stil_naslov))
 
-    redovi_vozaca = []
+    linije_vozaca = []
     if VOZAC.ime_prezime:
-        redovi_vozaca.append(Paragraph(VOZAC.ime_prezime, stil_vozac_ime))
+        linije_vozaca.append(f"Vozac: {VOZAC.ime_prezime}")
     if VOZAC.telefon:
-        redovi_vozaca.append(Paragraph(f"Telefon: {VOZAC.telefon}", stil_vozac_red))
+        linije_vozaca.append(f"Telefon: {VOZAC.telefon}")
     if VOZAC.broj_licence:
-        redovi_vozaca.append(Paragraph(f"Licenca: {VOZAC.broj_licence}", stil_vozac_red))
+        linije_vozaca.append(f"Licenca: {VOZAC.broj_licence}")
     if VOZAC.vozilo:
-        redovi_vozaca.append(Paragraph(f"Vozilo: {VOZAC.vozilo}", stil_vozac_red))
+        linije_vozaca.append(f"Vozilo: {VOZAC.vozilo}")
     if VOZAC.tablice:
-        redovi_vozaca.append(Paragraph(f"Tablice: {VOZAC.tablice}", stil_vozac_red))
+        linije_vozaca.append(f"Tablice: {VOZAC.tablice}")
 
-    if redovi_vozaca:
+    if linije_vozaca:
         elementi.append(Spacer(1, 3 * mm))
-        box_vozac = Table([[redovi_vozaca]], colWidths=[85 * mm])
-        box_vozac.setStyle(TableStyle([
-            ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#3a3560")),
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f2f1f8")),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]))
-        elementi.append(box_vozac)
+        elementi.append(Paragraph(" &nbsp;|&nbsp; ".join(linije_vozaca), stil_vozac))
 
     elementi.append(Spacer(1, 8 * mm))
 
@@ -505,6 +492,107 @@ def generisi_mesecni_pdf(godina_mesec_str, putanja_fajla):
     elementi.append(Paragraph(f"Ukupan broj voznji: {broj}", stil_zbir))
     elementi.append(Paragraph(f"Ukupno predjeno: {km:.1f} km", stil_zbir))
     elementi.append(Paragraph(f"Ukupna zarada za mesec: {formatiraj_cenu(prihod)}", stil_zbir))
+
+    # ------------------------------------------------------------
+    # SERVISI - kompletan istorijat (ne samo za ovaj mesec)
+    # ------------------------------------------------------------
+    elementi.append(PageBreak())
+    elementi.append(Paragraph("Servisi vozila (kompletan istorijat)", stil_naslov))
+    elementi.append(Spacer(1, 5 * mm))
+
+    if SERVIS.stavke:
+        zaglavlje_servis = [
+            Paragraph("R.br.", stil_zaglavlje),
+            Paragraph("Datum", stil_zaglavlje),
+            Paragraph("Vrsta servisa", stil_zaglavlje),
+            Paragraph("Kilometraza", stil_zaglavlje),
+            Paragraph("Cena", stil_zaglavlje),
+            Paragraph("Napomena", stil_zaglavlje),
+        ]
+        podaci_servis = [zaglavlje_servis]
+        ukupno_servis = 0.0
+        for i, s in enumerate(reversed(SERVIS.stavke), start=1):
+            km_s = s.get("km")
+            podaci_servis.append([
+                Paragraph(str(i), stil_celija),
+                Paragraph(s.get("datum", "-"), stil_celija),
+                Paragraph(s.get("vrsta", "-"), stil_celija),
+                Paragraph(f"{km_s:g} km" if km_s else "-", stil_celija),
+                Paragraph(formatiraj_cenu(s.get("cena", 0)), stil_celija),
+                Paragraph(s.get("napomena") or "-", stil_celija),
+            ])
+            ukupno_servis += s.get("cena", 0)
+
+        sirine_servis = [12 * mm, 22 * mm, 45 * mm, 25 * mm, 25 * mm, 51 * mm]
+        tabela_servis = Table(podaci_servis, colWidths=sirine_servis, repeatRows=1)
+        tabela_servis.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elementi.append(tabela_servis)
+        elementi.append(Spacer(1, 6 * mm))
+        elementi.append(Paragraph(f"Ukupno potroseno na servise: {formatiraj_cenu(ukupno_servis)}", stil_zbir))
+    else:
+        elementi.append(Paragraph("Nema unetih servisa.", stil_celija))
+
+    # ------------------------------------------------------------
+    # GORIVO - kompletan istorijat (ne samo za ovaj mesec)
+    # ------------------------------------------------------------
+    elementi.append(PageBreak())
+    elementi.append(Paragraph("Gorivo (kompletan istorijat)", stil_naslov))
+    elementi.append(Spacer(1, 5 * mm))
+
+    if GORIVO.stavke:
+        zaglavlje_gorivo = [
+            Paragraph("R.br.", stil_zaglavlje),
+            Paragraph("Datum", stil_zaglavlje),
+            Paragraph("Vrsta", stil_zaglavlje),
+            Paragraph("Litara", stil_zaglavlje),
+            Paragraph("Km na pumpi", stil_zaglavlje),
+            Paragraph("Cena", stil_zaglavlje),
+            Paragraph("Napomena", stil_zaglavlje),
+        ]
+        podaci_gorivo = [zaglavlje_gorivo]
+        ukupno_gorivo_cena = 0.0
+        ukupno_gorivo_litara = 0.0
+        for i, s in enumerate(reversed(GORIVO.stavke), start=1):
+            km_pumpe = s.get("km_pumpe")
+            podaci_gorivo.append([
+                Paragraph(str(i), stil_celija),
+                Paragraph(s.get("datum", "-"), stil_celija),
+                Paragraph(s.get("tip", "-"), stil_celija),
+                Paragraph(f"{s.get('litara', 0):g} l", stil_celija),
+                Paragraph(f"{km_pumpe:g} km" if km_pumpe else "-", stil_celija),
+                Paragraph(formatiraj_cenu(s.get("cena", 0)), stil_celija),
+                Paragraph(s.get("napomena") or "-", stil_celija),
+            ])
+            ukupno_gorivo_cena += s.get("cena", 0)
+            ukupno_gorivo_litara += s.get("litara", 0)
+
+        sirine_gorivo = [10 * mm, 20 * mm, 18 * mm, 16 * mm, 22 * mm, 22 * mm, 42 * mm]
+        tabela_gorivo = Table(podaci_gorivo, colWidths=sirine_gorivo, repeatRows=1)
+        tabela_gorivo.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3a3560")),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f0f0f5")]),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elementi.append(tabela_gorivo)
+        elementi.append(Spacer(1, 6 * mm))
+        elementi.append(Paragraph(f"Ukupno potroseno na gorivo: {formatiraj_cenu(ukupno_gorivo_cena)}", stil_zbir))
+        elementi.append(Paragraph(f"Ukupno litara: {ukupno_gorivo_litara:g} l", stil_zbir))
+    else:
+        elementi.append(Paragraph("Nema unetih goriva.", stil_celija))
 
     doc.build(elementi)
 
@@ -733,10 +821,10 @@ ScreenManager:
     ValutaScreen:
     BackupScreen:
     IzvozPdfScreen:
+    GrafikZaradeScreen:
     PlaceholderScreen:
         name: "poziv"
         naslov: "Poziv / Dispecer"
-    GrafikScreen:
 
 # ============================================================
 # ZAJEDNICKI STIL - pastelne kartice, zaobljeni uglovi, tipografija
@@ -816,7 +904,7 @@ ScreenManager:
 
 <NavBar@BoxLayout>:
     size_hint_y: None
-    height: dp(58)
+    height: dp(46)
     spacing: dp(10)
 
 <MenuButton>:
@@ -1009,12 +1097,12 @@ ScreenManager:
                 PastelCard:
                     tint: 0.28, 0.48, 0.34, 0.92
                     size_hint_y: None
-                    height: dp(112)
+                    height: dp(96)
                     padding: dp(14)
                     Label:
                         id: label_cena
                         text: root.tekst_cene
-                        font_size: '17sp'
+                        font_size: '20sp'
                         bold: True
                         color: 0.90, 1, 0.92, 1
                         halign: "center"
@@ -1081,22 +1169,22 @@ ScreenManager:
             RoundButton:
                 label_text: "Pocetna"
                 tint: 0.36, 0.46, 0.64, 1
-                font_size: '12sp'
+                font_size: '11sp'
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Kalkulator"
                 tint: 0.36, 0.46, 0.64, 1
-                font_size: '12sp'
+                font_size: '11sp'
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
                 label_text: "Evidencija"
                 tint: 0.36, 0.46, 0.64, 1
-                font_size: '12sp'
+                font_size: '11sp'
                 on_release: root.manager.current = "evidencija"
             RoundButton:
                 label_text: "Izvoz PDF"
                 tint: 0.55, 0.38, 0.26, 1
-                font_size: '12sp'
+                font_size: '11sp'
                 on_release: root.manager.current = "izvoz_pdf"
 
         ScrollView:
@@ -1454,6 +1542,14 @@ ScreenManager:
                 PastelTextInput:
                     id: input_cena_goriva
                     hint_text: "npr. 3200"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Kilometraza na pumpi (opciono, za tacnu potrosnju)"
+
+                PastelTextInput:
+                    id: input_km_pumpe
+                    hint_text: "npr. 152340"
                     input_filter: "float"
 
                 FieldLabel:
@@ -2108,234 +2204,12 @@ ScreenManager:
                 color: 0.92, 0.92, 0.98, 1
 
         Widget:
-
-# ============================================================
-# GRAFIK ZARADE
-# ============================================================
-
-<GrafikScreen>:
-    name: "grafik"
-    ScreenRoot:
-
-        TitleLabel:
-            text: "Grafik zarade"
-
-        NavBar:
-            RoundButton:
-                label_text: "Pocetna"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "home"
-            RoundButton:
-                label_text: "Podesavanja"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "podesavanja"
-
-        BoxLayout:
-            size_hint_y: None
-            height: dp(52)
-            spacing: dp(8)
-
-            RoundButton:
-                label_text: "Dnevno"
-                tint: (0.30, 0.52, 0.36, 1) if root.perioda == "dnevno" else (0.36, 0.35, 0.48, 1)
-                text_color: 0.95, 1, 0.96, 1
-                font_size: '13sp'
-                on_release: root.izaberi_periodu("dnevno")
-            RoundButton:
-                label_text: "Nedeljno"
-                tint: (0.30, 0.52, 0.36, 1) if root.perioda == "nedeljno" else (0.36, 0.35, 0.48, 1)
-                text_color: 0.95, 1, 0.96, 1
-                font_size: '13sp'
-                on_release: root.izaberi_periodu("nedeljno")
-            RoundButton:
-                label_text: "Mesecno"
-                tint: (0.30, 0.52, 0.36, 1) if root.perioda == "mesecno" else (0.36, 0.35, 0.48, 1)
-                text_color: 0.95, 1, 0.96, 1
-                font_size: '13sp'
-                on_release: root.izaberi_periodu("mesecno")
-
-        PastelCard:
-            tint: 0.24, 0.24, 0.36, 0.92
-            size_hint_y: None
-            height: dp(220)
-            padding: dp(10)
-
-            TrakaGrafikona:
-                id: traka
-                boja_trake: 0.34, 0.62, 0.82, 1
-                boja_teksta: 0.92, 0.94, 1, 1
-
-        PastelCard:
-            tint: 0.28, 0.48, 0.34, 0.92
-            size_hint_y: None
-            height: dp(96)
-            padding: dp(12)
-
-            Label:
-                text: root.tekst_prosek
-                font_size: '14sp'
-                bold: True
-                color: 0.92, 1, 0.94, 1
-                halign: "center"
-                valign: "middle"
-                text_size: self.size
-
-        Widget:
 """
 
 
 class MenuButton(ButtonBehavior, BoxLayout):
     icon_src = StringProperty("")
     tekst = StringProperty("")
-
-
-class TrakaGrafikona(Widget):
-    """Jednostavan bar-grafikon nacrtan direktno preko Kivy canvas-a,
-    bez ikakve dodatne biblioteke (da build ostane stabilan). Prima
-    listu (labela, vrednost) parova preko 'podaci' i sam se precrta
-    kad se promeni velicina ili podaci.
-    """
-    podaci = ListProperty([])  # [(labela_str, vrednost_float), ...]
-    boja_trake = ListProperty([0.34, 0.62, 0.82, 1])
-    boja_teksta = ListProperty([0.92, 0.94, 1, 1])
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.bind(pos=self._precrtaj, size=self._precrtaj, podaci=self._precrtaj)
-
-    def _precrtaj(self, *args):
-        self.canvas.clear()
-        if not self.podaci or self.width <= 0 or self.height <= 0:
-            return
-
-        maks = max((v for _, v in self.podaci), default=0) or 1
-        broj = len(self.podaci)
-        razmak = dp(6)
-        donja_margina = dp(34)
-        gornja_margina = dp(20)
-        sirina_trake = max(dp(8), (self.width - razmak * (broj + 1)) / broj)
-        visina_dostupna = max(dp(10), self.height - donja_margina - gornja_margina)
-
-        with self.canvas:
-            x = self.x + razmak
-            for labela, vrednost in self.podaci:
-                visina_trake = (vrednost / maks) * visina_dostupna if vrednost > 0 else 0
-                visina_trake = max(dp(2), visina_trake) if vrednost > 0 else 0
-
-                Color(*self.boja_trake)
-                Rectangle(
-                    pos=(x, self.y + donja_margina),
-                    size=(sirina_trake, visina_trake),
-                )
-
-                if vrednost:
-                    core_broj = CoreLabel(text=f"{vrednost:.0f}", font_size=dp(10))
-                    core_broj.refresh()
-                    tex = core_broj.texture
-                    Color(*self.boja_teksta)
-                    Rectangle(
-                        texture=tex,
-                        pos=(x + sirina_trake / 2 - tex.size[0] / 2,
-                             self.y + donja_margina + visina_trake + dp(2)),
-                        size=tex.size,
-                    )
-
-                core_lab = CoreLabel(text=str(labela), font_size=dp(10))
-                core_lab.refresh()
-                tex2 = core_lab.texture
-                Color(*self.boja_teksta)
-                Rectangle(
-                    texture=tex2,
-                    pos=(x + sirina_trake / 2 - tex2.size[0] / 2, self.y + dp(4)),
-                    size=tex2.size,
-                )
-
-                x += sirina_trake + razmak
-
-
-class GrafikScreen(Screen):
-    perioda = StringProperty("dnevno")
-    tekst_prosek = StringProperty("")
-
-    def on_pre_enter(self, *args):
-        self.osvezi()
-
-    def izaberi_periodu(self, perioda):
-        self.perioda = perioda
-        self.osvezi()
-
-    def osvezi(self):
-        if self.perioda == "dnevno":
-            self._osvezi_dnevno()
-        elif self.perioda == "nedeljno":
-            self._osvezi_nedeljno()
-        else:
-            self._osvezi_mesecno()
-
-    def _osvezi_dnevno(self):
-        danas_dt = datetime.now()
-        dani_kratki = ["Pon", "Uto", "Sre", "Cet", "Pet", "Sub", "Ned"]
-        podaci = []
-        ukupno_zarada = 0.0
-        ukupno_km = 0.0
-        for i in range(6, -1, -1):
-            dan = danas_dt - timedelta(days=i)
-            voznje = db.voznje_za_datum(dan.strftime("%Y-%m-%d"))
-            _, prihod, km = db.zbir_voznji(voznje)
-            podaci.append((dani_kratki[dan.weekday()], prihod))
-            ukupno_zarada += prihod
-            ukupno_km += km
-        self.ids.traka.podaci = podaci
-        self.tekst_prosek = (
-            f"Poslednjih 7 dana\n"
-            f"Ukupno km: {ukupno_km:.1f}   Ukupna zarada: {formatiraj_cenu(ukupno_zarada)}\n"
-            f"Prosek po danu: {formatiraj_cenu(ukupno_zarada / 7)}"
-        )
-
-    def _osvezi_nedeljno(self):
-        danas_dt = datetime.now()
-        podaci = []
-        ukupno_zarada = 0.0
-        ukupno_km = 0.0
-        for i in range(7, -1, -1):
-            pocetak = danas_dt - timedelta(days=danas_dt.weekday() + i * 7)
-            kraj = pocetak + timedelta(days=6)
-            voznje = db.voznje_izmedju(pocetak.strftime("%Y-%m-%d"), kraj.strftime("%Y-%m-%d"))
-            _, prihod, km = db.zbir_voznji(voznje)
-            podaci.append((pocetak.strftime("%d.%m"), prihod))
-            ukupno_zarada += prihod
-            ukupno_km += km
-        self.ids.traka.podaci = podaci
-        self.tekst_prosek = (
-            f"Poslednjih 8 nedelja\n"
-            f"Ukupno km: {ukupno_km:.1f}   Ukupna zarada: {formatiraj_cenu(ukupno_zarada)}\n"
-            f"Prosek po nedelji: {formatiraj_cenu(ukupno_zarada / 8)}"
-        )
-
-    def _osvezi_mesecno(self):
-        danas_dt = datetime.now()
-        meseci_kratki = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
-                          "Jul", "Avg", "Sep", "Okt", "Nov", "Dec"]
-        podaci = []
-        ukupno_zarada = 0.0
-        ukupno_km = 0.0
-        for i in range(5, -1, -1):
-            godina = danas_dt.year
-            mesec_broj = danas_dt.month - i
-            while mesec_broj <= 0:
-                mesec_broj += 12
-                godina -= 1
-            voznje = db.voznje_za_mesec(f"{godina:04d}-{mesec_broj:02d}")
-            _, prihod, km = db.zbir_voznji(voznje)
-            podaci.append((meseci_kratki[mesec_broj - 1], prihod))
-            ukupno_zarada += prihod
-            ukupno_km += km
-        self.ids.traka.podaci = podaci
-        self.tekst_prosek = (
-            f"Poslednjih 6 meseci\n"
-            f"Ukupno km: {ukupno_km:.1f}   Ukupna zarada: {formatiraj_cenu(ukupno_zarada)}\n"
-            f"Prosek po mesecu: {formatiraj_cenu(ukupno_zarada / 6)}"
-        )
 
 
 class HomeScreen(Screen):
@@ -2447,9 +2321,11 @@ class GorivoScreen(Screen):
     def _napravi_red(self, s):
         napomena = s.get("napomena") or "-"
         tip = s.get("tip", "Benzin")
+        km_pumpe = s.get("km_pumpe")
+        km_tekst = f"  |  {km_pumpe:g} km" if km_pumpe else ""
         opis = (
             f"[b]{s.get('datum', '-')}[/b]\n"
-            f"{tip}  |  {s.get('litara', 0):g} l\n"
+            f"{tip}  |  {s.get('litara', 0):g} l{km_tekst}\n"
             f"{napomena}\n"
             f"[color=6b3d0d][b]{formatiraj_cenu(s.get('cena', 0))}[/b][/color]"
         )
@@ -2472,6 +2348,7 @@ class GorivoScreen(Screen):
         self.izmena_id = stavka_id
         self.ids.input_litara.text = f"{s.get('litara', 0):g}"
         self.ids.input_cena_goriva.text = f"{s.get('cena', 0):g}"
+        self.ids.input_km_pumpe.text = f"{s.get('km_pumpe'):g}" if s.get("km_pumpe") else ""
         self.ids.input_napomena_gorivo.text = s.get("napomena") or ""
         tip = s.get("tip", "Benzin")
         if tip in self.ids.spinner_tip_goriva.values:
@@ -2486,12 +2363,22 @@ class GorivoScreen(Screen):
             self._poruka("Unesi ispravne brojeve za kolicinu i cenu.")
             return
 
+        km_pumpe_tekst = self.ids.input_km_pumpe.text.strip()
+        km_pumpe = None
+        if km_pumpe_tekst:
+            try:
+                km_pumpe = float(km_pumpe_tekst.replace(",", "."))
+            except ValueError:
+                self._poruka("Kilometraza na pumpi mora biti broj (ili ostavi prazno).")
+                return
+
         app = App.get_running_app()
         stavka = {
             "datum": datetime.now().strftime("%Y-%m-%d"),
             "tip": self.ids.spinner_tip_goriva.text,
             "litara": litara,
             "cena": cena,
+            "km_pumpe": km_pumpe,
             "napomena": self.ids.input_napomena_gorivo.text.strip(),
         }
 
@@ -2506,6 +2393,7 @@ class GorivoScreen(Screen):
 
         self.ids.input_litara.text = ""
         self.ids.input_cena_goriva.text = ""
+        self.ids.input_km_pumpe.text = ""
         self.ids.input_napomena_gorivo.text = ""
         self.ids.spinner_tip_goriva.text = "Benzin"
 
@@ -3471,15 +3359,9 @@ class KalkulatorScreen(Screen):
         tarifa_naziv = self.ids.spinner_tarifa.text
         cena_po_km = CENE.tarife.get(tarifa_naziv, CENE.tarife["Osnovna (07-22h)"])
         ukupno = CENE.start_fee + km * cena_po_km
-
-        linija_cena = f"Cena: {ukupno:.0f} RSD"
-        if KURS.kurs_eur_rsd:
-            eur = ukupno / KURS.kurs_eur_rsd
-            linija_cena += f"  (~{eur:.2f} EUR)"
-
         self.tekst_cene = (
-            f"{linija_cena}\n"
-            f"(start {CENE.start_fee:.0f} RSD + {km:g} km x {cena_po_km:.0f} RSD)"
+            f"Cena: {formatiraj_cenu(ukupno)}\n"
+            f"(start {formatiraj_cenu(CENE.start_fee)} + {km:g} km x {formatiraj_cenu(cena_po_km)})"
         )
 
     def sacuvaj_voznju(self):
@@ -3745,7 +3627,7 @@ class TaksiApp(App):
                 target=lambda: KURS.osvezi_ako_treba(self.user_data_dir),
                 daemon=True,
             ).start()
-            return Builder.load_string(KV)
+            return Builder.load_string(KV + grafik_zarade.GRAFIK_KV)
         except Exception:
             greska = traceback.format_exc()
             _zapisi_gresku(greska)
