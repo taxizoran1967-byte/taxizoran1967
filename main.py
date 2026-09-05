@@ -793,11 +793,7 @@ ScreenManager:
         text: root.label_text
         color: root.text_color
         bold: True
-        font_size: '14sp'
-        halign: "center"
-        valign: "middle"
-        text_size: self.width - dp(6), self.height
-        padding: dp(3), 0
+        font_size: '15sp'
 
 <NavBar@BoxLayout>:
     size_hint_y: None
@@ -1660,21 +1656,6 @@ ScreenManager:
                     color: 0.65, 0.85, 1, 1
                     text_size: self.width, None
 
-                FieldLabel:
-                    text: "Predjeni km (rucno, ako GPS ne izmeri)"
-
-                PastelTextInput:
-                    id: input_km_rucno
-                    hint_text: "npr. 12.5"
-                    input_filter: "float"
-
-                FieldLabel:
-                    text: "Adresa dolaska (rucno, opciono)"
-
-                PastelTextInput:
-                    id: input_dolazak_rucno
-                    hint_text: "npr. Bulevar oslobodjenja 10, Beograd"
-
                 RoundButton:
                     id: dugme_start
                     label_text: "POCNI VOZNJU"
@@ -1732,9 +1713,9 @@ ScreenManager:
             on_release: root.otvori_navigaciju()
 
         FieldLabel:
-            text: "Otvorice se OpenStreetMap u browseru i prikazati unetu adresu na mapi (bez Google-a). Napomena: ovo je prikaz lokacije, ne glasovno navodjenje korak-po-korak."
+            text: "Otvorice se Google Maps i navigacija ce automatski krenuti korak-po-korak ka unetoj adresi (nije potrebno rucno kliktati 'Kreni'). Polazna tacka je uvek trenutna GPS pozicija telefona u tom trenutku."
             size_hint_y: None
-            height: dp(50)
+            height: dp(60)
             text_size: self.width, None
 
         Widget:
@@ -2930,12 +2911,28 @@ class NavigacijaScreen(Screen):
             _prikazi_popup_poruku("Info", "Unesi odrediste pre otvaranja navigacije.", size_hint=(0.8, 0.3))
             return
 
-        upit = urllib.parse.quote(odrediste)
-        url = f"https://www.openstreetmap.org/search?query={upit}"
+        destinacija = urllib.parse.quote(odrediste)
+
+        # "google.navigation" je poseban link koji Google Maps na
+        # Androidu prepoznaje i odmah pokrece navigaciju korak-po-korak
+        # (bez ekrana za pregled rute na kome bi inace trebalo rucno
+        # kliknuti "Kreni"). Polazna tacka je uvek TRENUTNA GPS pozicija
+        # telefona u tom trenutku - ovaj format ne dozvoljava da se
+        # zada neka druga/starija polazna tacka.
+        url_navigacija = f"google.navigation:q={destinacija}&mode=d"
+
+        # Rezervni link, ako iz nekog razloga google.navigation ne
+        # uspe da se otvori (npr. Google Maps app nije instaliran) -
+        # ovaj samo prikazuje rutu, bez automatskog starta.
+        url_rezervni = f"https://www.google.com/maps/dir/?api=1&destination={destinacija}&travelmode=driving"
+
         try:
-            webbrowser.open(url)
+            webbrowser.open(url_navigacija)
         except Exception:
-            _prikazi_popup_poruku("Greska", "Ne mogu da otvorim navigaciju na ovom uredjaju.", size_hint=(0.8, 0.3))
+            try:
+                webbrowser.open(url_rezervni)
+            except Exception:
+                _prikazi_popup_poruku("Greska", "Ne mogu da otvorim navigaciju na ovom uredjaju.", size_hint=(0.8, 0.3))
 
 
 class GoogleApiScreen(Screen):
