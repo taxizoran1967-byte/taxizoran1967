@@ -781,6 +781,7 @@ ScreenManager:
     tint: (0.36, 0.46, 0.64, 1)
     text_color: 0.95, 0.96, 1, 1
     label_text: ""
+    font_size: '15sp'
     opacity: 0.4 if self.disabled else 1
     canvas.before:
         Color:
@@ -793,7 +794,10 @@ ScreenManager:
         text: root.label_text
         color: root.text_color
         bold: True
-        font_size: '15sp'
+        font_size: root.font_size
+        text_size: self.width - dp(4), self.height
+        halign: 'center'
+        valign: 'middle'
 
 <NavBar@BoxLayout>:
     size_hint_y: None
@@ -923,14 +927,17 @@ ScreenManager:
             RoundButton:
                 label_text: "Pocetna"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '13sp'
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Evidencija"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '13sp'
                 on_release: root.manager.current = "evidencija"
             RoundButton:
                 label_text: "Izvestaj"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '13sp'
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
@@ -1022,14 +1029,17 @@ ScreenManager:
             RoundButton:
                 label_text: "Pocetna"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '13sp'
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Kalkulator"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '13sp'
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
                 label_text: "Izvestaj"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '13sp'
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
@@ -1056,18 +1066,22 @@ ScreenManager:
             RoundButton:
                 label_text: "Pocetna"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '11sp'
                 on_release: root.manager.current = "home"
             RoundButton:
                 label_text: "Kalkulator"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '11sp'
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
                 label_text: "Evidencija"
                 tint: 0.36, 0.46, 0.64, 1
+                font_size: '11sp'
                 on_release: root.manager.current = "evidencija"
             RoundButton:
                 label_text: "Izvoz PDF"
                 tint: 0.55, 0.38, 0.26, 1
+                font_size: '11sp'
                 on_release: root.manager.current = "izvoz_pdf"
 
         ScrollView:
