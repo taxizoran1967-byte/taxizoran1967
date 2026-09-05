@@ -41,6 +41,20 @@ jobs:
           restore-keys: |
             buildozer-${{ runner.os }}-
 
+      - name: Fetch python-for-android (without full build yet)
+        run: |
+          yes | buildozer android p4a -- --help || true
+
+      - name: Remove broken reportlab recipe (forces plain pip install)
+        run: |
+          RECIPE_DIR=".buildozer/android/platform/python-for-android/pythonforandroid/recipes/reportlab"
+          if [ -d "$RECIPE_DIR" ]; then
+            echo "Uklanjam stari reportlab recept: $RECIPE_DIR"
+            rm -rf "$RECIPE_DIR"
+          else
+            echo "Reportlab recept nije pronadjen (mozda vec uklonjen ili p4a jos nije skinut) - nastavljam."
+          fi
+
       - name: Build APK with buildozer
         run: |
           yes | buildozer android debug
