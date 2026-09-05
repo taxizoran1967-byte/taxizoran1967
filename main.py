@@ -794,12 +794,6 @@ ScreenManager:
         color: root.text_color
         bold: True
         font_size: '15sp'
-        text_size: self.width - dp(6), self.height
-        halign: "center"
-        valign: "middle"
-        shorten: True
-        shorten_from: "right"
-        max_lines: 1
 
 <NavBar@BoxLayout>:
     size_hint_y: None
@@ -1064,15 +1058,15 @@ ScreenManager:
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Kalkul."
+                label_text: "Kalkulator"
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
-                label_text: "Evid."
+                label_text: "Evidencija"
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
             RoundButton:
-                label_text: "PDF"
+                label_text: "Izvoz PDF"
                 tint: 0.55, 0.38, 0.26, 1
                 on_release: root.manager.current = "izvoz_pdf"
 
@@ -1661,6 +1655,21 @@ ScreenManager:
                     font_size: '12sp'
                     color: 0.65, 0.85, 1, 1
                     text_size: self.width, None
+
+                FieldLabel:
+                    text: "Predjeni km (rucno, ako GPS ne izmeri)"
+
+                PastelTextInput:
+                    id: input_km_rucno
+                    hint_text: "npr. 12.5"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Adresa dolaska (rucno, opciono)"
+
+                PastelTextInput:
+                    id: input_dolazak_rucno
+                    hint_text: "npr. Bulevar oslobodjenja 10, Beograd"
 
                 RoundButton:
                     id: dugme_start
