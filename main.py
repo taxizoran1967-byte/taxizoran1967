@@ -33,7 +33,11 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.uix.widget import Widget
+from kivy.properties import StringProperty, BooleanProperty, ListProperty
+from kivy.graphics import Color, Rectangle
+from kivy.core.text import Label as CoreLabel
+from kivy.metrics import dp
 from datetime import datetime, timedelta
 
 import database as db
@@ -730,11 +734,9 @@ ScreenManager:
     BackupScreen:
     IzvozPdfScreen:
     PlaceholderScreen:
-        name: "grafik"
-        naslov: "Grafik zarade"
-    PlaceholderScreen:
         name: "poziv"
         naslov: "Poziv / Dispecer"
+    GrafikScreen:
 
 # ============================================================
 # ZAJEDNICKI STIL - pastelne kartice, zaobljeni uglovi, tipografija
@@ -2106,12 +2108,234 @@ ScreenManager:
                 color: 0.92, 0.92, 0.98, 1
 
         Widget:
+
+# ============================================================
+# GRAFIK ZARADE
+# ============================================================
+
+<GrafikScreen>:
+    name: "grafik"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Grafik zarade"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "podesavanja"
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(52)
+            spacing: dp(8)
+
+            RoundButton:
+                label_text: "Dnevno"
+                tint: (0.30, 0.52, 0.36, 1) if root.perioda == "dnevno" else (0.36, 0.35, 0.48, 1)
+                text_color: 0.95, 1, 0.96, 1
+                font_size: '13sp'
+                on_release: root.izaberi_periodu("dnevno")
+            RoundButton:
+                label_text: "Nedeljno"
+                tint: (0.30, 0.52, 0.36, 1) if root.perioda == "nedeljno" else (0.36, 0.35, 0.48, 1)
+                text_color: 0.95, 1, 0.96, 1
+                font_size: '13sp'
+                on_release: root.izaberi_periodu("nedeljno")
+            RoundButton:
+                label_text: "Mesecno"
+                tint: (0.30, 0.52, 0.36, 1) if root.perioda == "mesecno" else (0.36, 0.35, 0.48, 1)
+                text_color: 0.95, 1, 0.96, 1
+                font_size: '13sp'
+                on_release: root.izaberi_periodu("mesecno")
+
+        PastelCard:
+            tint: 0.24, 0.24, 0.36, 0.92
+            size_hint_y: None
+            height: dp(220)
+            padding: dp(10)
+
+            TrakaGrafikona:
+                id: traka
+                boja_trake: 0.34, 0.62, 0.82, 1
+                boja_teksta: 0.92, 0.94, 1, 1
+
+        PastelCard:
+            tint: 0.28, 0.48, 0.34, 0.92
+            size_hint_y: None
+            height: dp(96)
+            padding: dp(12)
+
+            Label:
+                text: root.tekst_prosek
+                font_size: '14sp'
+                bold: True
+                color: 0.92, 1, 0.94, 1
+                halign: "center"
+                valign: "middle"
+                text_size: self.size
+
+        Widget:
 """
 
 
 class MenuButton(ButtonBehavior, BoxLayout):
     icon_src = StringProperty("")
     tekst = StringProperty("")
+
+
+class TrakaGrafikona(Widget):
+    """Jednostavan bar-grafikon nacrtan direktno preko Kivy canvas-a,
+    bez ikakve dodatne biblioteke (da build ostane stabilan). Prima
+    listu (labela, vrednost) parova preko 'podaci' i sam se precrta
+    kad se promeni velicina ili podaci.
+    """
+    podaci = ListProperty([])  # [(labela_str, vrednost_float), ...]
+    boja_trake = ListProperty([0.34, 0.62, 0.82, 1])
+    boja_teksta = ListProperty([0.92, 0.94, 1, 1])
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.bind(pos=self._precrtaj, size=self._precrtaj, podaci=self._precrtaj)
+
+    def _precrtaj(self, *args):
+        self.canvas.clear()
+        if not self.podaci or self.width <= 0 or self.height <= 0:
+            return
+
+        maks = max((v for _, v in self.podaci), default=0) or 1
+        broj = len(self.podaci)
+        razmak = dp(6)
+        donja_margina = dp(34)
+        gornja_margina = dp(20)
+        sirina_trake = max(dp(8), (self.width - razmak * (broj + 1)) / broj)
+        visina_dostupna = max(dp(10), self.height - donja_margina - gornja_margina)
+
+        with self.canvas:
+            x = self.x + razmak
+            for labela, vrednost in self.podaci:
+                visina_trake = (vrednost / maks) * visina_dostupna if vrednost > 0 else 0
+                visina_trake = max(dp(2), visina_trake) if vrednost > 0 else 0
+
+                Color(*self.boja_trake)
+                Rectangle(
+                    pos=(x, self.y + donja_margina),
+                    size=(sirina_trake, visina_trake),
+                )
+
+                if vrednost:
+                    core_broj = CoreLabel(text=f"{vrednost:.0f}", font_size=dp(10))
+                    core_broj.refresh()
+                    tex = core_broj.texture
+                    Color(*self.boja_teksta)
+                    Rectangle(
+                        texture=tex,
+                        pos=(x + sirina_trake / 2 - tex.size[0] / 2,
+                             self.y + donja_margina + visina_trake + dp(2)),
+                        size=tex.size,
+                    )
+
+                core_lab = CoreLabel(text=str(labela), font_size=dp(10))
+                core_lab.refresh()
+                tex2 = core_lab.texture
+                Color(*self.boja_teksta)
+                Rectangle(
+                    texture=tex2,
+                    pos=(x + sirina_trake / 2 - tex2.size[0] / 2, self.y + dp(4)),
+                    size=tex2.size,
+                )
+
+                x += sirina_trake + razmak
+
+
+class GrafikScreen(Screen):
+    perioda = StringProperty("dnevno")
+    tekst_prosek = StringProperty("")
+
+    def on_pre_enter(self, *args):
+        self.osvezi()
+
+    def izaberi_periodu(self, perioda):
+        self.perioda = perioda
+        self.osvezi()
+
+    def osvezi(self):
+        if self.perioda == "dnevno":
+            self._osvezi_dnevno()
+        elif self.perioda == "nedeljno":
+            self._osvezi_nedeljno()
+        else:
+            self._osvezi_mesecno()
+
+    def _osvezi_dnevno(self):
+        danas_dt = datetime.now()
+        dani_kratki = ["Pon", "Uto", "Sre", "Cet", "Pet", "Sub", "Ned"]
+        podaci = []
+        ukupno_zarada = 0.0
+        ukupno_km = 0.0
+        for i in range(6, -1, -1):
+            dan = danas_dt - timedelta(days=i)
+            voznje = db.voznje_za_datum(dan.strftime("%Y-%m-%d"))
+            _, prihod, km = db.zbir_voznji(voznje)
+            podaci.append((dani_kratki[dan.weekday()], prihod))
+            ukupno_zarada += prihod
+            ukupno_km += km
+        self.ids.traka.podaci = podaci
+        self.tekst_prosek = (
+            f"Poslednjih 7 dana\n"
+            f"Ukupno km: {ukupno_km:.1f}   Ukupna zarada: {formatiraj_cenu(ukupno_zarada)}\n"
+            f"Prosek po danu: {formatiraj_cenu(ukupno_zarada / 7)}"
+        )
+
+    def _osvezi_nedeljno(self):
+        danas_dt = datetime.now()
+        podaci = []
+        ukupno_zarada = 0.0
+        ukupno_km = 0.0
+        for i in range(7, -1, -1):
+            pocetak = danas_dt - timedelta(days=danas_dt.weekday() + i * 7)
+            kraj = pocetak + timedelta(days=6)
+            voznje = db.voznje_izmedju(pocetak.strftime("%Y-%m-%d"), kraj.strftime("%Y-%m-%d"))
+            _, prihod, km = db.zbir_voznji(voznje)
+            podaci.append((pocetak.strftime("%d.%m"), prihod))
+            ukupno_zarada += prihod
+            ukupno_km += km
+        self.ids.traka.podaci = podaci
+        self.tekst_prosek = (
+            f"Poslednjih 8 nedelja\n"
+            f"Ukupno km: {ukupno_km:.1f}   Ukupna zarada: {formatiraj_cenu(ukupno_zarada)}\n"
+            f"Prosek po nedelji: {formatiraj_cenu(ukupno_zarada / 8)}"
+        )
+
+    def _osvezi_mesecno(self):
+        danas_dt = datetime.now()
+        meseci_kratki = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
+                          "Jul", "Avg", "Sep", "Okt", "Nov", "Dec"]
+        podaci = []
+        ukupno_zarada = 0.0
+        ukupno_km = 0.0
+        for i in range(5, -1, -1):
+            godina = danas_dt.year
+            mesec_broj = danas_dt.month - i
+            while mesec_broj <= 0:
+                mesec_broj += 12
+                godina -= 1
+            voznje = db.voznje_za_mesec(f"{godina:04d}-{mesec_broj:02d}")
+            _, prihod, km = db.zbir_voznji(voznje)
+            podaci.append((meseci_kratki[mesec_broj - 1], prihod))
+            ukupno_zarada += prihod
+            ukupno_km += km
+        self.ids.traka.podaci = podaci
+        self.tekst_prosek = (
+            f"Poslednjih 6 meseci\n"
+            f"Ukupno km: {ukupno_km:.1f}   Ukupna zarada: {formatiraj_cenu(ukupno_zarada)}\n"
+            f"Prosek po mesecu: {formatiraj_cenu(ukupno_zarada / 6)}"
+        )
 
 
 class HomeScreen(Screen):
