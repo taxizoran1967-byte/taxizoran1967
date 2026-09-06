@@ -33,6 +33,7 @@ from kivy.core.text import Label as CoreLabel
 from kivy.animation import Animation
 from kivy.metrics import dp
 from kivy.clock import Clock
+from kivy.core.window import Window
 
 import database as db
 
@@ -372,6 +373,18 @@ class GrafikCanvas(Widget):
 
             self._nacrtaj_tekst(_format_broj(maxv, 0), x0 + dp(20), y0 + h + dp(8),
                                  veličina=9, boja=(1, 1, 1, 0.5))
+
+            # ---- PRIVREMENA DIJAGNOSTIKA (obrisati posle) ----
+            # Ovaj crveni tekst je uvek na FIKSNOJ poziciji na ekranu
+            # (gore levo, u odnosu na ceo prozor), i pokazuje sta app
+            # MISLI da su koordinate/velicina grafikona. Uporedi tu
+            # poziciju sa time gde se STVARNO vide trake na ekranu.
+            self._nacrtaj_tekst(
+                f"DEBUG: x={self.x:.0f} y={self.y:.0f} w={self.width:.0f} h={self.height:.0f}",
+                Window.width / 2, Window.height - dp(24),
+                veličina=11, boja=(1, 0.25, 0.25, 1),
+            )
+            # ---- KRAJ PRIVREMENE DIJAGNOSTIKE ----
 
             if n == 0:
                 return
