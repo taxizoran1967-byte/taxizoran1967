@@ -40,6 +40,7 @@ from datetime import datetime, timedelta
 
 import database as db
 import grafik_zarade
+import biometrics
 
 try:
     from plyer import gps
@@ -220,6 +221,35 @@ class VozacPodesavanja:
 
 
 VOZAC = VozacPodesavanja()
+
+
+class SigurnostPodesavanja:
+    """Da li je ukljuceno otkljucavanje aplikacije otiskom prsta pri
+    pokretanju. Podrazumevano ISKLJUCENO - korisnik ga sam ukljucuje u
+    Podesavanja -> Sigurnost, jer zahteva da telefon vec ima
+    registrovan otisak u sistemskim podesavanjima."""
+
+    def __init__(self):
+        self.ukljucena = False
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "sigurnost.json")
+
+    def ucitaj(self, user_data_dir):
+        try:
+            with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+            self.ukljucena = bool(podaci.get("ukljucena", False))
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        podaci = {"ukljucena": self.ukljucena}
+        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+
+SIGURNOST = SigurnostPodesavanja()
 
 
 class KursPodesavanja:
@@ -967,6 +997,7 @@ KV = """
 #:import dp kivy.metrics.dp
 
 ScreenManager:
+    LockScreen:
     HomeScreen:
     KalkulatorScreen:
     EvidencijaScreen:
@@ -985,6 +1016,7 @@ ScreenManager:
     BackupScreen:
     IzvozPdfScreen:
     GrafikZaradeScreen:
+    SigurnostScreen:
     PlaceholderScreen:
         name: "poziv"
         naslov: "Poziv / Dispecer"
@@ -1216,6 +1248,44 @@ ScreenManager:
     size_hint_y: None
     height: dp(48)
     multiline: False
+
+# ============================================================
+# EKRAN ZAKLJUCAVANJA - otisak prsta pri pokretanju app-a
+# ============================================================
+
+<LockScreen>:
+    name: "lock"
+    ScreenRoot:
+
+        Widget:
+
+        TaxiZoranNaslov:
+
+        Widget:
+            size_hint_y: None
+            height: dp(30)
+
+        Label:
+            text: root.tekst_status
+            font_size: '18sp'
+            color: 1, 1, 1, 1
+            size_hint_y: None
+            height: dp(110)
+            text_size: self.width, None
+            halign: "center"
+            valign: "middle"
+
+        RoundButton:
+            label_text: root.tekst_dugme
+            tint: 0.30, 0.52, 0.36, 1
+            text_color: 0.1, 0.1, 0.1, 1
+            size_hint_y: None
+            height: dp(52)
+            opacity: 1 if root.prikazi_dugme else 0
+            disabled: not root.prikazi_dugme
+            on_release: root.pokusaj_ponovo()
+
+        Widget:
 
 # ============================================================
 # POCETNI EKRAN
@@ -1608,6 +1678,11 @@ ScreenManager:
                     tekst: "Backup podataka"
                     on_release: app.root.current = "backup"
 
+                MenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: "Sigurnost (otisak prsta)"
+                    on_release: app.root.current = "sigurnost"
+
 # ============================================================
 # CENOVNIK - izmena cena tarifa i start takse
 # ============================================================
@@ -1726,6 +1801,54 @@ ScreenManager:
             text: "Kada je ukljucena, kalkulator ce pri otvaranju automatski predloziti nocnu tarifu (i dalje mozes rucno da promenis tarifu za konkretnu voznju)."
             size_hint_y: None
             height: dp(60)
+            text_size: self.width, None
+
+        Widget:
+
+# ============================================================
+# SIGURNOST - otkljucavanje otiskom prsta
+# ============================================================
+
+<SigurnostScreen>:
+    name: "sigurnost"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Sigurnost"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "podesavanja"
+
+        PastelCard:
+            tint: 0.38, 0.32, 0.52, 0.92
+            size_hint_y: None
+            height: dp(74)
+            padding: dp(14)
+            Label:
+                text: root.tekst_status
+                font_size: '18sp'
+                bold: True
+                color: 0.92, 0.88, 1, 1
+
+        RoundButton:
+            label_text: root.tekst_dugme
+            tint: root.tint_dugme
+            text_color: 0.1, 0.1, 0.1, 1
+            size_hint_y: None
+            height: dp(52)
+            on_release: root.promeni()
+
+        FieldLabel:
+            text: root.tekst_napomena
+            size_hint_y: None
+            height: dp(110)
             text_size: self.width, None
 
         Widget:
@@ -2586,6 +2709,103 @@ class HomeMenuButton(ButtonBehavior, BoxLayout):
 
 class HomeScreen(Screen):
     pass
+
+
+class LockScreen(Screen):
+    """Prvi ekran koji se prikazuje pri pokretanju app-a - ako je
+    otkljucavanje otiskom ukljuceno u Podesavanja -> Sigurnost i
+    uredjaj ima registrovan otisak, korisnik mora da prisloni prst
+    pre nego sto udje u app. U suprotnom (iskljuceno, ili uredjaj
+    nema citac/registrovan otisak) automatski se propusta dalje."""
+
+    tekst_status = StringProperty("Proveravam...")
+    tekst_dugme = StringProperty("Pokusaj ponovo")
+    prikazi_dugme = BooleanProperty(False)
+
+    def pokusaj_ili_preskoci(self):
+        """Poziva se JEDNOM, iz TaksiApp.build() (preko Clock.schedule_once,
+        posto je citav ScreenManager vec sagradjen) - a ne iz
+        on_pre_enter(), jer ScreenManager postavlja 'current' na ovaj
+        (prvi) ekran JOS DOK se KV gradi, pre nego sto ekran 'home'
+        uopste postoji, pa bi automatski prelazak na 'home' u tom
+        trenutku pukao sa 'No Screen with name home'."""
+        self.prikazi_dugme = False
+
+        if not SIGURNOST.ukljucena:
+            self._nastavi_dalje()
+            return
+
+        dostupno, poruka = biometrics.hardver_dostupan()
+        if not dostupno:
+            # Bez alternative za otkljucavanje (nema PIN-a), pa ne
+            # smemo trajno da zakljucamo korisnika van app-a - samo
+            # ga obavestavamo i propustamo dalje.
+            self.tekst_status = poruka
+            Clock.schedule_once(lambda dt: self._nastavi_dalje(), 1.5)
+            return
+
+        self.pokusaj_ponovo()
+
+    def pokusaj_ponovo(self):
+        self.tekst_status = "Prislonite prst na senzor za otisak..."
+        self.prikazi_dugme = False
+        biometrics.pokreni_autentifikaciju(
+            on_uspeh=lambda: Clock.schedule_once(lambda dt: self._nastavi_dalje()),
+            on_greska=lambda poruka: Clock.schedule_once(
+                lambda dt, p=poruka: self._neuspeh(p)
+            ),
+            on_neuspesno=lambda: Clock.schedule_once(
+                lambda dt: self._neuspeh("Otisak nije prepoznat.")
+            ),
+        )
+
+    def _neuspeh(self, poruka):
+        self.tekst_status = poruka
+        self.tekst_dugme = "Pokusaj ponovo"
+        self.prikazi_dugme = True
+
+    def _nastavi_dalje(self):
+        self.manager.current = "home"
+
+
+class SigurnostScreen(Screen):
+    tekst_status = StringProperty("")
+    tekst_dugme = StringProperty("")
+    tint_dugme = (0.7, 0.9, 0.72, 1)
+    tekst_napomena = StringProperty("")
+
+    def on_pre_enter(self, *args):
+        self._osvezi()
+
+    def _osvezi(self):
+        if SIGURNOST.ukljucena:
+            self.tekst_status = "Otkljucavanje otiskom: UKLJUCENO"
+            self.tekst_dugme = "Iskljuci otisak"
+            self.tint_dugme = (0.66, 0.30, 0.34, 1)
+        else:
+            self.tekst_status = "Otkljucavanje otiskom: ISKLJUCENO"
+            self.tekst_dugme = "Ukljuci otisak"
+            self.tint_dugme = (0.30, 0.52, 0.36, 1)
+
+        dostupno, poruka = biometrics.hardver_dostupan()
+        if dostupno:
+            self.tekst_napomena = (
+                "Otisak je registrovan na ovom uredjaju - ekran za "
+                "otkljucavanje ce se prikazati svaki put kad pokrenes app."
+            )
+        else:
+            self.tekst_napomena = (
+                f"Napomena: {poruka} Ako ukljucis ovu opciju bez "
+                "registrovanog otiska, app ce te automatski propustiti "
+                "dalje - iz bezbednosnih razloga se ne mozes zakljucati "
+                "van app-a bez registrovanog otiska."
+            )
+
+    def promeni(self):
+        SIGURNOST.ukljucena = not SIGURNOST.ukljucena
+        app = App.get_running_app()
+        SIGURNOST.sacuvaj(app.user_data_dir)
+        self._osvezi()
 
 
 class PodesavanjaScreen(Screen):
@@ -4331,6 +4551,7 @@ class TaksiApp(App):
             API.ucitaj(self.user_data_dir)
             VOZAC.ucitaj(self.user_data_dir)
             KURS.ucitaj(self.user_data_dir)
+            SIGURNOST.ucitaj(self.user_data_dir)
             # Kurs se povlaci sa interneta u pozadini (posebna nit), da
             # app ne "visi" na pokretanju ako je internet spor ili ga
             # nema - u tom slucaju samo ostaje poslednji sacuvani kurs.
@@ -4338,7 +4559,15 @@ class TaksiApp(App):
                 target=lambda: KURS.osvezi_ako_treba(self.user_data_dir),
                 daemon=True,
             ).start()
-            return Builder.load_string(KV + grafik_zarade.GRAFIK_KV)
+            root = Builder.load_string(KV + grafik_zarade.GRAFIK_KV)
+            # Provera zakljucavanja (otisak) se pokrece tek NAKON sto je
+            # citav ScreenManager sagradjen (vidi napomenu u
+            # LockScreen.pokusaj_ili_preskoci) - zato ide kroz
+            # Clock.schedule_once, a ne odmah ovde.
+            Clock.schedule_once(
+                lambda dt: root.get_screen("lock").pokusaj_ili_preskoci()
+            )
+            return root
         except Exception:
             greska = traceback.format_exc()
             _zapisi_gresku(greska)
