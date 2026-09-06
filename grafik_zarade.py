@@ -33,7 +33,6 @@ from kivy.core.text import Label as CoreLabel
 from kivy.animation import Animation
 from kivy.metrics import dp
 from kivy.clock import Clock
-from kivy.core.window import Window
 
 import database as db
 
@@ -375,15 +374,31 @@ class GrafikCanvas(Widget):
                                  veličina=9, boja=(1, 1, 1, 0.5))
 
             # ---- PRIVREMENA DIJAGNOSTIKA (obrisati posle) ----
-            # Ovaj crveni tekst je uvek na FIKSNOJ poziciji na ekranu
-            # (gore levo, u odnosu na ceo prozor), i pokazuje sta app
-            # MISLI da su koordinate/velicina grafikona. Uporedi tu
-            # poziciju sa time gde se STVARNO vide trake na ekranu.
-            self._nacrtaj_tekst(
-                f"DEBUG: x={self.x:.0f} y={self.y:.0f} w={self.width:.0f} h={self.height:.0f}",
-                Window.width / 2, Window.height - dp(24),
-                veličina=11, boja=(1, 0.25, 0.25, 1),
-            )
+            # Ovaj crveni tekst koristi ISTU poziciju (self.x/self.y)
+            # kao i trake ispod - dakle mora da se pojavi TU GDE SE VIDE
+            # trake (ne na fiksnoj poziciji ekrana, to je bila greska u
+            # prethodnoj verziji). Pokazuje x/y/sirinu/visinu za sam
+            # grafikon, njegovog roditelja (FloatLayout) i "dedu"
+            # (kutiju/PastelCard) - da se vidi gde tacno lanac puca.
+            try:
+                red1 = f"CANVAS x={self.x:.0f} y={self.y:.0f} w={self.width:.0f} h={self.height:.0f}"
+                roditelj = self.parent
+                red2 = ""
+                red3 = ""
+                if roditelj is not None:
+                    red2 = f"FLOAT x={roditelj.x:.0f} y={roditelj.y:.0f} w={roditelj.width:.0f} h={roditelj.height:.0f}"
+                    deda = roditelj.parent
+                    if deda is not None:
+                        red3 = f"KUTIJA x={deda.x:.0f} y={deda.y:.0f} w={deda.width:.0f} h={deda.height:.0f}"
+            except Exception as e:
+                red1, red2, red3 = f"GRESKA: {e}", "", ""
+
+            cx = self.x + self.width / 2
+            self._nacrtaj_tekst(red1, cx, self.y + self.height - dp(14), veličina=10, boja=(1, 0.25, 0.25, 1))
+            if red2:
+                self._nacrtaj_tekst(red2, cx, self.y + self.height - dp(30), veličina=10, boja=(1, 0.6, 0.25, 1))
+            if red3:
+                self._nacrtaj_tekst(red3, cx, self.y + self.height - dp(46), veličina=10, boja=(1, 1, 0.25, 1))
             # ---- KRAJ PRIVREMENE DIJAGNOSTIKE ----
 
             if n == 0:
