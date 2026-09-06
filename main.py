@@ -2265,55 +2265,61 @@ ScreenManager:
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
-        FieldLabel:
-            text: "Cuva sve voznje (km, cene, adrese) u jedan fajl van aplikacije, da ne nestanu ako obrises app ili promenis telefon."
-
-        PastelCard:
-            orientation: "vertical"
-            tint: 0.30, 0.29, 0.42, 0.92
-            size_hint_y: None
-            height: self.minimum_height
-            padding: dp(14)
-            Label:
-                text: root.tekst_status
-                color: 1, 1, 1, 1
-                halign: "left"
-                valign: "top"
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
                 size_hint_y: None
-                text_size: self.width, None
-                height: self.texture_size[1]
+                height: self.minimum_height
+                spacing: dp(16)
+                padding: dp(2), dp(4)
 
-        RoundButton:
-            label_text: "Odobri pristup fajlovima"
-            tint: 0.36, 0.46, 0.64, 1
-            text_color: 1, 1, 1, 1
-            size_hint_y: None
-            height: dp(52)
-            on_release: root.zatrazi_dozvolu()
+                FieldLabel:
+                    text: "Cuva sve voznje (km, cene, adrese) u jedan fajl van aplikacije, da ne nestanu ako obrises app ili promenis telefon."
 
-        RoundButton:
-            label_text: "Sacuvaj backup sada"
-            tint: 0.30, 0.52, 0.36, 1
-            text_color: 1, 1, 1, 1
-            size_hint_y: None
-            height: dp(56)
-            on_release: root.sacuvaj_backup()
+                PastelCard:
+                    orientation: "vertical"
+                    tint: 0.30, 0.29, 0.42, 0.92
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(14)
+                    Label:
+                        text: root.tekst_status
+                        color: 1, 1, 1, 1
+                        halign: "left"
+                        valign: "top"
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
 
-        RoundButton:
-            label_text: "Vrati podatke iz backupa"
-            tint: 0.55, 0.38, 0.26, 1
-            text_color: 1, 1, 1, 1
-            size_hint_y: None
-            height: dp(56)
-            on_release: root.ucitaj_backup()
+                RoundButton:
+                    label_text: "Odobri pristup fajlovima"
+                    tint: 0.36, 0.46, 0.64, 1
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.zatrazi_dozvolu()
 
-        FieldLabel:
-            text: "Ako menjas telefon: napravi backup na starom, prebaci fajl (WhatsApp/Drive/USB) u isti folder na novom, instaliraj app, pa klikni 'Vrati podatke'."
-            size_hint_y: None
-            height: dp(90)
-            text_size: self.width, None
+                RoundButton:
+                    label_text: "Sacuvaj backup sada"
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(56)
+                    on_release: root.sacuvaj_backup()
 
-        Widget:
+                RoundButton:
+                    label_text: "Vrati podatke iz backupa"
+                    tint: 0.55, 0.38, 0.26, 1
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(56)
+                    on_release: root.ucitaj_backup()
+
+                FieldLabel:
+                    text: "Ako menjas telefon: napravi backup na starom, prebaci fajl (WhatsApp/Drive/USB) u isti folder na novom, instaliraj app, pa klikni 'Vrati podatke'."
+                    size_hint_y: None
+                    height: dp(90)
+                    text_size: self.width, None
 
 # ============================================================
 # IZVOZ PDF - mesecni izvestaj kao PDF fajl
@@ -2336,59 +2342,65 @@ ScreenManager:
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "izvestaj"
 
-        FieldLabel:
-            text: "Pravi PDF sa svim voznjama, gorivom, servisima i potrosnjom za izabrani period, sa ukupnim zbirom na kraju."
-
-        FieldLabel:
-            text: "Vrsta perioda:"
-
-        Spinner:
-            id: spinner_period
-            text: "Mesecno"
-            values: ["Dnevno", "Nedeljno", "Mesecno", "Polugodisnje", "Godisnje"]
-            size_hint_y: None
-            height: dp(48)
-            background_color: 0.78, 0.80, 0.90, 1
-            color: 0.12, 0.12, 0.24, 1
-            on_text: root.promeni_period(self.text)
-
-        FieldLabel:
-            text: root.tekst_format_perioda
-
-        PastelTextInput:
-            id: input_period
-            hint_text: root.hint_perioda
-
-        PastelCard:
-            orientation: "vertical"
-            tint: 0.30, 0.29, 0.42, 0.92
-            size_hint_y: None
-            height: self.minimum_height
-            padding: dp(14)
-            Label:
-                text: root.tekst_status
-                color: 1, 1, 1, 1
-                halign: "left"
-                valign: "top"
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
                 size_hint_y: None
-                text_size: self.width, None
-                height: self.texture_size[1]
+                height: self.minimum_height
+                spacing: dp(16)
+                padding: dp(2), dp(4)
 
-        RoundButton:
-            label_text: "Izvezi PDF"
-            tint: 0.30, 0.52, 0.36, 1
-            text_color: 1, 1, 1, 1
-            size_hint_y: None
-            height: dp(56)
-            on_release: root.izvezi_pdf()
+                FieldLabel:
+                    text: "Pravi PDF sa svim voznjama, gorivom, servisima i potrosnjom za izabrani period, sa ukupnim zbirom na kraju."
 
-        FieldLabel:
-            text: "PDF se cuva u isti folder kao i backup: Preuzimanja/TaksiApp."
-            size_hint_y: None
-            height: dp(48)
-            text_size: self.width, None
+                FieldLabel:
+                    text: "Vrsta perioda:"
 
-        Widget:
+                Spinner:
+                    id: spinner_period
+                    text: "Mesecno"
+                    values: ["Dnevno", "Nedeljno", "Mesecno", "Polugodisnje", "Godisnje"]
+                    size_hint_y: None
+                    height: dp(48)
+                    background_color: 0.78, 0.80, 0.90, 1
+                    color: 0.12, 0.12, 0.24, 1
+                    on_text: root.promeni_period(self.text)
+
+                FieldLabel:
+                    text: root.tekst_format_perioda
+
+                PastelTextInput:
+                    id: input_period
+                    hint_text: root.hint_perioda
+
+                PastelCard:
+                    orientation: "vertical"
+                    tint: 0.30, 0.29, 0.42, 0.92
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(14)
+                    Label:
+                        text: root.tekst_status
+                        color: 1, 1, 1, 1
+                        halign: "left"
+                        valign: "top"
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
+
+                RoundButton:
+                    label_text: "Izvezi PDF"
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(56)
+                    on_release: root.izvezi_pdf()
+
+                FieldLabel:
+                    text: "PDF se cuva u isti folder kao i backup: Preuzimanja/TaksiApp."
+                    size_hint_y: None
+                    height: dp(48)
+                    text_size: self.width, None
 
 # ============================================================
 # PLACEHOLDER ("Uskoro")
