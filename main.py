@@ -979,33 +979,39 @@ ScreenManager:
     # Naslov "TAXI ZORAN" na pocetnom ekranu - centriran, sa efektom
     # dubine (3D): 3 sloja istog teksta, malo pomerena jedan od drugog,
     # od najtamnijeg (senka, u dnu) do najsvetlijeg zlatnog (na vrhu) -
-    # to stvara utisak izdignutog/uklesanog zlatnog slova.
+    # to stvara utisak izdignutog/uklesanog zlatnog slova. Svaki sloj
+    # ima velicinu roditelja (root.size) i centrira tekst unutar sebe
+    # preko halign/valign - ovo je pouzdanije od rucnog pomeranja
+    # centra, jer se ne oslanja na sirinu samog teksta.
     Label:
         text: "TAXI ZORAN"
-        font_size: '32sp'
+        font_size: '28sp'
         bold: True
-        size_hint: None, None
-        size: self.texture_size
-        center_x: root.center_x + dp(2.5)
-        center_y: root.center_y - dp(2.5)
+        size: root.size
+        pos: root.x + dp(2.5), root.y - dp(2.5)
+        halign: "center"
+        valign: "middle"
+        text_size: self.size
         color: 0.08, 0.04, 0.01, 0.85
     Label:
         text: "TAXI ZORAN"
-        font_size: '32sp'
+        font_size: '28sp'
         bold: True
-        size_hint: None, None
-        size: self.texture_size
-        center_x: root.center_x + dp(1.2)
-        center_y: root.center_y - dp(1.2)
+        size: root.size
+        pos: root.x + dp(1.2), root.y - dp(1.2)
+        halign: "center"
+        valign: "middle"
+        text_size: self.size
         color: 0.55, 0.30, 0.08, 1
     Label:
         text: "TAXI ZORAN"
-        font_size: '32sp'
+        font_size: '28sp'
         bold: True
-        size_hint: None, None
-        size: self.texture_size
-        center_x: root.center_x
-        center_y: root.center_y
+        size: root.size
+        pos: root.pos
+        halign: "center"
+        valign: "middle"
+        text_size: self.size
         color: 1, 0.83, 0.32, 1
 
 <FieldLabel@Label>:
