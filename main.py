@@ -29,6 +29,7 @@ from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
@@ -1113,6 +1114,55 @@ ScreenManager:
         valign: "middle"
         text_size: self.size
 
+<HomeMenuButton>:
+    # Poseban izgled SAMO za Pocetni ekran - bez okvira/kutije oko
+    # ikonice i teksta, veca kruzna ikonica na vrhu, tekst centriran
+    # ispod (visina se racuna automatski prema duzini teksta, da
+    # nijedan naziv ne bude odsecen). MenuButton (iznad) ostaje
+    # nepromenjen i i dalje se koristi na ekranu Podesavanja.
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height
+    spacing: dp(4)
+    padding: dp(4), dp(8)
+
+    AnchorLayout:
+        anchor_x: "center"
+        anchor_y: "center"
+        size_hint_y: None
+        height: dp(74)
+
+        BoxLayout:
+            size_hint: None, None
+            size: dp(74), dp(74)
+            canvas.before:
+                StencilPush
+                Ellipse:
+                    pos: self.pos
+                    size: self.size
+                StencilUse
+            canvas.after:
+                StencilUnUse
+                Ellipse:
+                    pos: self.pos
+                    size: self.size
+                StencilPop
+            Image:
+                source: root.icon_src
+                allow_stretch: True
+                keep_ratio: False
+
+    Label:
+        text: root.tekst
+        font_size: '16sp'
+        bold: True
+        color: 0.94, 0.93, 0.98, 1
+        halign: "center"
+        valign: "top"
+        text_size: self.width, None
+        size_hint_y: None
+        height: self.texture_size[1] + dp(4)
+
 <PastelTextInput@TextInput>:
     background_color: 0.80, 0.79, 0.88, 0.95
     foreground_color: 0.12, 0.12, 0.22, 1
@@ -1141,32 +1191,32 @@ ScreenManager:
                 spacing: dp(14)
                 padding: dp(2), dp(4)
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/start_ride.png"
                     tekst: "GPS voznja (auto)"
                     on_release: app.root.current = "gps_voznja"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/end_ride.png"
                     tekst: "Pocetak voznje (rucno)"
                     on_release: app.root.current = "kalkulator"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/history.png"
                     tekst: "Istorija voznji"
                     on_release: app.root.current = "evidencija"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/daily_report.png"
                     tekst: "Izvestaj"
                     on_release: app.root.current = "izvestaj"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/profil.png"
                     tekst: "Profil vozaca"
                     on_release: app.root.current = "profil"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Podesavanja"
                     on_release: app.root.current = "podesavanja"
@@ -2377,6 +2427,14 @@ ScreenManager:
 
 
 class MenuButton(ButtonBehavior, BoxLayout):
+    icon_src = StringProperty("")
+    tekst = StringProperty("")
+
+
+class HomeMenuButton(ButtonBehavior, BoxLayout):
+    """Isti princip kao MenuButton (ikonica + tekst + klik za prelazak
+    na drugi ekran), samo drugaciji izgled - koristi se ISKLJUCIVO na
+    Pocetnom ekranu. Vidi <HomeMenuButton>: pravilo u KV-u."""
     icon_src = StringProperty("")
     tekst = StringProperty("")
 
