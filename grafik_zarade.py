@@ -373,34 +373,6 @@ class GrafikCanvas(Widget):
             self._nacrtaj_tekst(_format_broj(maxv, 0), x0 + dp(20), y0 + h + dp(8),
                                  veličina=9, boja=(1, 1, 1, 0.5))
 
-            # ---- PRIVREMENA DIJAGNOSTIKA (obrisati posle) ----
-            # Ovaj crveni tekst koristi ISTU poziciju (self.x/self.y)
-            # kao i trake ispod - dakle mora da se pojavi TU GDE SE VIDE
-            # trake (ne na fiksnoj poziciji ekrana, to je bila greska u
-            # prethodnoj verziji). Pokazuje x/y/sirinu/visinu za sam
-            # grafikon, njegovog roditelja (FloatLayout) i "dedu"
-            # (kutiju/PastelCard) - da se vidi gde tacno lanac puca.
-            try:
-                red1 = f"CANVAS x={self.x:.0f} y={self.y:.0f} w={self.width:.0f} h={self.height:.0f}"
-                roditelj = self.parent
-                red2 = ""
-                red3 = ""
-                if roditelj is not None:
-                    red2 = f"FLOAT x={roditelj.x:.0f} y={roditelj.y:.0f} w={roditelj.width:.0f} h={roditelj.height:.0f}"
-                    deda = roditelj.parent
-                    if deda is not None:
-                        red3 = f"KUTIJA x={deda.x:.0f} y={deda.y:.0f} w={deda.width:.0f} h={deda.height:.0f}"
-            except Exception as e:
-                red1, red2, red3 = f"GRESKA: {e}", "", ""
-
-            cx = self.x + self.width / 2
-            self._nacrtaj_tekst(red1, cx, self.y + self.height - dp(14), veličina=10, boja=(1, 0.25, 0.25, 1))
-            if red2:
-                self._nacrtaj_tekst(red2, cx, self.y + self.height - dp(30), veličina=10, boja=(1, 0.6, 0.25, 1))
-            if red3:
-                self._nacrtaj_tekst(red3, cx, self.y + self.height - dp(46), veličina=10, boja=(1, 1, 0.25, 1))
-            # ---- KRAJ PRIVREMENE DIJAGNOSTIKE ----
-
             if n == 0:
                 return
 
@@ -855,9 +827,12 @@ GRAFIK_KV = """
                     height: dp(220)
                     padding: dp(10)
                     FloatLayout:
+                        id: float_grafikon
                         Label:
                             text: "📊\\n\\nNema podataka za ovaj period\\n\\nDodaj nekoliko voznji da bi se ovde\\nprikazala statistika zarade."
                             opacity: 1 if root.prazno_stanje else 0
+                            pos: float_grafikon.pos
+                            size: float_grafikon.size
                             halign: "center"
                             valign: "middle"
                             text_size: self.width - dp(20), None
@@ -865,6 +840,9 @@ GRAFIK_KV = """
                             font_size: '14sp'
                         GrafikCanvas:
                             id: platno
+                            size_hint: None, None
+                            pos: float_grafikon.pos
+                            size: float_grafikon.size
                             opacity: 0 if root.prazno_stanje else 1
                             podaci: root.graf_podaci
                             mod: root.graf_mod
