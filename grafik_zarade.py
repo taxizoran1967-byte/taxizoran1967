@@ -60,20 +60,25 @@ _STAVKE_IZMEDJU = None
 _POTROSNJA_INTERVALI = None
 _GORIVO_REF = None
 _SERVIS_REF = None
+_TROSKOVI_REF = None
 
 
-def poveži_gorivo_servis(stavke_izmedju_fn, potrosnja_intervali_fn, gorivo_obj, servis_obj):
+def poveži_gorivo_servis(stavke_izmedju_fn, potrosnja_intervali_fn, gorivo_obj, servis_obj, troskovi_obj=None):
     """main.py poziva ovo jednom, odmah posle 'import grafik_zarade', da
-    bi ovaj ekran mogao da prikaze gorivo/servise/potrosnju za isti
-    period koji je trenutno prikazan (dan/nedelja/mesec) - bez kruznog
-    uvoza. stavke_izmedju_fn i potrosnja_intervali_fn su iste funkcije
-    koje main.py koristi za PDF izvestaj, gorivo_obj/servis_obj su
-    GORIVO/SERVIS objekti (JsonLog) iz main.py."""
-    global _STAVKE_IZMEDJU, _POTROSNJA_INTERVALI, _GORIVO_REF, _SERVIS_REF
+    bi ovaj ekran mogao da prikaze gorivo/servise/ostale troskove/
+    potrosnju za isti period koji je trenutno prikazan (dan/nedelja/
+    mesec) - bez kruznog uvoza. stavke_izmedju_fn i
+    potrosnja_intervali_fn su iste funkcije koje main.py koristi za PDF
+    izvestaj, gorivo_obj/servis_obj/troskovi_obj su GORIVO/SERVIS/
+    TROSKOVI objekti (JsonLog) iz main.py. troskovi_obj je opcion (radi
+    kompatibilnosti) - ako se ne prosledi, karte jednostavno ne
+    ukljucuju ostale troskove u racunicu."""
+    global _STAVKE_IZMEDJU, _POTROSNJA_INTERVALI, _GORIVO_REF, _SERVIS_REF, _TROSKOVI_REF
     _STAVKE_IZMEDJU = stavke_izmedju_fn
     _POTROSNJA_INTERVALI = potrosnja_intervali_fn
     _GORIVO_REF = gorivo_obj
     _SERVIS_REF = servis_obj
+    _TROSKOVI_REF = troskovi_obj
 
 
 # ============================================================
@@ -564,6 +569,11 @@ class GrafikZaradeScreen(Screen):
         litara_gorivo = sum(s.get("litara", 0) for s in gorivo_p)
         cena_servis = sum(s.get("cena", 0) for s in servisi_p)
 
+        cena_troskovi = 0.0
+        if _TROSKOVI_REF is not None:
+            troskovi_p = _STAVKE_IZMEDJU(_TROSKOVI_REF.stavke, pocetak, kraj)
+            cena_troskovi = sum(s.get("cena", 0) for s in troskovi_p)
+
         intervali = [
             i for i in _POTROSNJA_INTERVALI(_GORIVO_REF.stavke)
             if pocetak <= i["datum"] <= kraj
@@ -575,11 +585,12 @@ class GrafikZaradeScreen(Screen):
         else:
             potrosnja_txt = "nema podataka"
 
-        neto = ukupan_prihod - cena_gorivo - cena_servis
+        neto = ukupan_prihod - cena_gorivo - cena_servis - cena_troskovi
 
         self.tekst_gorivo_servis = (
             f"Gorivo: {_novac_puno(cena_gorivo)} ({litara_gorivo:g} l)   |   Servisi: {_novac_puno(cena_servis)}\n"
-            f"Potrosnja: {potrosnja_txt}   |   Neto zarada: {_novac_puno(neto)}"
+            f"Ostali troskovi: {_novac_puno(cena_troskovi)}   |   Potrosnja: {potrosnja_txt}\n"
+            f"Neto zarada: {_novac_puno(neto)}"
         )
 
     def _popuni_extra(self, podaci):

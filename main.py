@@ -149,6 +149,7 @@ class JsonLog:
 CENE = CenePodesavanja()
 GORIVO = JsonLog("gorivo.json")
 SERVIS = JsonLog("servis.json")
+TROSKOVI = JsonLog("troskovi.json")
 
 
 class ApiPodesavanja:
@@ -429,7 +430,7 @@ def _izracunaj_potrosnju_intervale(sve_stavke_goriva):
     return intervali
 
 
-grafik_zarade.poveži_gorivo_servis(_stavke_izmedju, _izracunaj_potrosnju_intervale, GORIVO, SERVIS)
+grafik_zarade.poveži_gorivo_servis(_stavke_izmedju, _izracunaj_potrosnju_intervale, GORIVO, SERVIS, TROSKOVI)
 
 
 def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla):
@@ -456,6 +457,7 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
 
     gorivo_period = _stavke_izmedju(GORIVO.stavke, pocetak_str, kraj_str)
     servisi_period = _stavke_izmedju(SERVIS.stavke, pocetak_str, kraj_str)
+    troskovi_period = _stavke_izmedju(TROSKOVI.stavke, pocetak_str, kraj_str)
 
     svi_intervali_potrosnje = _izracunaj_potrosnju_intervale(GORIVO.stavke)
     intervali_perioda = [
@@ -544,6 +546,7 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     elementi.append(Paragraph("Servisi vozila u periodu", stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
+    ukupno_servis = 0.0
     if servisi_period:
         zaglavlje_servis = [
             Paragraph("R.br.", stil_zaglavlje),
@@ -554,7 +557,6 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
             Paragraph("Napomena", stil_zaglavlje),
         ]
         podaci_servis = [zaglavlje_servis]
-        ukupno_servis = 0.0
         for i, s in enumerate(sorted(servisi_period, key=lambda s: s.get("datum", "")), start=1):
             km_s = s.get("km")
             podaci_servis.append([
@@ -575,6 +577,42 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
         elementi.append(Paragraph(f"Ukupno potroseno na servise u periodu: {formatiraj_cenu(ukupno_servis)}", stil_zbir))
     else:
         elementi.append(Paragraph("Nema unetih servisa u ovom periodu.", stil_celija))
+
+    # ------------------------------------------------------------
+    # OSTALI TROSKOVI u periodu (parking, putarina, pranje...)
+    # ------------------------------------------------------------
+    elementi.append(Spacer(1, 10 * mm))
+    elementi.append(Paragraph("Ostali troskovi u periodu", stil_naslov))
+    elementi.append(Spacer(1, 5 * mm))
+
+    ukupno_troskovi = 0.0
+    if troskovi_period:
+        zaglavlje_troskovi = [
+            Paragraph("R.br.", stil_zaglavlje),
+            Paragraph("Datum", stil_zaglavlje),
+            Paragraph("Vrsta", stil_zaglavlje),
+            Paragraph("Cena", stil_zaglavlje),
+            Paragraph("Napomena", stil_zaglavlje),
+        ]
+        podaci_troskovi = [zaglavlje_troskovi]
+        for i, s in enumerate(sorted(troskovi_period, key=lambda s: s.get("datum", "")), start=1):
+            podaci_troskovi.append([
+                Paragraph(str(i), stil_celija),
+                Paragraph(s.get("datum", "-"), stil_celija),
+                Paragraph(s.get("vrsta", "-"), stil_celija),
+                Paragraph(formatiraj_cenu(s.get("cena", 0)), stil_celija),
+                Paragraph(s.get("napomena") or "-", stil_celija),
+            ])
+            ukupno_troskovi += s.get("cena", 0)
+
+        sirine_troskovi = [12 * mm, 25 * mm, 35 * mm, 30 * mm, 78 * mm]
+        tabela_troskovi = Table(podaci_troskovi, colWidths=sirine_troskovi, repeatRows=1)
+        tabela_troskovi.setStyle(_tabela_stil())
+        elementi.append(tabela_troskovi)
+        elementi.append(Spacer(1, 6 * mm))
+        elementi.append(Paragraph(f"Ukupno ostalih troskova u periodu: {formatiraj_cenu(ukupno_troskovi)}", stil_zbir))
+    else:
+        elementi.append(Paragraph("Nema unetih ostalih troskova u ovom periodu.", stil_celija))
 
     # ------------------------------------------------------------
     # POTROSNJA GORIVA + svi unosi goriva u periodu
@@ -630,6 +668,8 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     elementi.append(Paragraph("Gorivo - svi unosi u periodu", stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
+    ukupno_gorivo_cena = 0.0
+    ukupno_gorivo_litara = 0.0
     if gorivo_period:
         zaglavlje_gorivo = [
             Paragraph("R.br.", stil_zaglavlje),
@@ -641,8 +681,6 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
             Paragraph("Napomena", stil_zaglavlje),
         ]
         podaci_gorivo = [zaglavlje_gorivo]
-        ukupno_gorivo_cena = 0.0
-        ukupno_gorivo_litara = 0.0
         for i, s in enumerate(sorted(gorivo_period, key=lambda s: s.get("datum", "")), start=1):
             km_pumpe = s.get("km_pumpe")
             podaci_gorivo.append([
@@ -712,6 +750,11 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     elementi.append(Paragraph(f"Ukupan broj voznji: {broj}", stil_zbir))
     elementi.append(Paragraph(f"Ukupno predjeno (voznje): {km:.1f} km", stil_zbir))
     elementi.append(Paragraph(f"Ukupna zarada za period: {formatiraj_cenu(prihod)}", stil_zbir))
+    neto_ukupno = prihod - ukupno_gorivo_cena - ukupno_servis - ukupno_troskovi
+    elementi.append(Paragraph(
+        f"Neto (zarada - gorivo - servisi - ostali troskovi): {formatiraj_cenu(neto_ukupno)}",
+        stil_zbir,
+    ))
 
     doc.build(elementi)
 
@@ -933,6 +976,7 @@ ScreenManager:
     NocnaTarifaScreen:
     GorivoScreen:
     ServisScreen:
+    TroskoviScreen:
     GpsVoznjaScreen:
     NavigacijaScreen:
     GoogleApiScreen:
@@ -1515,6 +1559,11 @@ ScreenManager:
                     on_release: app.root.current = "gorivo"
 
                 MenuButton:
+                    icon_src: "assets/icons/calculator.png"
+                    tekst: "Ostali troskovi"
+                    on_release: app.root.current = "troskovi"
+
+                MenuButton:
                     icon_src: "assets/icons/weekly_report.png"
                     tekst: "Nedeljni izvestaj"
                     on_release: app.root.current = "izvestaj"
@@ -1862,6 +1911,90 @@ ScreenManager:
 
                 BoxLayout:
                     id: lista_servis
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(4), dp(10)
+
+# ============================================================
+# OSTALI TROSKOVI - parking, putarina, pranje, ostalo
+# ============================================================
+
+<TroskoviScreen>:
+    name: "troskovi"
+    ScreenRoot:
+
+        TitleLabel:
+            text: "Ostali troskovi"
+
+        NavBar:
+            RoundButton:
+                label_text: "Pocetna"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "home"
+            RoundButton:
+                label_text: "Podesavanja"
+                tint: 0.36, 0.46, 0.64, 1
+                on_release: root.manager.current = "podesavanja"
+
+        ScrollView:
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: dp(4)
+
+                PastelCard:
+                    tint: 0.55, 0.38, 0.26, 0.92
+                    size_hint_y: None
+                    height: dp(72)
+                    padding: dp(12)
+                    Label:
+                        id: label_ukupno_troskovi
+                        text: root.tekst_ukupno
+                        font_size: '14sp'
+                        bold: True
+                        color: 1, 0.90, 0.80, 1
+
+                FieldLabel:
+                    text: "Vrsta troska"
+
+                Spinner:
+                    id: spinner_vrsta_troska
+                    text: "Parking"
+                    values: ["Parking", "Putarina", "Pranje", "Ostalo"]
+                    size_hint_y: None
+                    height: dp(48)
+                    background_color: 0.78, 0.80, 0.90, 1
+                    color: 0.12, 0.12, 0.24, 1
+
+                FieldLabel:
+                    text: "Cena (RSD)"
+
+                PastelTextInput:
+                    id: input_cena_troska
+                    hint_text: "npr. 150"
+                    input_filter: "float"
+
+                FieldLabel:
+                    text: "Napomena (opciono)"
+
+                PastelTextInput:
+                    id: input_napomena_troska
+                    hint_text: "npr. parking centar grada"
+
+                RoundButton:
+                    label_text: root.dugme_tekst
+                    tint: 0.30, 0.52, 0.36, 1
+                    text_color: 0.92, 1, 0.94, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.sacuvaj_trosak()
+
+                BoxLayout:
+                    id: lista_troskovi
                     orientation: "vertical"
                     size_hint_y: None
                     height: self.minimum_height
@@ -2767,6 +2900,115 @@ class ServisScreen(Screen):
         _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
 
 
+class TroskoviScreen(Screen):
+    tekst_ukupno = StringProperty("Ukupno troskova: 0 RSD")
+    dugme_tekst = StringProperty("Sacuvaj trosak")
+    izmena_id = None
+
+    def on_pre_enter(self, *args):
+        self.ucitaj_troskove()
+
+    def ucitaj_troskove(self):
+        kontejner = self.ids.lista_troskovi
+        kontejner.clear_widgets()
+
+        ukupno = sum(s.get("cena", 0) for s in TROSKOVI.stavke)
+        ukupno_parking = sum(
+            s.get("cena", 0) for s in TROSKOVI.stavke if s.get("vrsta") == "Parking"
+        )
+        ukupno_putarina = sum(
+            s.get("cena", 0) for s in TROSKOVI.stavke if s.get("vrsta") == "Putarina"
+        )
+        self.tekst_ukupno = (
+            f"Ukupno: {formatiraj_cenu(ukupno)}\n"
+            f"Parking: {formatiraj_cenu(ukupno_parking)}   |   Putarina: {formatiraj_cenu(ukupno_putarina)}"
+        )
+
+        if not TROSKOVI.stavke:
+            kontejner.add_widget(Label(
+                text="Jos uvek nema unetih troskova.",
+                size_hint_y=None, height=40,
+                color=(1, 1, 1, 1),
+            ))
+            return
+
+        for s in TROSKOVI.stavke:
+            kontejner.add_widget(self._napravi_red(s))
+
+    def _napravi_red(self, s):
+        napomena = s.get("napomena") or "-"
+        opis = (
+            f"[b]{s.get('datum', '-')}[/b]\n"
+            f"{s.get('vrsta', '-')}\n"
+            f"{napomena}\n"
+            f"[color=6b3d0d][b]{formatiraj_cenu(s.get('cena', 0))}[/b][/color]"
+        )
+        return napravi_red_liste(
+            opis,
+            tint=(0.55, 0.38, 0.26, 0.92),
+            boja_teksta=(1, 0.92, 0.85, 1),
+            dugmad=[
+                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
+                 lambda inst, sid=s["id"]: self._izmeni(sid)),
+                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
+                 lambda inst, sid=s["id"]: self._obrisi(sid)),
+            ],
+        )
+
+    def _izmeni(self, stavka_id):
+        s = TROSKOVI.nadji(stavka_id)
+        if not s:
+            return
+        self.izmena_id = stavka_id
+        self.ids.input_cena_troska.text = f"{s.get('cena', 0):g}"
+        self.ids.input_napomena_troska.text = s.get("napomena") or ""
+        vrsta = s.get("vrsta", "Parking")
+        if vrsta in self.ids.spinner_vrsta_troska.values:
+            self.ids.spinner_vrsta_troska.text = vrsta
+        self.dugme_tekst = "Sacuvaj izmenu"
+
+    def sacuvaj_trosak(self):
+        try:
+            cena = float(self.ids.input_cena_troska.text.replace(",", "."))
+        except (ValueError, AttributeError):
+            self._poruka("Unesi ispravan broj za cenu.")
+            return
+
+        app = App.get_running_app()
+        stavka = {
+            "datum": datetime.now().strftime("%Y-%m-%d"),
+            "vrsta": self.ids.spinner_vrsta_troska.text,
+            "cena": cena,
+            "napomena": self.ids.input_napomena_troska.text.strip(),
+        }
+
+        if self.izmena_id is not None:
+            TROSKOVI.azuriraj(app.user_data_dir, self.izmena_id, stavka)
+            self.izmena_id = None
+            self.dugme_tekst = "Sacuvaj trosak"
+            self._poruka("Izmena sacuvana.")
+        else:
+            TROSKOVI.dodaj(app.user_data_dir, stavka)
+            self._poruka("Trosak sacuvan.")
+
+        self.ids.input_cena_troska.text = ""
+        self.ids.input_napomena_troska.text = ""
+        self.ids.spinner_vrsta_troska.text = "Parking"
+
+        self.ucitaj_troskove()
+
+    def _obrisi(self, stavka_id):
+        app = App.get_running_app()
+        TROSKOVI.obrisi(app.user_data_dir, stavka_id)
+        if self.izmena_id == stavka_id:
+            self.izmena_id = None
+            self.dugme_tekst = "Sacuvaj trosak"
+        self.ucitaj_troskove()
+
+    def _poruka(self, tekst):
+        _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
+
+
 class GpsVoznjaScreen(Screen):
     tekst_polazak = StringProperty("Nije zapoceta")
     tekst_km = StringProperty("Predjeno: 0.00 km")
@@ -3436,6 +3678,7 @@ class BackupScreen(Screen):
             f"Voznji trenutno u bazi: {broj}\n"
             f"Unosa goriva: {len(GORIVO.stavke)}\n"
             f"Unosa servisa: {len(SERVIS.stavke)}\n"
+            f"Ostalih troskova: {len(TROSKOVI.stavke)}\n"
             f"Podaci o vozacu: {vozac_txt}"
         )
 
@@ -3469,6 +3712,7 @@ class BackupScreen(Screen):
                 "vozac": podaci_vozac,
                 "gorivo": GORIVO.stavke,
                 "servisi": SERVIS.stavke,
+                "troskovi": TROSKOVI.stavke,
             }
 
             folder = _putanja_backup_foldera()
@@ -3482,6 +3726,7 @@ class BackupScreen(Screen):
                 f"- {len(podaci_voznje)} voznji\n"
                 f"- {len(GORIVO.stavke)} unosa goriva\n"
                 f"- {len(SERVIS.stavke)} unosa servisa\n"
+                f"- {len(TROSKOVI.stavke)} ostalih troskova\n"
                 f"- podaci o vozacu\n\n"
                 f"Fajl:\n{putanja}",
                 size_hint=(0.88, 0.55),
@@ -3531,6 +3776,7 @@ class BackupScreen(Screen):
         vozac_podaci = podaci.get("vozac")
         gorivo_podaci = podaci.get("gorivo", [])
         servisi_podaci = podaci.get("servisi", [])
+        troskovi_podaci = podaci.get("troskovi", [])
 
         dodato = 0
         preskoceno = 0
@@ -3558,12 +3804,14 @@ class BackupScreen(Screen):
 
         dodato_gorivo = _dodaj_stavke_bez_duplikata(GORIVO, app.user_data_dir, gorivo_podaci)
         dodato_servisi = _dodaj_stavke_bez_duplikata(SERVIS, app.user_data_dir, servisi_podaci)
+        dodato_troskovi = _dodaj_stavke_bez_duplikata(TROSKOVI, app.user_data_dir, troskovi_podaci)
 
         _prikazi_popup_poruku(
             "Vraceno iz backupa",
             f"Voznje - dodato: {dodato}, preskoceno (vec postoje): {preskoceno}\n"
             f"Gorivo - dodato novih unosa: {dodato_gorivo}\n"
             f"Servisi - dodato novih unosa: {dodato_servisi}\n"
+            f"Ostali troskovi - dodato novih unosa: {dodato_troskovi}\n"
             f"Podaci o vozacu: {'azurirani' if vozac_podaci else 'nije bilo u ovom backupu'}",
             size_hint=(0.88, 0.55),
         )
@@ -3905,14 +4153,17 @@ class IzvestajScreen(Screen):
         self.osvezi()
 
     def _dodatne_linije_perioda(self, pocetak, kraj, prihod):
-        """Vraca gotov tekst (gorivo, servisi, potrosnja, neto zarada)
-        za dati period - koristi se ispod osnovnih brojeva (broj
-        voznji/km/zarada) na sve tri kartice (danas/nedelja/mesec)."""
+        """Vraca gotov tekst (gorivo, servisi, ostali troskovi,
+        potrosnja, neto zarada) za dati period - koristi se ispod
+        osnovnih brojeva (broj voznji/km/zarada) na sve tri kartice
+        (danas/nedelja/mesec)."""
         gorivo_p = _stavke_izmedju(GORIVO.stavke, pocetak, kraj)
         servisi_p = _stavke_izmedju(SERVIS.stavke, pocetak, kraj)
+        troskovi_p = _stavke_izmedju(TROSKOVI.stavke, pocetak, kraj)
         cena_gorivo = sum(s.get("cena", 0) for s in gorivo_p)
         litara_gorivo = sum(s.get("litara", 0) for s in gorivo_p)
         cena_servis = sum(s.get("cena", 0) for s in servisi_p)
+        cena_troskovi = sum(s.get("cena", 0) for s in troskovi_p)
 
         intervali = [
             i for i in _izracunaj_potrosnju_intervale(GORIVO.stavke)
@@ -3925,13 +4176,13 @@ class IzvestajScreen(Screen):
         else:
             potrosnja_txt = "nema dovoljno podataka"
 
-        neto = prihod - cena_gorivo - cena_servis
+        neto = prihod - cena_gorivo - cena_servis - cena_troskovi
 
         return (
             f"Gorivo: {formatiraj_cenu(cena_gorivo)} ({litara_gorivo:g} l)\n"
-            f"Servisi: {formatiraj_cenu(cena_servis)}\n"
+            f"Servisi: {formatiraj_cenu(cena_servis)}   |   Ostali troskovi: {formatiraj_cenu(cena_troskovi)}\n"
             f"Potrosnja: {potrosnja_txt}\n"
-            f"Neto (zarada - gorivo - servisi): {formatiraj_cenu(neto)}"
+            f"Neto (zarada - gorivo - servisi - troskovi): {formatiraj_cenu(neto)}"
         )
 
     def osvezi(self):
@@ -4075,6 +4326,7 @@ class TaksiApp(App):
             CENE.ucitaj(self.user_data_dir)
             GORIVO.ucitaj(self.user_data_dir)
             SERVIS.ucitaj(self.user_data_dir)
+            TROSKOVI.ucitaj(self.user_data_dir)
             AKTIVNA_VOZNJA.ucitaj(self.user_data_dir)
             API.ucitaj(self.user_data_dir)
             VOZAC.ucitaj(self.user_data_dir)
