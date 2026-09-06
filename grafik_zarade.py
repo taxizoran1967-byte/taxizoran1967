@@ -711,6 +711,7 @@ GRAFIK_KV = """
             size: self.size
             radius: [dp(16)]
     Label:
+        id: lbl
         text: root.tekst
         font_size: '13sp'
         color: 0.94, 0.94, 1, 1
@@ -873,7 +874,7 @@ GRAFIK_KV = """
                     tint: 0.46, 0.34, 0.24, 0.9
                     tekst: root.tekst_gorivo_servis
                     size_hint_y: None
-                    height: dp(64) if root.tekst_gorivo_servis else 0
+                    height: (self.ids.lbl.texture_size[1] + dp(24)) if root.tekst_gorivo_servis else 0
                     opacity: 1 if root.tekst_gorivo_servis else 0
 
                 Widget:

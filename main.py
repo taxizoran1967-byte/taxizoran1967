@@ -973,6 +973,41 @@ ScreenManager:
     text_size: self.size
     valign: "middle"
 
+<TaxiZoranNaslov@FloatLayout>:
+    size_hint_y: None
+    height: dp(64)
+    # Naslov "TAXI ZORAN" na pocetnom ekranu - centriran, sa efektom
+    # dubine (3D): 3 sloja istog teksta, malo pomerena jedan od drugog,
+    # od najtamnijeg (senka, u dnu) do najsvetlijeg zlatnog (na vrhu) -
+    # to stvara utisak izdignutog/uklesanog zlatnog slova.
+    Label:
+        text: "TAXI ZORAN"
+        font_size: '32sp'
+        bold: True
+        size_hint: None, None
+        size: self.texture_size
+        center_x: root.center_x + dp(2.5)
+        center_y: root.center_y - dp(2.5)
+        color: 0.08, 0.04, 0.01, 0.85
+    Label:
+        text: "TAXI ZORAN"
+        font_size: '32sp'
+        bold: True
+        size_hint: None, None
+        size: self.texture_size
+        center_x: root.center_x + dp(1.2)
+        center_y: root.center_y - dp(1.2)
+        color: 0.55, 0.30, 0.08, 1
+    Label:
+        text: "TAXI ZORAN"
+        font_size: '32sp'
+        bold: True
+        size_hint: None, None
+        size: self.texture_size
+        center_x: root.center_x
+        center_y: root.center_y
+        color: 1, 0.83, 0.32, 1
+
 <FieldLabel@Label>:
     size_hint_y: None
     height: max(self.texture_size[1] + dp(6), dp(22))
@@ -1090,10 +1125,7 @@ ScreenManager:
     name: "home"
     ScreenRoot:
 
-        TitleLabel:
-            text: "Taksi App"
-            font_size: '28sp'
-            height: dp(48)
+        TaxiZoranNaslov:
 
         ScrollView:
             BoxLayout:
