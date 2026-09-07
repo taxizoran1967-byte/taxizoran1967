@@ -4,6 +4,7 @@ Kalkulator cene, evidencija voznji, dnevni/mesecni izvestaj zarade.
 """
 
 import os
+import shutil
 import sys
 import re
 import json
@@ -40,6 +41,12 @@ from datetime import datetime, timedelta
 
 import database as db
 import grafik_zarade
+
+try:
+    from androidstorage4kivy import SharedStorage, ShareSheet
+    _DELJENJE_DOSTUPNO = True
+except Exception:
+    _DELJENJE_DOSTUPNO = False
 
 try:
     from plyer import gps
@@ -2448,6 +2455,14 @@ ScreenManager:
                     height: dp(56)
                     on_release: root.ucitaj_backup()
 
+                RoundButton:
+                    label_text: "Podeli backup (Drive, WhatsApp...)"
+                    tint: 0.30, 0.40, 0.58, 1
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(56)
+                    on_release: root.podeli_backup()
+
                 FieldLabel:
                     text: "Ako menjas telefon: napravi backup na starom, prebaci fajl (WhatsApp/Drive/USB) u isti folder na novom, instaliraj app, pa klikni 'Vrati podatke'."
                     size_hint_y: None
@@ -3816,6 +3831,52 @@ class BackupScreen(Screen):
             size_hint=(0.88, 0.55),
         )
         self._osvezi_status()
+
+    def podeli_backup(self):
+        """Otvara Android-ov sistemski meni za deljenje (isti koji se
+        koristi za deljenje slika) sa backup fajlom - korisnik bira
+        Google Drive, WhatsApp, email, itd. Ne zahteva prijavu ni na
+        jedan nalog unutar ove aplikacije."""
+        if not _DELJENJE_DOSTUPNO:
+            _prikazi_popup_poruku(
+                "Nije dostupno",
+                "Deljenje fajlova radi samo na Android telefonu.",
+                size_hint=(0.85, 0.35),
+            )
+            return
+
+        putanja = os.path.join(_putanja_backup_foldera(), BACKUP_FAJL_NAZIV)
+        if not os.path.exists(putanja):
+            _prikazi_popup_poruku(
+                "Nema backup fajla",
+                "Prvo napravi backup klikom na 'Sacuvaj backup sada', pa onda podeli.",
+                size_hint=(0.85, 0.4),
+            )
+            return
+
+        try:
+            app = App.get_running_app()
+            # SharedStorage ocekuje fajl iz privatnog prostora aplikacije,
+            # a nas backup je u javnom Download folderu - zato prvo
+            # napravimo privatnu kopiju, pa nju delimo.
+            privatna_kopija = os.path.join(app.user_data_dir, BACKUP_FAJL_NAZIV)
+            shutil.copyfile(putanja, privatna_kopija)
+
+            skladiste = SharedStorage()
+            deljeni_fajl = skladiste.copy_to_shared(privatna_kopija, collection="Documents")
+            if deljeni_fajl is None:
+                _prikazi_popup_poruku(
+                    "Greska", "Deljenje nije uspelo - probaj ponovo.", size_hint=(0.85, 0.35)
+                )
+                return
+
+            if getattr(self, "_share_sheet", None) is None:
+                self._share_sheet = ShareSheet()
+            self._share_sheet.share_file(deljeni_fajl)
+        except Exception as e:
+            _prikazi_popup_poruku(
+                "Greska", f"Deljenje nije uspelo:\n{e}", size_hint=(0.88, 0.4)
+            )
 
 
 def _izracunaj_period(tip, unos):
