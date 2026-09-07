@@ -32,6 +32,7 @@ from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.anchorlayout import AnchorLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
@@ -1276,7 +1277,7 @@ ScreenManager:
 <MenuButton>:
     orientation: "horizontal"
     size_hint_y: None
-    height: dp(72)
+    height: max(dp(72), label_menu_tekst.texture_size[1] + dp(24))
     spacing: dp(16)
     padding: dp(12)
     canvas.before:
@@ -1312,13 +1313,14 @@ ScreenManager:
             allow_stretch: True
             keep_ratio: False
     Label:
+        id: label_menu_tekst
         text: root.tekst
         font_size: '17sp'
         bold: True
         color: 0.94, 0.93, 0.98, 1
         halign: "left"
         valign: "middle"
-        text_size: self.size
+        text_size: self.width, None
 
 <HomeMenuButton>:
     # Poseban izgled SAMO za Pocetni ekran - bez okvira/kutije oko
@@ -1428,8 +1430,8 @@ ScreenManager:
         TaxiZoranNaslov:
 
         ScrollView:
-            BoxLayout:
-                orientation: "vertical"
+            GridLayout:
+                cols: 2
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: dp(14)
@@ -1791,8 +1793,8 @@ ScreenManager:
                 on_release: root.manager.current = "home"
 
         ScrollView:
-            BoxLayout:
-                orientation: "vertical"
+            GridLayout:
+                cols: 2
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: dp(14)

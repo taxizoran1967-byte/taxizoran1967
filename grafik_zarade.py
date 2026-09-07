@@ -597,32 +597,32 @@ class GrafikZaradeScreen(Screen):
         if self.period == "dan":
             nb = podaci.get("najbolja_voznja")
             nd = podaci.get("najduza_voznja")
-            self.tekst_extra_1 = (f"🏆 Najbolja voznja\n{_novac_puno(nb['ukupna_cena'])}"
-                                   if nb else "🏆 Najbolja voznja\n-")
-            self.tekst_extra_2 = (f"🚕 Najduza voznja\n{_km_tekst(nd['km'])}"
-                                   if nd else "🚕 Najduza voznja\n-")
-            self.tekst_extra_3 = f"🕒 Broj voznji\n{podaci['ukupno_broj']}"
+            self.tekst_extra_1 = (f"Najbolja voznja\n{_novac_puno(nb['ukupna_cena'])}"
+                                   if nb else "Najbolja voznja\n-")
+            self.tekst_extra_2 = (f"Najduza voznja\n{_km_tekst(nd['km'])}"
+                                   if nd else "Najduza voznja\n-")
+            self.tekst_extra_3 = f"Broj voznji\n{podaci['ukupno_broj']}"
             self.tekst_extra_4 = ""
         elif self.period == "nedelja":
             nb = podaci.get("najbolji_dan")
             nk = podaci.get("najkm_dan")
-            self.tekst_extra_1 = f"📊 Prosecna dnevna zarada\n{_novac_puno(podaci['prosecna_dnevna'])}"
-            self.tekst_extra_2 = (f"🏆 Najbolji dan\n{nb[0]} - {_novac_puno(nb[1])}"
-                                   if nb else "🏆 Najbolji dan\n-")
-            self.tekst_extra_3 = (f"🚕 Najvise kilometara\n{nk[0]} - {_km_tekst(nk[1])}"
-                                   if nk else "🚕 Najvise kilometara\n-")
+            self.tekst_extra_1 = f"Prosecna dnevna zarada\n{_novac_puno(podaci['prosecna_dnevna'])}"
+            self.tekst_extra_2 = (f"Najbolji dan\n{nb[0]} - {_novac_puno(nb[1])}"
+                                   if nb else "Najbolji dan\n-")
+            self.tekst_extra_3 = (f"Najvise kilometara\n{nk[0]} - {_km_tekst(nk[1])}"
+                                   if nk else "Najvise kilometara\n-")
             self.tekst_extra_4 = ""
         else:
             nb = podaci.get("najbolji_dan")
             ns = podaci.get("najslabiji_dan")
             nk = podaci.get("najkm_dan")
-            self.tekst_extra_1 = (f"🏆 Najbolji dan\n{nb[0]}. - {_novac_puno(nb[1])}"
-                                   if nb else "🏆 Najbolji dan\n-")
-            self.tekst_extra_2 = (f"📉 Najslabiji dan\n{ns[0]}. - {_novac_puno(ns[1])}"
-                                   if ns else "📉 Najslabiji dan\n-")
-            self.tekst_extra_3 = (f"🚕 Najvise kilometara\n{nk[0]}. - {_km_tekst(nk[1])}"
-                                   if nk else "🚕 Najvise kilometara\n-")
-            self.tekst_extra_4 = f"📊 Prosecna dnevna zarada\n{_novac_puno(podaci['prosecna_dnevna'])}"
+            self.tekst_extra_1 = (f"Najbolji dan\n{nb[0]}. - {_novac_puno(nb[1])}"
+                                   if nb else "Najbolji dan\n-")
+            self.tekst_extra_2 = (f"Najslabiji dan\n{ns[0]}. - {_novac_puno(ns[1])}"
+                                   if ns else "Najslabiji dan\n-")
+            self.tekst_extra_3 = (f"Najvise kilometara\n{nk[0]}. - {_km_tekst(nk[1])}"
+                                   if nk else "Najvise kilometara\n-")
+            self.tekst_extra_4 = f"Prosecna dnevna zarada\n{_novac_puno(podaci['prosecna_dnevna'])}"
 
     # ---------- tooltip ----------
 
@@ -660,12 +660,11 @@ GRAFIK_KV = """
 
 <StatCard@BoxLayout>:
     orientation: "vertical"
-    ikonica: ""
     opis: ""
     vrednost: ""
     tint: 0.32, 0.30, 0.50, 0.85
     padding: dp(8)
-    spacing: dp(1)
+    spacing: dp(2)
     canvas.before:
         Color:
             rgba: 0, 0, 0, 0.14
@@ -679,11 +678,6 @@ GRAFIK_KV = """
             pos: self.pos
             size: self.size
             radius: [dp(16)]
-    Label:
-        text: root.ikonica
-        font_size: '19sp'
-        size_hint_y: None
-        height: dp(24)
     Label:
         text: root.vrednost
         font_size: '14sp'
@@ -761,17 +755,14 @@ GRAFIK_KV = """
                     height: dp(82)
                     spacing: dp(8)
                     StatCard:
-                        ikonica: "💰"
                         vrednost: root.tekst_zarada_karta
                         opis: "Ukupna zarada"
                         tint: 0.26, 0.42, 0.30, 0.9
                     StatCard:
-                        ikonica: "🚕"
                         vrednost: root.tekst_km_karta
                         opis: "Ukupno kilometara"
                         tint: 0.24, 0.34, 0.52, 0.9
                     StatCard:
-                        ikonica: "📈"
                         vrednost: root.tekst_prosek_karta
                         opis: "Prosek"
                         tint: 0.40, 0.30, 0.48, 0.9
@@ -798,11 +789,11 @@ GRAFIK_KV = """
                     height: dp(36)
                     spacing: dp(6)
                     SegmentDugme:
-                        label_text: "💰 Zarada"
+                        label_text: "Zarada"
                         aktivno: root.prikaz == "zarada"
                         on_release: root.izaberi_prikaz("zarada")
                     SegmentDugme:
-                        label_text: "🚕 Kilometri"
+                        label_text: "Kilometri"
                         aktivno: root.prikaz == "km"
                         on_release: root.izaberi_prikaz("km")
 
@@ -841,7 +832,7 @@ GRAFIK_KV = """
                     FloatLayout:
                         id: float_grafikon
                         Label:
-                            text: "📊\\n\\nNema podataka za ovaj period\\n\\nDodaj nekoliko voznji da bi se ovde\\nprikazala statistika zarade."
+                            text: "Nema podataka za ovaj period\\n\\nDodaj nekoliko voznji da bi se ovde\\nprikazala statistika zarade."
                             opacity: 1 if root.prazno_stanje else 0
                             pos: float_grafikon.pos
                             size: float_grafikon.size
