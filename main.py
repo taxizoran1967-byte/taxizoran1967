@@ -36,7 +36,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-from kivy.properties import StringProperty, BooleanProperty
+from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from datetime import datetime, timedelta
 
 import database as db
@@ -228,6 +228,35 @@ class VozacPodesavanja:
 
 
 VOZAC = VozacPodesavanja()
+
+
+class ServisPodsetnikPodesavanja:
+    """Cuva podeseni interval (u km) za podsetnik o sledecem servisu -
+    npr. 'svakih 10000 km'. Koristi se na ekranu Servis da upozori
+    vozaca kad se priblizi ili predje taj interval od poslednjeg
+    servisa sa upisanom kilometrazom."""
+
+    def __init__(self):
+        self.interval_km = 10000
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "servis_podsetnik.json")
+
+    def ucitaj(self, user_data_dir):
+        try:
+            with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
+                podaci = json.load(f)
+            self.interval_km = podaci.get("interval_km", 10000)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        podaci = {"interval_km": self.interval_km}
+        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+            json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+
+SERVIS_PODSETNIK = ServisPodsetnikPodesavanja()
 
 
 class SigurnostPodesavanja:
@@ -1990,6 +2019,42 @@ ScreenManager:
                 padding: dp(4)
 
                 PastelCard:
+                    tint: root.boja_podsetnik
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(12)
+                    orientation: "vertical"
+                    Label:
+                        id: label_podsetnik
+                        text: root.tekst_podsetnik
+                        font_size: '13sp'
+                        color: 1, 1, 1, 1
+                        halign: "left"
+                        valign: "top"
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
+
+                FieldLabel:
+                    text: "Interval za podsetnik (km izmedju servisa)"
+
+                BoxLayout:
+                    size_hint_y: None
+                    height: dp(48)
+                    spacing: dp(8)
+                    PastelTextInput:
+                        id: input_interval_servis
+                        hint_text: "npr. 10000"
+                        input_filter: "float"
+                    RoundButton:
+                        label_text: "Sacuvaj"
+                        tint: 0.36, 0.46, 0.64, 1
+                        text_color: 1, 1, 1, 1
+                        size_hint_x: None
+                        width: dp(100)
+                        on_release: root.sacuvaj_interval()
+
+                PastelCard:
                     tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
                     height: dp(56)
@@ -3024,13 +3089,100 @@ class GorivoScreen(Screen):
         _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
 
 
+def _izracunaj_stanje_servisa():
+    """Vraca recnik sa stanjem podsetnika za servis, na osnovu
+    poslednjeg servisa koji ima upisanu kilometrazu (SERVIS.stavke) i
+    najnovije kilometraze sa pumpe (GORIVO.stavke, km_pumpe) kao
+    priblizne trenutne kilometraze vozila. Vraca None ako nema
+    dovoljno podataka (nijedan servis sa km, ili nijedno gorivo sa
+    upisanom km na pumpi)."""
+    servisi_sa_km = [s for s in SERVIS.stavke if s.get("km")]
+    if not servisi_sa_km:
+        return None
+    poslednji_servis = max(servisi_sa_km, key=lambda s: s["km"])
+
+    gorivo_sa_km = [g for g in GORIVO.stavke if g.get("km_pumpe")]
+    if not gorivo_sa_km:
+        return None
+    trenutna_km = max(g["km_pumpe"] for g in gorivo_sa_km)
+
+    interval = SERVIS_PODSETNIK.interval_km
+    predjeno = trenutna_km - poslednji_servis["km"]
+    preostalo = interval - predjeno
+
+    return {
+        "poslednji_servis": poslednji_servis,
+        "trenutna_km": trenutna_km,
+        "predjeno": predjeno,
+        "interval": interval,
+        "preostalo": preostalo,
+    }
+
+
 class ServisScreen(Screen):
     tekst_ukupno = StringProperty("Ukupno na servisima: 0 RSD")
     dugme_tekst = StringProperty("Sacuvaj servis")
+    tekst_podsetnik = StringProperty("")
+    boja_podsetnik = ListProperty([0.35, 0.35, 0.45, 0.92])
     izmena_id = None
 
     def on_pre_enter(self, *args):
         self.ucitaj_servis()
+        self._osvezi_podsetnik()
+        self.ids.input_interval_servis.text = f"{SERVIS_PODSETNIK.interval_km:g}"
+
+    def _osvezi_podsetnik(self):
+        stanje = _izracunaj_stanje_servisa()
+
+        if stanje is None:
+            self.tekst_podsetnik = (
+                "Podsetnik za servis: nema jos dovoljno podataka.\n"
+                "Potreban je bar jedan uneti servis SA kilometrazom, i "
+                "bar jedno sipanje goriva sa upisanom kilometrazom sa pumpe."
+            )
+            self.boja_podsetnik = [0.35, 0.35, 0.45, 0.92]
+            return
+
+        poslednji = stanje["poslednji_servis"]
+        predjeno = stanje["predjeno"]
+        preostalo = stanje["preostalo"]
+        interval = stanje["interval"]
+
+        osnova = (
+            f"Poslednji servis: {poslednji.get('vrsta', '-')} na {poslednji['km']:g} km"
+            f" ({poslednji.get('datum', '-')})\n"
+            f"Trenutna kilometraza (iz goriva): {stanje['trenutna_km']:g} km\n"
+            f"Predjeno od servisa: {predjeno:g} km (interval: {interval:g} km)\n"
+        )
+
+        if preostalo <= 0:
+            self.tekst_podsetnik = osnova + f"VREME JE ZA SERVIS! Predjeno {abs(preostalo):g} km preko intervala."
+            self.boja_podsetnik = [0.62, 0.24, 0.24, 0.95]
+        elif interval > 0 and preostalo <= interval * 0.2:
+            self.tekst_podsetnik = osnova + f"Uskoro treba servis - jos {preostalo:g} km."
+            self.boja_podsetnik = [0.60, 0.48, 0.16, 0.95]
+        else:
+            self.tekst_podsetnik = osnova + f"Sve OK - jos {preostalo:g} km do sledeceg servisa."
+            self.boja_podsetnik = [0.24, 0.46, 0.30, 0.95]
+
+    def sacuvaj_interval(self):
+        try:
+            novi_interval = float(self.ids.input_interval_servis.text.replace(",", "."))
+            if novi_interval <= 0:
+                raise ValueError
+        except (ValueError, AttributeError):
+            _prikazi_popup_poruku(
+                "Greska", "Unesi ispravan broj kilometara (vece od 0).", size_hint=(0.85, 0.35)
+            )
+            return
+
+        app = App.get_running_app()
+        SERVIS_PODSETNIK.interval_km = novi_interval
+        SERVIS_PODSETNIK.sacuvaj(app.user_data_dir)
+        self._osvezi_podsetnik()
+        _prikazi_popup_poruku(
+            "Sacuvano", f"Interval za podsetnik je sad {novi_interval:g} km.", size_hint=(0.85, 0.3)
+        )
 
     def ucitaj_servis(self):
         kontejner = self.ids.lista_servis
@@ -3128,6 +3280,7 @@ class ServisScreen(Screen):
         self.ids.input_napomena_servis.text = ""
 
         self.ucitaj_servis()
+        self._osvezi_podsetnik()
 
     def _obrisi(self, stavka_id):
         app = App.get_running_app()
@@ -3136,6 +3289,7 @@ class ServisScreen(Screen):
             self.izmena_id = None
             self.dugme_tekst = "Sacuvaj servis"
         self.ucitaj_servis()
+        self._osvezi_podsetnik()
 
     def _poruka(self, tekst):
         _prikazi_popup_poruku("Info", tekst, size_hint=(0.8, 0.3))
@@ -4646,6 +4800,7 @@ class TaksiApp(App):
             GORIVO.ucitaj(self.user_data_dir)
             SERVIS.ucitaj(self.user_data_dir)
             TROSKOVI.ucitaj(self.user_data_dir)
+            SERVIS_PODSETNIK.ucitaj(self.user_data_dir)
             AKTIVNA_VOZNJA.ucitaj(self.user_data_dir)
             API.ucitaj(self.user_data_dir)
             VOZAC.ucitaj(self.user_data_dir)
