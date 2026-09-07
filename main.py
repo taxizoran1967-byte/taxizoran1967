@@ -5,6 +5,7 @@ Kalkulator cene, evidencija voznji, dnevni/mesecni izvestaj zarade.
 
 import os
 import shutil
+import csv
 import sys
 import re
 import json
@@ -503,6 +504,93 @@ def _izracunaj_potrosnju_intervale(sve_stavke_goriva):
 
 
 grafik_zarade.poveži_gorivo_servis(_stavke_izmedju, _izracunaj_potrosnju_intervale, GORIVO, SERVIS, TROSKOVI)
+
+
+def generisi_izvestaj_csv(pocetak_str, kraj_str, putanja_fajla):
+    """Pravi CSV fajl (za Excel) sa svim voznjama, gorivom, servisima i
+    ostalim troskovima za izabrani period, u JEDNOJ tabeli - lakse za
+    knjigovodju da sabira/filtrira nego cetiri posebna fajla. Kolone:
+    Datum, Tip, Opis, Prihod, Rashod, Napomena. Sortirano po datumu.
+
+    Pise se sa UTF-8 BOM na pocetku, da Excel ispravno prikaze slova
+    kao sto su c, c, s, dj, z (bez toga Excel cesto pokvari ta slova)."""
+    voznje = db.voznje_izmedju(pocetak_str, kraj_str)
+    gorivo_period = _stavke_izmedju(GORIVO.stavke, pocetak_str, kraj_str)
+    servisi_period = _stavke_izmedju(SERVIS.stavke, pocetak_str, kraj_str)
+    troskovi_period = _stavke_izmedju(TROSKOVI.stavke, pocetak_str, kraj_str)
+
+    redovi = []
+
+    for v in voznje:
+        vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else ""
+        opis = f"Voznja {vreme_pocetka}-{v['vreme']}: {v['od_adresa'] or '-'} -> {v['do_adresa'] or '-'} ({v['km']:g} km)"
+        redovi.append({
+            "datum": v["datum"],
+            "tip": "Voznja",
+            "opis": opis,
+            "prihod": v["ukupna_cena"],
+            "rashod": 0,
+            "napomena": "",
+        })
+
+    for s in gorivo_period:
+        km_pumpe = s.get("km_pumpe")
+        opis = f"Gorivo: {s.get('tip', '-')}, {s.get('litara', 0):g} l"
+        if km_pumpe:
+            opis += f" (na {km_pumpe:g} km)"
+        redovi.append({
+            "datum": s.get("datum", ""),
+            "tip": "Gorivo",
+            "opis": opis,
+            "prihod": 0,
+            "rashod": s.get("cena", 0),
+            "napomena": s.get("napomena") or "",
+        })
+
+    for s in servisi_period:
+        km_s = s.get("km")
+        opis = f"Servis: {s.get('vrsta', '-')}"
+        if km_s:
+            opis += f" (na {km_s:g} km)"
+        redovi.append({
+            "datum": s.get("datum", ""),
+            "tip": "Servis",
+            "opis": opis,
+            "prihod": 0,
+            "rashod": s.get("cena", 0),
+            "napomena": s.get("napomena") or "",
+        })
+
+    for s in troskovi_period:
+        redovi.append({
+            "datum": s.get("datum", ""),
+            "tip": "Ostali trosak",
+            "opis": s.get("vrsta", "-"),
+            "prihod": 0,
+            "rashod": s.get("cena", 0),
+            "napomena": s.get("napomena") or "",
+        })
+
+    redovi.sort(key=lambda r: r["datum"])
+
+    with open(putanja_fajla, "w", encoding="utf-8-sig", newline="") as f:
+        pisac = csv.writer(f, delimiter=";")
+        pisac.writerow(["Datum", "Tip", "Opis", "Prihod (RSD)", "Rashod (RSD)", "Napomena"])
+        for r in redovi:
+            pisac.writerow([
+                r["datum"], r["tip"], r["opis"],
+                f"{r['prihod']:g}" if r["prihod"] else "",
+                f"{r['rashod']:g}" if r["rashod"] else "",
+                r["napomena"],
+            ])
+
+        ukupan_prihod = sum(r["prihod"] for r in redovi)
+        ukupan_rashod = sum(r["rashod"] for r in redovi)
+        pisac.writerow([])
+        pisac.writerow(["", "", "UKUPNO", f"{ukupan_prihod:g}", f"{ukupan_rashod:g}", ""])
+        pisac.writerow(["", "", "NETO (prihod - rashod)", f"{ukupan_prihod - ukupan_rashod:g}", "", ""])
+
+    return len(redovi)
 
 
 def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla):
@@ -2840,10 +2928,18 @@ ScreenManager:
                     height: dp(56)
                     on_release: root.izvezi_pdf()
 
-                FieldLabel:
-                    text: "PDF se cuva u isti folder kao i backup: Preuzimanja/TaksiApp."
+                RoundButton:
+                    label_text: "Izvezi CSV (Excel)"
+                    tint: 0.30, 0.46, 0.56, 1
+                    text_color: 1, 1, 1, 1
                     size_hint_y: None
-                    height: dp(48)
+                    height: dp(56)
+                    on_release: root.izvezi_csv()
+
+                FieldLabel:
+                    text: "PDF je za stampu, CSV je za Excel/knjigovodju - oba se cuvaju u isti folder kao i backup: Preuzimanja/TaksiApp."
+                    size_hint_y: None
+                    height: dp(60)
                     text_size: self.width, None
 
 # ============================================================
@@ -4648,6 +4744,60 @@ class IzvozPdfScreen(Screen):
         except Exception as e:
             _prikazi_popup_poruku(
                 "Greska", f"Pravljenje PDF-a nije uspelo:\n{e}", size_hint=(0.88, 0.45)
+            )
+
+    def izvezi_csv(self):
+        tip = self.ids.spinner_period.text
+        unos = self.ids.input_period.text.strip()
+
+        try:
+            pocetak, kraj, naslov = _izracunaj_period(tip, unos)
+        except ValueError as e:
+            _prikazi_popup_poruku("Greska", str(e), size_hint=(0.85, 0.4))
+            return
+
+        if not _ima_dozvolu_svi_fajlovi():
+            _prikazi_popup_poruku(
+                "Nedostaje dozvola",
+                "Idi u Podesavanja -> Backup podataka i klikni "
+                "'Odobri pristup fajlovima', pa se vrati ovde.",
+                size_hint=(0.88, 0.4),
+            )
+            return
+
+        try:
+            voznje = db.voznje_izmedju(pocetak, kraj)
+        except Exception as e:
+            _prikazi_popup_poruku("Greska", f"Ne mogu da procitam bazu:\n{e}", size_hint=(0.88, 0.4))
+            return
+
+        gorivo_period = _stavke_izmedju(GORIVO.stavke, pocetak, kraj)
+        servisi_period = _stavke_izmedju(SERVIS.stavke, pocetak, kraj)
+        troskovi_period = _stavke_izmedju(TROSKOVI.stavke, pocetak, kraj)
+
+        if not voznje and not gorivo_period and not servisi_period and not troskovi_period:
+            _prikazi_popup_poruku(
+                "Nema podataka",
+                f"Nema nijedne voznje, unosa goriva, servisa ni troskova za period "
+                f"{pocetak} do {kraj} - CSV nije napravljen.",
+                size_hint=(0.88, 0.45),
+            )
+            return
+
+        try:
+            folder = _putanja_backup_foldera()
+            os.makedirs(folder, exist_ok=True)
+            putanja = os.path.join(folder, f"izvestaj_{pocetak}_do_{kraj}.csv")
+            broj_redova = generisi_izvestaj_csv(pocetak, kraj, putanja)
+            _prikazi_popup_poruku(
+                "Sacuvano",
+                f"CSV izvestaj ({broj_redova} redova) sacuvan u:\n{putanja}\n\n"
+                f"Otvori ga u Excel-u ili prosledi knjigovodji.",
+                size_hint=(0.88, 0.5),
+            )
+        except Exception as e:
+            _prikazi_popup_poruku(
+                "Greska", f"Pravljenje CSV-a nije uspelo:\n{e}", size_hint=(0.88, 0.45)
             )
 
 
