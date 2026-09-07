@@ -190,8 +190,8 @@ API = ApiPodesavanja()
 
 class VozacPodesavanja:
     """Cuva podatke o vozacu - ime, telefon, broj licence, registarske
-    tablice i vozilo. Koristi se za prikaz u app-u i u zaglavlju PDF
-    mesecnog izvestaja."""
+    tablice, vozilo, i datume isteka registracije/osiguranja. Koristi
+    se za prikaz u app-u i u zaglavlju PDF mesecnog izvestaja."""
 
     def __init__(self):
         self.ime_prezime = ""
@@ -199,6 +199,8 @@ class VozacPodesavanja:
         self.broj_licence = ""
         self.tablice = ""
         self.vozilo = ""
+        self.registracija_datum = ""
+        self.osiguranje_datum = ""
 
     def _putanja(self, user_data_dir):
         return os.path.join(user_data_dir, "vozac.json")
@@ -212,6 +214,8 @@ class VozacPodesavanja:
             self.broj_licence = podaci.get("broj_licence", "")
             self.tablice = podaci.get("tablice", "")
             self.vozilo = podaci.get("vozilo", "")
+            self.registracija_datum = podaci.get("registracija_datum", "")
+            self.osiguranje_datum = podaci.get("osiguranje_datum", "")
         except (FileNotFoundError, ValueError, json.JSONDecodeError):
             pass
 
@@ -222,6 +226,8 @@ class VozacPodesavanja:
             "broj_licence": self.broj_licence,
             "tablice": self.tablice,
             "vozilo": self.vozilo,
+            "registracija_datum": self.registracija_datum,
+            "osiguranje_datum": self.osiguranje_datum,
         }
         with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
             json.dump(podaci, f, ensure_ascii=False, indent=2)
@@ -2481,6 +2487,20 @@ ScreenManager:
                     id: input_vozilo
                     hint_text: "npr. Skoda Octavia"
 
+                FieldLabel:
+                    text: "Registracija istice (format GGGG-MM-DD)"
+
+                PastelTextInput:
+                    id: input_registracija
+                    hint_text: "npr. 2026-12-31"
+
+                FieldLabel:
+                    text: "Osiguranje istice (format GGGG-MM-DD)"
+
+                PastelTextInput:
+                    id: input_osiguranje
+                    hint_text: "npr. 2026-11-15"
+
                 RoundButton:
                     label_text: "Sacuvaj profil"
                     tint: 0.30, 0.52, 0.36, 1
@@ -2488,6 +2508,23 @@ ScreenManager:
                     size_hint_y: None
                     height: dp(56)
                     on_release: root.sacuvaj_profil()
+
+                PastelCard:
+                    tint: root.boja_dokumenti
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(12)
+                    orientation: "vertical"
+                    Label:
+                        text: root.tekst_dokumenti
+                        font_size: '14sp'
+                        bold: True
+                        color: 1, 1, 1, 1
+                        halign: "left"
+                        valign: "top"
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
 
                 FieldLabel:
                     text: "Ovi podaci se prikazuju u zaglavlju PDF mesecnog izvestaja (Izvestaj -> Izvoz PDF)."
@@ -3959,23 +3996,100 @@ class GoogleApiScreen(Screen):
         _prikazi_popup_poruku("Info", "Google API kljuc sacuvan.", size_hint=(0.8, 0.3))
 
 
+def _dani_do_isteka(datum_str):
+    """Vraca broj dana do isteka za dati datum (format GGGG-MM-DD), ili
+    None ako datum nije unet ili nije validan. Broj moze biti
+    negativan ako je datum vec prosao (znaci da je vec isteklo)."""
+    if not datum_str:
+        return None
+    try:
+        datum = datetime.strptime(datum_str, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    return (datum - datetime.now().date()).days
+
+
+def _stanje_dokumenata_vozila():
+    """Vraca (tekst, boja) za kombinovani status registracije i
+    osiguranja - koristi se na ekranu Profil vozaca. Boja kartice
+    prati NAJGORE od ta dva stanja (crveno ako je bar jedno isteklo,
+    zuto ako bar jedno istice u naredni 30 dana, inace zeleno; sivo
+    ako nijedan datum jos nije unet)."""
+
+    def opis(dani, naziv):
+        if dani is None:
+            return f"{naziv}: nije unet datum isteka"
+        if dani < 0:
+            return f"{naziv}: ISTEKLO pre {abs(dani)} dana!"
+        if dani == 0:
+            return f"{naziv}: istice DANAS!"
+        return f"{naziv}: istice za {dani} dana"
+
+    def nivo(dani):
+        if dani is None:
+            return 0
+        if dani < 0:
+            return 3
+        if dani <= 30:
+            return 2
+        return 1
+
+    reg_dani = _dani_do_isteka(VOZAC.registracija_datum)
+    osig_dani = _dani_do_isteka(VOZAC.osiguranje_datum)
+
+    tekst = opis(reg_dani, "Registracija") + "\n" + opis(osig_dani, "Osiguranje")
+
+    boje = {
+        0: [0.35, 0.35, 0.45, 0.92],
+        1: [0.24, 0.46, 0.30, 0.95],
+        2: [0.60, 0.48, 0.16, 0.95],
+        3: [0.62, 0.24, 0.24, 0.95],
+    }
+    najgori_nivo = max(nivo(reg_dani), nivo(osig_dani))
+    return tekst, boje[najgori_nivo]
+
+
 class ProfilScreen(Screen):
+    tekst_dokumenti = StringProperty("")
+    boja_dokumenti = ListProperty([0.35, 0.35, 0.45, 0.92])
+
     def on_pre_enter(self, *args):
         self.ids.input_ime.text = VOZAC.ime_prezime
         self.ids.input_telefon.text = VOZAC.telefon
         self.ids.input_licenca.text = VOZAC.broj_licence
         self.ids.input_tablice.text = VOZAC.tablice
         self.ids.input_vozilo.text = VOZAC.vozilo
+        self.ids.input_registracija.text = VOZAC.registracija_datum
+        self.ids.input_osiguranje.text = VOZAC.osiguranje_datum
+        self._osvezi_dokumenti()
+
+    def _osvezi_dokumenti(self):
+        self.tekst_dokumenti, self.boja_dokumenti = _stanje_dokumenata_vozila()
 
     def sacuvaj_profil(self):
+        reg_tekst = self.ids.input_registracija.text.strip()
+        osig_tekst = self.ids.input_osiguranje.text.strip()
+
+        for naziv, vrednost in (("Registracija", reg_tekst), ("Osiguranje", osig_tekst)):
+            if vrednost and _dani_do_isteka(vrednost) is None:
+                _prikazi_popup_poruku(
+                    "Greska",
+                    f"{naziv}: datum mora biti u formatu GGGG-MM-DD (npr. 2026-12-31), ili ostavi prazno.",
+                    size_hint=(0.85, 0.4),
+                )
+                return
+
         VOZAC.ime_prezime = self.ids.input_ime.text.strip()
         VOZAC.telefon = self.ids.input_telefon.text.strip()
         VOZAC.broj_licence = self.ids.input_licenca.text.strip()
         VOZAC.tablice = self.ids.input_tablice.text.strip()
         VOZAC.vozilo = self.ids.input_vozilo.text.strip()
+        VOZAC.registracija_datum = reg_tekst
+        VOZAC.osiguranje_datum = osig_tekst
 
         app = App.get_running_app()
         VOZAC.sacuvaj(app.user_data_dir)
+        self._osvezi_dokumenti()
 
         _prikazi_popup_poruku("Info", "Profil vozaca je sacuvan.", size_hint=(0.8, 0.3))
 
@@ -4062,6 +4176,8 @@ def _sacuvaj_backup_fajl():
         "broj_licence": VOZAC.broj_licence,
         "tablice": VOZAC.tablice,
         "vozilo": VOZAC.vozilo,
+        "registracija_datum": VOZAC.registracija_datum,
+        "osiguranje_datum": VOZAC.osiguranje_datum,
     }
 
     podaci = {
@@ -4227,6 +4343,8 @@ class BackupScreen(Screen):
             VOZAC.broj_licence = vozac_podaci.get("broj_licence", VOZAC.broj_licence)
             VOZAC.tablice = vozac_podaci.get("tablice", VOZAC.tablice)
             VOZAC.vozilo = vozac_podaci.get("vozilo", VOZAC.vozilo)
+            VOZAC.registracija_datum = vozac_podaci.get("registracija_datum", VOZAC.registracija_datum)
+            VOZAC.osiguranje_datum = vozac_podaci.get("osiguranje_datum", VOZAC.osiguranje_datum)
             VOZAC.sacuvaj(app.user_data_dir)
 
         dodato_gorivo = _dodaj_stavke_bez_duplikata(GORIVO, app.user_data_dir, gorivo_podaci)
