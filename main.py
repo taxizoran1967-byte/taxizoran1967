@@ -1509,12 +1509,77 @@ ScreenManager:
 
         ScrollView:
             BoxLayout:
-                id: lista_voznji
                 orientation: "vertical"
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: dp(10)
                 padding: dp(4)
+
+                PastelCard:
+                    orientation: "vertical"
+                    tint: 0.30, 0.29, 0.42, 0.92
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(12)
+                    spacing: dp(8)
+
+                    FieldLabel:
+                        text: "Pretraga (adresa ili napomena)"
+
+                    PastelTextInput:
+                        id: input_pretraga_tekst
+                        hint_text: "npr. bulevar, aerodrom..."
+
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(48)
+                        spacing: dp(8)
+                        PastelTextInput:
+                            id: input_pretraga_datum_od
+                            hint_text: "Datum od (GGGG-MM-DD)"
+                        PastelTextInput:
+                            id: input_pretraga_datum_do
+                            hint_text: "Datum do (GGGG-MM-DD)"
+
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(48)
+                        spacing: dp(8)
+                        PastelTextInput:
+                            id: input_pretraga_cena_od
+                            hint_text: "Cena od"
+                            input_filter: "float"
+                        PastelTextInput:
+                            id: input_pretraga_cena_do
+                            hint_text: "Cena do"
+                            input_filter: "float"
+
+                    BoxLayout:
+                        size_hint_y: None
+                        height: dp(48)
+                        spacing: dp(8)
+                        RoundButton:
+                            label_text: "Pretrazi"
+                            tint: 0.30, 0.52, 0.36, 1
+                            text_color: 1, 1, 1, 1
+                            on_release: root.pretrazi()
+                        RoundButton:
+                            label_text: "Resetuj"
+                            tint: 0.45, 0.45, 0.52, 1
+                            text_color: 1, 1, 1, 1
+                            on_release: root.resetuj_pretragu()
+
+                FieldLabel:
+                    id: label_broj_rezultata
+                    text: root.tekst_broj_rezultata
+
+                BoxLayout:
+                    id: lista_voznji
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(4)
 
 # ============================================================
 # IZVESTAJ
@@ -4677,17 +4742,27 @@ class KalkulatorScreen(Screen):
 
 
 class EvidencijaScreen(Screen):
+    tekst_broj_rezultata = StringProperty("")
+
     def on_pre_enter(self, *args):
         self.ucitaj_voznje()
 
-    def ucitaj_voznje(self):
+    def ucitaj_voznje(self, voznje=None):
         kontejner = self.ids.lista_voznji
         kontejner.clear_widgets()
-        voznje = db.sve_voznje(limit=200)
+
+        if voznje is None:
+            voznje = db.sve_voznje(limit=200)
+            self.tekst_broj_rezultata = ""
 
         if not voznje:
+            poruka = (
+                "Nema voznji koje odgovaraju pretrazi."
+                if self.tekst_broj_rezultata else
+                "Jos uvek nema evidentiranih voznji."
+            )
             kontejner.add_widget(Label(
-                text="Jos uvek nema evidentiranih voznji.",
+                text=poruka,
                 size_hint_y=None, height=40,
                 color=(1, 1, 1, 1),
             ))
@@ -4696,6 +4771,55 @@ class EvidencijaScreen(Screen):
         for v in voznje:
             red = self._napravi_red(v)
             kontejner.add_widget(red)
+
+    def pretrazi(self):
+        tekst = self.ids.input_pretraga_tekst.text.strip() or None
+        datum_od = self.ids.input_pretraga_datum_od.text.strip() or None
+        datum_do = self.ids.input_pretraga_datum_do.text.strip() or None
+
+        for naziv, vrednost in (("Datum od", datum_od), ("Datum do", datum_do)):
+            if vrednost:
+                try:
+                    datetime.strptime(vrednost, "%Y-%m-%d")
+                except ValueError:
+                    _prikazi_popup_poruku(
+                        "Greska",
+                        f"{naziv}: format mora biti GGGG-MM-DD (npr. 2026-09-05).",
+                        size_hint=(0.85, 0.4),
+                    )
+                    return
+
+        cena_od_tekst = self.ids.input_pretraga_cena_od.text.strip()
+        cena_do_tekst = self.ids.input_pretraga_cena_do.text.strip()
+        cena_min = None
+        cena_max = None
+        try:
+            if cena_od_tekst:
+                cena_min = float(cena_od_tekst.replace(",", "."))
+            if cena_do_tekst:
+                cena_max = float(cena_do_tekst.replace(",", "."))
+        except ValueError:
+            _prikazi_popup_poruku("Greska", "Cena mora biti broj.", size_hint=(0.85, 0.3))
+            return
+
+        voznje = db.pretrazi_voznje(
+            pocetak=datum_od, kraj=datum_do, tekst=tekst,
+            cena_min=cena_min, cena_max=cena_max,
+        )
+        broj, prihod, km = db.zbir_voznji(voznje)
+        self.tekst_broj_rezultata = (
+            f"Nadjeno: {broj} voznji   |   {km:.1f} km   |   {formatiraj_cenu(prihod)}"
+        )
+        self.ucitaj_voznje(voznje)
+
+    def resetuj_pretragu(self):
+        self.ids.input_pretraga_tekst.text = ""
+        self.ids.input_pretraga_datum_od.text = ""
+        self.ids.input_pretraga_datum_do.text = ""
+        self.ids.input_pretraga_cena_od.text = ""
+        self.ids.input_pretraga_cena_do.text = ""
+        self.tekst_broj_rezultata = ""
+        self.ucitaj_voznje()
 
     def _napravi_red(self, v):
         od = v["od_adresa"] or "-"
@@ -4732,7 +4856,10 @@ class EvidencijaScreen(Screen):
 
     def _obrisi(self, voznja_id):
         db.obrisi_voznju(voznja_id)
-        self.ucitaj_voznje()
+        if self.tekst_broj_rezultata:
+            self.pretrazi()
+        else:
+            self.ucitaj_voznje()
 
 
 class IzvestajScreen(Screen):

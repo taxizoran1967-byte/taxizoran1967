@@ -187,3 +187,46 @@ def zbir_voznji(rows):
     prihod = sum(r["ukupna_cena"] for r in rows)
     km = sum(r["km"] for r in rows)
     return broj, prihod, km
+
+
+def pretrazi_voznje(pocetak=None, kraj=None, tekst=None, cena_min=None, cena_max=None, limit=300):
+    """Pretrazuje voznje po bilo kojoj kombinaciji filtera - sve su
+    opcione (None = ne filtrira po tome):
+      pocetak, kraj  - datum opseg (format YYYY-MM-DD, oba kraja ukljucena)
+      tekst          - trazi u adresi polaska, adresi dolaska i napomeni
+                       (nije osetljivo na velika/mala slova)
+      cena_min, cena_max - opseg ukupne cene voznje
+
+    Vraca najnovije prvo (isto kao sve_voznje)."""
+    uslovi = []
+    parametri = []
+
+    if pocetak:
+        uslovi.append("datum >= ?")
+        parametri.append(pocetak)
+    if kraj:
+        uslovi.append("datum <= ?")
+        parametri.append(kraj)
+    if tekst:
+        uslovi.append("(od_adresa LIKE ? OR do_adresa LIKE ? OR napomena LIKE ?)")
+        obrazac = f"%{tekst}%"
+        parametri.extend([obrazac, obrazac, obrazac])
+    if cena_min is not None:
+        uslovi.append("ukupna_cena >= ?")
+        parametri.append(cena_min)
+    if cena_max is not None:
+        uslovi.append("ukupna_cena <= ?")
+        parametri.append(cena_max)
+
+    upit = "SELECT * FROM voznje"
+    if uslovi:
+        upit += " WHERE " + " AND ".join(uslovi)
+    upit += " ORDER BY datum DESC, vreme DESC LIMIT ?"
+    parametri.append(limit)
+
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(upit, parametri)
+    rows = cur.fetchall()
+    conn.close()
+    return rows
