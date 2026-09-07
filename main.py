@@ -2562,6 +2562,12 @@ ScreenManager:
                     height: dp(52)
                     on_release: root.zatrazi_dozvolu()
 
+                FieldLabel:
+                    text: "Automatski backup: app sam napravi svez backup jednom dnevno pri pokretanju (tiho, bez poruke) - dugme ispod je za rucni backup kad god zelis."
+                    size_hint_y: None
+                    height: dp(70)
+                    text_size: self.width, None
+
                 RoundButton:
                     label_text: "Sacuvaj backup sada"
                     tint: 0.30, 0.52, 0.36, 1
@@ -3887,6 +3893,61 @@ def _dodaj_stavke_bez_duplikata(log_obj, user_data_dir, nove_stavke):
     return dodato
 
 
+def _sacuvaj_backup_fajl():
+    """Upisuje trenutne podatke (voznje, vozac, gorivo, servisi,
+    troskovi) u backup fajl. Koristi ga i rucno dugme 'Sacuvaj backup
+    sada' i automatski dnevni backup, da se logika ne duplira negde.
+    Vraca (putanja, podaci_voznje) ako uspe; baca izuzetak ako ne
+    uspe (npr. nema dozvole za fajlove)."""
+    voznje = db.sve_voznje_za_izvoz()
+    podaci_voznje = [dict(v) for v in voznje]
+
+    podaci_vozac = {
+        "ime_prezime": VOZAC.ime_prezime,
+        "telefon": VOZAC.telefon,
+        "broj_licence": VOZAC.broj_licence,
+        "tablice": VOZAC.tablice,
+        "vozilo": VOZAC.vozilo,
+    }
+
+    podaci = {
+        "voznje": podaci_voznje,
+        "vozac": podaci_vozac,
+        "gorivo": GORIVO.stavke,
+        "servisi": SERVIS.stavke,
+        "troskovi": TROSKOVI.stavke,
+    }
+
+    folder = _putanja_backup_foldera()
+    os.makedirs(folder, exist_ok=True)
+    putanja = os.path.join(folder, BACKUP_FAJL_NAZIV)
+    with open(putanja, "w", encoding="utf-8") as f:
+        json.dump(podaci, f, ensure_ascii=False, indent=2)
+
+    return putanja, podaci_voznje
+
+
+def _auto_backup_ako_treba(*_args):
+    """Ako je proslo vise od 24h od poslednjeg backupa (ili backup
+    fajl uopste ne postoji), napravi novi backup automatski i TIHO
+    (bez popup poruka) - poziva se jednom pri svakom pokretanju
+    aplikacije (vidi TaksiApp.build). Ako nesto pukne (nema dozvole,
+    baza jos nije spremna...), jednostavno preskace - automatski
+    backup ne sme nikad da obori app niti da gnjavi korisnika
+    porukama o gresci."""
+    try:
+        if not _ima_dozvolu_svi_fajlovi():
+            return
+        putanja = os.path.join(_putanja_backup_foldera(), BACKUP_FAJL_NAZIV)
+        if os.path.exists(putanja):
+            poslednja_izmena = datetime.fromtimestamp(os.path.getmtime(putanja))
+            if datetime.now() - poslednja_izmena < timedelta(hours=24):
+                return
+        _sacuvaj_backup_fajl()
+    except Exception:
+        pass
+
+
 class BackupScreen(Screen):
     tekst_status = StringProperty("")
 
@@ -3931,30 +3992,7 @@ class BackupScreen(Screen):
             )
             return
         try:
-            voznje = db.sve_voznje_za_izvoz()
-            podaci_voznje = [dict(v) for v in voznje]
-
-            podaci_vozac = {
-                "ime_prezime": VOZAC.ime_prezime,
-                "telefon": VOZAC.telefon,
-                "broj_licence": VOZAC.broj_licence,
-                "tablice": VOZAC.tablice,
-                "vozilo": VOZAC.vozilo,
-            }
-
-            podaci = {
-                "voznje": podaci_voznje,
-                "vozac": podaci_vozac,
-                "gorivo": GORIVO.stavke,
-                "servisi": SERVIS.stavke,
-                "troskovi": TROSKOVI.stavke,
-            }
-
-            folder = _putanja_backup_foldera()
-            os.makedirs(folder, exist_ok=True)
-            putanja = os.path.join(folder, BACKUP_FAJL_NAZIV)
-            with open(putanja, "w", encoding="utf-8") as f:
-                json.dump(podaci, f, ensure_ascii=False, indent=2)
+            putanja, podaci_voznje = _sacuvaj_backup_fajl()
             _prikazi_popup_poruku(
                 "Sacuvano",
                 f"Sacuvano u backup:\n"
@@ -4628,6 +4666,10 @@ class TaksiApp(App):
             Clock.schedule_once(
                 lambda dt: root.get_screen("lock").pokusaj_ili_preskoci()
             )
+            # Automatski dnevni backup (tih, bez poruka) - pokrece se
+            # 3 sekunde posle starta, da ne uspori pokretanje app-a i
+            # da saceka da se ekran zakljucavanja resi.
+            Clock.schedule_once(_auto_backup_ako_treba, 3)
             return root
         except Exception:
             greska = traceback.format_exc()
