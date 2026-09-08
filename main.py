@@ -31,6 +31,7 @@ from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
+from kivy.metrics import dp
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -1219,6 +1220,13 @@ def generisi_uputstvo_pdf(putanja_fajla):
 # pokupio i popunio formu za ispravku.
 EDIT_VOZNJA = None
 
+# Pamti sa kog je ekrana korisnik dosao kad PREVUCE prstom (swipe) u
+# Podesavanja - da bi povratni swipe (udesno) vratio tacno tamo, a ne
+# uvek na Pocetnu. Postavlja ga ScreenRoot.on_touch_up pri swipe-u;
+# ostaje None ako je korisnik usao u Podesavanja preko obicnog dugmeta
+# (u tom slucaju povratni swipe ide na Pocetnu).
+EKRAN_PRE_PODESAVANJA = None
+
 
 # ========================
 # GPS VOZNJA - pomocne funkcije i cuvanje stanja aktivne voznje
@@ -1448,7 +1456,7 @@ ScreenManager:
 # ZAJEDNICKI STIL - pastelne kartice, zaobljeni uglovi, tipografija
 # ============================================================
 
-<ScreenRoot@BoxLayout>:
+<ScreenRoot>:
     orientation: "vertical"
     padding: dp(18)
     spacing: dp(16)
@@ -1722,6 +1730,7 @@ ScreenManager:
         TaxiZoranNaslov:
 
         ScrollView:
+            do_scroll_x: False
             GridLayout:
                 cols: 2
                 size_hint_y: None
@@ -1793,6 +1802,7 @@ ScreenManager:
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -1895,6 +1905,7 @@ ScreenManager:
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2002,6 +2013,7 @@ ScreenManager:
                 on_release: root.manager.current = "izvoz_pdf"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2090,6 +2102,7 @@ ScreenManager:
                 on_release: root.manager.current = "home"
 
         ScrollView:
+            do_scroll_x: False
             GridLayout:
                 cols: 2
                 size_hint_y: None
@@ -2199,6 +2212,7 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2379,6 +2393,7 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2484,6 +2499,7 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2612,6 +2628,7 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2701,6 +2718,7 @@ ScreenManager:
                 on_release: root.manager.current = "evidencija"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2922,6 +2940,7 @@ ScreenManager:
                 on_release: root.manager.current = "home"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -3106,6 +3125,7 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -3197,6 +3217,7 @@ ScreenManager:
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -3338,6 +3359,7 @@ ScreenManager:
             on_release: root.izvezi_pdf()
 
         ScrollView:
+            do_scroll_x: False
             BoxLayout:
                 id: lista_uputstvo
                 orientation: "vertical"
@@ -3400,6 +3422,64 @@ class SekcijaUputstva(BoxLayout):
     <SekcijaUputstva>: pravilo u KV-u."""
     naslov = StringProperty("")
     tekst = StringProperty("")
+
+
+class ScreenRoot(BoxLayout):
+    """Osnovni kontejner svakog ekrana (izgled - pozadina, padding -
+    je i dalje definisan u <ScreenRoot>: pravilu u KV-u). Ovde se
+    dodaje SAMO hvatanje horizontalnog prevlacenja prstom (swipe) kao
+    precica izmedju trenutnog ekrana i Podesavanja:
+
+      - Swipe ULEVO (bilo gde, osim na ekranu zakljucavanja i vec u
+        Podesavanjima) -> otvara Podesavanja, pamteci u
+        EKRAN_PRE_PODESAVANJA sa kog si ekrana dosao.
+      - Swipe UDESNO, dok si u Podesavanjima -> vraca te NAZAD na taj
+        upamceni ekran (ne uvek na Pocetnu) - ako si usao u
+        Podesavanja preko obicnog dugmeta (ne swipe-om), vraca na
+        Pocetnu, jer tada EKRAN_PRE_PODESAVANJA nije postavljen.
+
+    Sve ostalo (dugmad, NavBar, skrolovanje) ostaje potpuno
+    nepromenjeno - super().on_touch_up() se poziva PRVI, pa ako neki
+    dugme/ScrollView vec obradi dodir, swipe provera se uopste ne
+    izvrsava.
+    """
+
+    PRAG_SWIPE = dp(60)  # minimalna horizontalna distanca da se racuna kao swipe
+
+    def on_touch_up(self, touch):
+        if super().on_touch_up(touch):
+            return True
+
+        dx = touch.x - touch.ox
+        dy = touch.y - touch.oy
+
+        if abs(dx) < self.PRAG_SWIPE or abs(dx) < abs(dy) * 1.5:
+            return False
+
+        app = App.get_running_app()
+        if app is None or app.root is None:
+            return False
+        manager = app.root
+        trenutni = manager.current
+
+        if trenutni == "lock":
+            return False
+
+        global EKRAN_PRE_PODESAVANJA
+
+        if dx < 0:
+            if trenutni == "podesavanja":
+                return False
+            EKRAN_PRE_PODESAVANJA = trenutni
+            manager.transition.direction = "left"
+            manager.current = "podesavanja"
+            return True
+        else:
+            if trenutni != "podesavanja":
+                return False
+            manager.transition.direction = "right"
+            manager.current = EKRAN_PRE_PODESAVANJA or "home"
+            return True
 
 
 class HomeScreen(Screen):
