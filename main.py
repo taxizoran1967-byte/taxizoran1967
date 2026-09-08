@@ -2687,8 +2687,6 @@ ScreenManager:
                     height: dp(60)
                     text_size: self.width, None
 
-        Widget:
-
 # ============================================================
 # VALUTA - izbor prikaza cena (RSD ili EUR) i kurs
 # ============================================================
