@@ -1976,7 +1976,7 @@ ScreenManager:
         PastelCard:
             tint: 0.38, 0.32, 0.52, 0.92
             size_hint_y: None
-            height: dp(74)
+            height: self.minimum_height
             padding: dp(14)
             Label:
                 id: label_status
@@ -1984,6 +1984,11 @@ ScreenManager:
                 font_size: '18sp'
                 bold: True
                 color: 0.92, 0.88, 1, 1
+                halign: "center"
+                valign: "middle"
+                size_hint_y: None
+                text_size: self.width, None
+                height: self.texture_size[1]
 
         RoundButton:
             id: dugme_toggle
@@ -2026,13 +2031,18 @@ ScreenManager:
         PastelCard:
             tint: 0.38, 0.32, 0.52, 0.92
             size_hint_y: None
-            height: dp(74)
+            height: self.minimum_height
             padding: dp(14)
             Label:
                 text: root.tekst_status
                 font_size: '18sp'
                 bold: True
                 color: 0.92, 0.88, 1, 1
+                halign: "center"
+                valign: "middle"
+                size_hint_y: None
+                text_size: self.width, None
+                height: self.texture_size[1]
 
         RoundButton:
             label_text: root.tekst_dugme
@@ -2082,7 +2092,7 @@ ScreenManager:
                 PastelCard:
                     tint: 0.55, 0.38, 0.26, 0.92
                     size_hint_y: None
-                    height: dp(72)
+                    height: self.minimum_height
                     padding: dp(12)
                     Label:
                         id: label_ukupno_gorivo
@@ -2090,6 +2100,11 @@ ScreenManager:
                         font_size: '14sp'
                         bold: True
                         color: 1, 0.90, 0.80, 1
+                        halign: "left"
+                        valign: "middle"
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
 
                 FieldLabel:
                     text: "Vrsta goriva"
@@ -2218,7 +2233,7 @@ ScreenManager:
                 PastelCard:
                     tint: 0.38, 0.32, 0.52, 0.92
                     size_hint_y: None
-                    height: dp(56)
+                    height: self.minimum_height
                     padding: dp(12)
                     Label:
                         id: label_ukupno_servis
@@ -2226,6 +2241,11 @@ ScreenManager:
                         font_size: '15sp'
                         bold: True
                         color: 0.92, 0.88, 1, 1
+                        halign: "left"
+                        valign: "middle"
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
 
                 FieldLabel:
                     text: "Vrsta servisa"
@@ -2305,7 +2325,7 @@ ScreenManager:
                 PastelCard:
                     tint: 0.55, 0.38, 0.26, 0.92
                     size_hint_y: None
-                    height: dp(72)
+                    height: self.minimum_height
                     padding: dp(12)
                     Label:
                         id: label_ukupno_troskovi
@@ -2313,6 +2333,11 @@ ScreenManager:
                         font_size: '14sp'
                         bold: True
                         color: 1, 0.90, 0.80, 1
+                        halign: "left"
+                        valign: "middle"
+                        size_hint_y: None
+                        text_size: self.width, None
+                        height: self.texture_size[1]
 
                 FieldLabel:
                     text: "Vrsta troska"
