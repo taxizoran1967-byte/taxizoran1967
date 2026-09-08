@@ -1800,82 +1800,82 @@ ScreenManager:
                 spacing: dp(14)
                 padding: dp(2), dp(4)
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/earnings_chart.png"
                     tekst: "Grafik zarade"
                     on_release: app.root.current = "grafik"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/navigation.png"
                     tekst: "Navigacija"
                     on_release: app.root.current = "navigacija"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/night_tariff.png"
                     tekst: "Nocna tarifa"
                     on_release: app.root.current = "nocna_tarifa"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/service.png"
                     tekst: "Servis vozila"
                     on_release: app.root.current = "servis"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/fuel.png"
                     tekst: "Gorivo"
                     on_release: app.root.current = "gorivo"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/calculator.png"
                     tekst: "Ostali troskovi"
                     on_release: app.root.current = "troskovi"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/weekly_report.png"
                     tekst: "Nedeljni izvestaj"
                     on_release: app.root.current = "izvestaj"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/monthly_report.png"
                     tekst: "Mesecni izvestaj"
                     on_release: app.root.current = "izvestaj"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/calculator.png"
                     tekst: "Kalkulator"
                     on_release: app.root.current = "kalkulator"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/profil.png"
                     tekst: "Profil vozaca"
                     on_release: app.root.current = "profil"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/poziv.png"
                     tekst: "Poziv / Dispecer"
                     on_release: app.root.current = "poziv"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Cene / Tarife"
                     on_release: app.root.current = "cene"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Google API"
                     on_release: app.root.current = "google_api"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Valuta"
                     on_release: app.root.current = "valuta"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Backup podataka"
                     on_release: app.root.current = "backup"
 
-                MenuButton:
+                HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: "Sigurnost (otisak prsta)"
                     on_release: app.root.current = "sigurnost"
