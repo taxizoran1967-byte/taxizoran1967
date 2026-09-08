@@ -12,6 +12,7 @@ import json
 import math
 import calendar
 import threading
+import time
 import traceback
 import urllib.request
 import urllib.parse
@@ -31,7 +32,6 @@ from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
-from kivy.metrics import dp
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -1220,13 +1220,6 @@ def generisi_uputstvo_pdf(putanja_fajla):
 # pokupio i popunio formu za ispravku.
 EDIT_VOZNJA = None
 
-# Pamti sa kog je ekrana korisnik dosao kad PREVUCE prstom (swipe) u
-# Podesavanja - da bi povratni swipe (udesno) vratio tacno tamo, a ne
-# uvek na Pocetnu. Postavlja ga ScreenRoot.on_touch_up pri swipe-u;
-# ostaje None ako je korisnik usao u Podesavanja preko obicnog dugmeta
-# (u tom slucaju povratni swipe ide na Pocetnu).
-EKRAN_PRE_PODESAVANJA = None
-
 
 # ========================
 # GPS VOZNJA - pomocne funkcije i cuvanje stanja aktivne voznje
@@ -1320,6 +1313,9 @@ class AktivnaVoznjaState:
         self.pocetak_adresa = ""
         self.zadnja_lat = None
         self.zadnja_lon = None
+        self.zadnje_vreme = None  # time.time() kad je zadnja_lat/lon primljena -
+                                   # sluzi da se izracuna PRAVO proteklo vreme
+                                   # do sledece tacke (vidi _obradi_lokaciju)
         self.km = 0.0
 
     def _putanja(self, user_data_dir):
@@ -1336,6 +1332,7 @@ class AktivnaVoznjaState:
             self.pocetak_adresa = podaci.get("pocetak_adresa", "")
             self.zadnja_lat = podaci.get("zadnja_lat")
             self.zadnja_lon = podaci.get("zadnja_lon")
+            self.zadnje_vreme = podaci.get("zadnje_vreme")
             self.km = podaci.get("km", 0.0)
         except (FileNotFoundError, ValueError, json.JSONDecodeError):
             pass
@@ -1349,6 +1346,7 @@ class AktivnaVoznjaState:
             "pocetak_adresa": self.pocetak_adresa,
             "zadnja_lat": self.zadnja_lat,
             "zadnja_lon": self.zadnja_lon,
+            "zadnje_vreme": self.zadnje_vreme,
             "km": self.km,
         }
         with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
@@ -1456,7 +1454,7 @@ ScreenManager:
 # ZAJEDNICKI STIL - pastelne kartice, zaobljeni uglovi, tipografija
 # ============================================================
 
-<ScreenRoot>:
+<ScreenRoot@BoxLayout>:
     orientation: "vertical"
     padding: dp(18)
     spacing: dp(16)
@@ -1730,7 +1728,6 @@ ScreenManager:
         TaxiZoranNaslov:
 
         ScrollView:
-            do_scroll_x: False
             GridLayout:
                 cols: 2
                 size_hint_y: None
@@ -1802,7 +1799,6 @@ ScreenManager:
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -1905,7 +1901,6 @@ ScreenManager:
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2013,7 +2008,6 @@ ScreenManager:
                 on_release: root.manager.current = "izvoz_pdf"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2102,7 +2096,6 @@ ScreenManager:
                 on_release: root.manager.current = "home"
 
         ScrollView:
-            do_scroll_x: False
             GridLayout:
                 cols: 2
                 size_hint_y: None
@@ -2212,7 +2205,6 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2393,7 +2385,6 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2499,7 +2490,6 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2628,7 +2618,6 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2718,7 +2707,6 @@ ScreenManager:
                 on_release: root.manager.current = "evidencija"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -2940,7 +2928,6 @@ ScreenManager:
                 on_release: root.manager.current = "home"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -3125,7 +3112,6 @@ ScreenManager:
                 on_release: root.manager.current = "podesavanja"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -3217,7 +3203,6 @@ ScreenManager:
                 on_release: root.manager.current = "izvestaj"
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 orientation: "vertical"
                 size_hint_y: None
@@ -3359,7 +3344,6 @@ ScreenManager:
             on_release: root.izvezi_pdf()
 
         ScrollView:
-            do_scroll_x: False
             BoxLayout:
                 id: lista_uputstvo
                 orientation: "vertical"
@@ -3422,64 +3406,6 @@ class SekcijaUputstva(BoxLayout):
     <SekcijaUputstva>: pravilo u KV-u."""
     naslov = StringProperty("")
     tekst = StringProperty("")
-
-
-class ScreenRoot(BoxLayout):
-    """Osnovni kontejner svakog ekrana (izgled - pozadina, padding -
-    je i dalje definisan u <ScreenRoot>: pravilu u KV-u). Ovde se
-    dodaje SAMO hvatanje horizontalnog prevlacenja prstom (swipe) kao
-    precica izmedju trenutnog ekrana i Podesavanja:
-
-      - Swipe ULEVO (bilo gde, osim na ekranu zakljucavanja i vec u
-        Podesavanjima) -> otvara Podesavanja, pamteci u
-        EKRAN_PRE_PODESAVANJA sa kog si ekrana dosao.
-      - Swipe UDESNO, dok si u Podesavanjima -> vraca te NAZAD na taj
-        upamceni ekran (ne uvek na Pocetnu) - ako si usao u
-        Podesavanja preko obicnog dugmeta (ne swipe-om), vraca na
-        Pocetnu, jer tada EKRAN_PRE_PODESAVANJA nije postavljen.
-
-    Sve ostalo (dugmad, NavBar, skrolovanje) ostaje potpuno
-    nepromenjeno - super().on_touch_up() se poziva PRVI, pa ako neki
-    dugme/ScrollView vec obradi dodir, swipe provera se uopste ne
-    izvrsava.
-    """
-
-    PRAG_SWIPE = dp(60)  # minimalna horizontalna distanca da se racuna kao swipe
-
-    def on_touch_up(self, touch):
-        if super().on_touch_up(touch):
-            return True
-
-        dx = touch.x - touch.ox
-        dy = touch.y - touch.oy
-
-        if abs(dx) < self.PRAG_SWIPE or abs(dx) < abs(dy) * 1.5:
-            return False
-
-        app = App.get_running_app()
-        if app is None or app.root is None:
-            return False
-        manager = app.root
-        trenutni = manager.current
-
-        if trenutni == "lock":
-            return False
-
-        global EKRAN_PRE_PODESAVANJA
-
-        if dx < 0:
-            if trenutni == "podesavanja":
-                return False
-            EKRAN_PRE_PODESAVANJA = trenutni
-            manager.transition.direction = "left"
-            manager.current = "podesavanja"
-            return True
-        else:
-            if trenutni != "podesavanja":
-                return False
-            manager.transition.direction = "right"
-            manager.current = EKRAN_PRE_PODESAVANJA or "home"
-            return True
 
 
 class HomeScreen(Screen):
@@ -4472,6 +4398,7 @@ class GpsVoznjaScreen(Screen):
             AKTIVNA_VOZNJA.pocetak_lon = lon
             AKTIVNA_VOZNJA.zadnja_lat = lat
             AKTIVNA_VOZNJA.zadnja_lon = lon
+            AKTIVNA_VOZNJA.zadnje_vreme = time.time()
             AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
             self.tekst_gps_status = "GPS aktivan, pratim voznju."
             reverse_geocode(
@@ -4494,14 +4421,26 @@ class GpsVoznjaScreen(Screen):
         if udaljenost < self.MIN_POMERAJ_KM:
             return  # mikro-sum, ignorisi
 
+        # PRAVO proteklo vreme od poslednje prihvacene tacke (ne
+        # pretpostavljeni fiksni razmak) - bitno kad je telefon bio u
+        # pozadini (npr. korisnik gledao Google Maps par minuta): bez
+        # ovoga bi provera brzine ispod pogresno protumacila normalan
+        # pomeraj kao "nerealan skok" i TRAJNO odbacila te kilometre.
+        sada = time.time()
+        proteklo_sec = sada - (AKTIVNA_VOZNJA.zadnje_vreme or sada)
+        proteklo_sec = max(proteklo_sec, 1.0)  # minimum 1s - stiti od deljenja
+                                                 # gotovo nulom kod dve tacke
+                                                 # koje stignu skoro istovremeno
+
         # provera nerealnog skoka (losa GPS tacka)
-        brzina_kmh = udaljenost / (3.0 / 3600.0)  # priblizno, min interval ~3s
+        brzina_kmh = udaljenost / (proteklo_sec / 3600.0)
         if brzina_kmh > self.MAX_BRZINA_KMH:
             return  # verovatno GPS greska, ignorisi tacku
 
         AKTIVNA_VOZNJA.km += udaljenost
         AKTIVNA_VOZNJA.zadnja_lat = lat
         AKTIVNA_VOZNJA.zadnja_lon = lon
+        AKTIVNA_VOZNJA.zadnje_vreme = sada
         AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
         self._osvezi_prikaz()
 
