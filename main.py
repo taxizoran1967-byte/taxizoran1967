@@ -1461,20 +1461,29 @@ def napravi_red_liste(opis_markup, tint, boja_teksta, dugmad):
         size_hint_y=None,
     )
 
+    dugmad_kolona = _BoxLayout(
+        orientation="vertical",
+        size_hint_x=None,
+        size_hint_y=None,
+        width=dp(84),
+        spacing=dp(6),
+    )
+    # Visina kolone dugmadi RACUNA SE UNAPRED (broj dugmadi * njihova
+    # visina + razmaci) - bitno kad ima vise od 2 dugmeta (npr. kod
+    # dispecera: Pozovi/Smena/Izmeni/Obrisi), inace bi kolona bila visa
+    # od kartice i dugmad bi se preklapala sa sledecim redom u listi.
+    dugmad_kolona.height = (
+        len(dugmad) * dp(38) + max(0, len(dugmad) - 1) * dp(6)
+    )
+
     def _osvezi_velicinu(*_a):
         labela.text_size = (labela.width, None)
         labela.height = labela.texture_size[1]
-        red.height = max(labela.height + dp(24), dp(64))
+        red.height = max(labela.height, dugmad_kolona.height) + dp(24)
 
     labela.bind(width=_osvezi_velicinu, texture_size=_osvezi_velicinu)
     red.add_widget(labela)
 
-    dugmad_kolona = _BoxLayout(
-        orientation="vertical",
-        size_hint_x=None,
-        width=dp(84),
-        spacing=dp(6),
-    )
     for label_text, dtint, dtext_color, callback in dugmad:
         dugme = Factory.RoundButton(
             label_text=label_text,
@@ -3919,7 +3928,7 @@ class DispeceriScreen(Screen):
         smena = s.get("smena", 1)
         od_str, do_str = SMENE.opseg(smena)
         aktivna = _smena_aktivna_sada(od_str, do_str)
-        tacka = "[color=39d353]\u25cf[/color]" if aktivna else "[color=888888]\u25cf[/color]"
+        tacka = "[color=39d353][b]*[/b][/color]" if aktivna else "[color=888888]*[/color]"
         status = "aktivna sada" if aktivna else "nije aktivna"
         opis = (
             f"{tacka} [b]{s.get('ime', '-')}[/b]\n"
@@ -3933,7 +3942,7 @@ class DispeceriScreen(Screen):
             dugmad=[
                 ("Pozovi", (0.30, 0.52, 0.36, 1), (0.92, 1, 0.94, 1),
                  lambda inst, sid=s["id"]: self._pozovi(sid)),
-                (f"Smena {smena} \u25b8", (0.55, 0.45, 0.20, 1), (1, 0.97, 0.90, 1),
+                ("Sledeca smena", (0.55, 0.45, 0.20, 1), (1, 0.97, 0.90, 1),
                  lambda inst, sid=s["id"]: self._promeni_smenu(sid)),
                 ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, sid=s["id"]: self._izmeni(sid)),
