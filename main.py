@@ -45,6 +45,10 @@ from datetime import datetime, timedelta, time as dt_time
 
 import database as db
 import grafik_zarade
+import ekran_navigacija
+import ekran_google_api
+import ekran_profil
+import ekran_valuta
 import biometrics
 
 try:
@@ -2911,274 +2915,10 @@ ScreenManager:
                     disabled: not root.voznja_aktivna
                     on_release: root.zavrsi_voznju()
 
-# ============================================================
-# NAVIGACIJA
-# ============================================================
-
-<NavigacijaScreen>:
-    name: "navigacija"
-    ScreenRoot:
-
-        TitleLabel:
-            text: "Navigacija"
-
-        NavBar:
-            RoundButton:
-                label_text: "Pocetna"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "home"
-            RoundButton:
-                label_text: "Podesavanja"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "podesavanja"
-
-        FieldLabel:
-            text: "Odrediste (adresa ili naziv mesta)"
-
-        PastelTextInput:
-            id: input_odrediste
-            hint_text: "npr. Terazije 5, Beograd"
-
-        RoundButton:
-            label_text: "Otvori navigaciju"
-            tint: 0.36, 0.46, 0.64, 1
-            text_color: 0.95, 0.96, 1, 1
-            size_hint_y: None
-            height: dp(52)
-            on_release: root.otvori_navigaciju()
-
-        FieldLabel:
-            text: "Otvorice se Google Maps i navigacija ce automatski krenuti korak-po-korak ka unetoj adresi (nije potrebno rucno kliktati 'Kreni'). Polazna tacka je uvek trenutna GPS pozicija telefona u tom trenutku."
-            size_hint_y: None
-            height: dp(60)
-            text_size: self.width, None
-
-        Widget:
-
-# ============================================================
-# GOOGLE API - unos kljuca za tacnije adrese
-# ============================================================
-
-<GoogleApiScreen>:
-    name: "google_api"
-    ScreenRoot:
-
-        TitleLabel:
-            text: "Google API"
-
-        NavBar:
-            RoundButton:
-                label_text: "Pocetna"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "home"
-            RoundButton:
-                label_text: "Podesavanja"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "podesavanja"
-
-        FieldLabel:
-            text: "Google Geocoding API kljuc (opciono - ako je prazno, koristi se besplatan OpenStreetMap)"
-
-        PastelTextInput:
-            id: input_google_kljuc
-            hint_text: "npr. AIzaSy..."
-
-        RoundButton:
-            label_text: "Sacuvaj kljuc"
-            tint: 0.30, 0.52, 0.36, 1
-            text_color: 0.92, 1, 0.94, 1
-            size_hint_y: None
-            height: dp(52)
-            on_release: root.sacuvaj_kljuc()
-
-        FieldLabel:
-            text: "Kljuc pravis na console.cloud.google.com -> APIs & Services -> Credentials, i ukljucuje se Geocoding API. Ako ostavis prazno, adrese se i dalje racunaju preko besplatnog OpenStreetMap servisa."
-            size_hint_y: None
-            height: dp(70)
-            text_size: self.width, None
-
-        Widget:
-
-# ============================================================
-# PROFIL VOZACA
-# ============================================================
-
-<ProfilScreen>:
-    name: "profil"
-    ScreenRoot:
-
-        TitleLabel:
-            text: "Profil vozaca"
-
-        NavBar:
-            RoundButton:
-                label_text: "Pocetna"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "home"
-
-        ScrollView:
-            do_scroll_x: False
-            BoxLayout:
-                orientation: "vertical"
-                size_hint_y: None
-                height: self.minimum_height
-                spacing: dp(8)
-                padding: dp(2), dp(4)
-
-                FieldLabel:
-                    text: "Ime i prezime"
-
-                PastelTextInput:
-                    id: input_ime
-                    hint_text: "npr. Petar Petrovic"
-
-                FieldLabel:
-                    text: "Telefon"
-
-                PastelTextInput:
-                    id: input_telefon
-                    hint_text: "npr. 065 123 4567"
-
-                FieldLabel:
-                    text: "Broj licence / dozvole za taksi"
-
-                PastelTextInput:
-                    id: input_licenca
-                    hint_text: "npr. TX-00123"
-
-                FieldLabel:
-                    text: "Registarske tablice"
-
-                PastelTextInput:
-                    id: input_tablice
-                    hint_text: "npr. BG-1234-AB"
-
-                FieldLabel:
-                    text: "Vozilo (marka i model)"
-
-                PastelTextInput:
-                    id: input_vozilo
-                    hint_text: "npr. Skoda Octavia"
-
-                FieldLabel:
-                    text: "Registracija istice (format GGGG-MM-DD)"
-
-                PastelTextInput:
-                    id: input_registracija
-                    hint_text: "npr. 2026-12-31"
-
-                FieldLabel:
-                    text: "Osiguranje istice (format GGGG-MM-DD)"
-
-                PastelTextInput:
-                    id: input_osiguranje
-                    hint_text: "npr. 2026-11-15"
-
-                RoundButton:
-                    label_text: "Sacuvaj profil"
-                    tint: 0.30, 0.52, 0.36, 1
-                    text_color: 1, 1, 1, 1
-                    size_hint_y: None
-                    height: dp(56)
-                    on_release: root.sacuvaj_profil()
-
-                PastelCard:
-                    tint: root.boja_dokumenti
-                    size_hint_y: None
-                    height: self.minimum_height
-                    padding: dp(12)
-                    orientation: "vertical"
-                    Label:
-                        text: root.tekst_dokumenti
-                        font_size: '14sp'
-                        bold: True
-                        color: 1, 1, 1, 1
-                        halign: "left"
-                        valign: "top"
-                        size_hint_y: None
-                        text_size: self.width, None
-                        height: self.texture_size[1]
-
-                FieldLabel:
-                    text: "Ovi podaci se prikazuju u zaglavlju PDF mesecnog izvestaja (Izvestaj -> Izvoz PDF)."
-                    size_hint_y: None
-                    height: dp(60)
-                    text_size: self.width, None
-
-# ============================================================
-# VALUTA - izbor prikaza cena (RSD ili EUR) i kurs
-# ============================================================
-
-<ValutaScreen>:
-    name: "valuta"
-    ScreenRoot:
-
-        TitleLabel:
-            text: "Valuta"
-
-        NavBar:
-            RoundButton:
-                label_text: "Pocetna"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "home"
-            RoundButton:
-                label_text: "Podesavanja"
-                tint: 0.36, 0.46, 0.64, 1
-                on_release: root.manager.current = "podesavanja"
-
-        FieldLabel:
-            text: "Cene se u aplikaciji uvek racunaju i cuvaju u dinarima. Ovde bira se samo u kojoj valuti da se PRIKAZUJU."
-
-        BoxLayout:
-            size_hint_y: None
-            height: dp(80)
-            padding: dp(10)
-            canvas.before:
-                Color:
-                    rgba: 0.30, 0.29, 0.42, 0.85
-                RoundedRectangle:
-                    pos: self.pos
-                    size: self.size
-                    radius: [dp(14)]
-            Label:
-                text: root.tekst_kurs
-                color: 1, 1, 1, 1
-                halign: "center"
-                valign: "middle"
-                text_size: self.size
-
-        BoxLayout:
-            size_hint_y: None
-            height: dp(56)
-            spacing: dp(10)
-
-            RoundButton:
-                label_text: "Prikazuj u RSD"
-                tint: (0.30, 0.52, 0.36, 1) if root.valuta_izbor == "RSD" else (0.36, 0.35, 0.48, 1)
-                text_color: 0.95, 1, 0.96, 1
-                on_release: root.izaberi_valutu("RSD")
-
-            RoundButton:
-                label_text: "Prikazuj u EUR"
-                tint: (0.30, 0.52, 0.36, 1) if root.valuta_izbor == "EUR" else (0.36, 0.35, 0.48, 1)
-                text_color: 0.95, 1, 0.96, 1
-                on_release: root.izaberi_valutu("EUR")
-
-        RoundButton:
-            label_text: "Osvezi kurs sada"
-            tint: 0.36, 0.46, 0.64, 1
-            text_color: 1, 1, 1, 1
-            size_hint_y: None
-            height: dp(52)
-            on_release: root.osvezi_kurs_rucno()
-
-        FieldLabel:
-            text: "Kurs se automatski osvezava jednom dnevno (kad prvi put otvoris app tog dana). Ovde mozes rucno da ga povuces ponovo, npr. ako juce nije bilo interneta."
-            size_hint_y: None
-            height: dp(70)
-            text_size: self.width, None
-
-        Widget:
+# NavigacijaScreen, GoogleApiScreen, ProfilScreen, ValutaScreen su
+# izdvojeni u ekran_navigacija.py / ekran_google_api.py /
+# ekran_profil.py / ekran_valuta.py (KV deo se dodaje nize, u
+# TaksiApp.build()).
 
 # ============================================================
 # BACKUP - trajno cuvanje/vracanje voznji
@@ -5041,189 +4781,10 @@ class GpsVoznjaScreen(Screen):
         _prikazi_popup_poruku("Voznja zavrsena", tekst, size_hint=(0.85, 0.4))
 
 
-class NavigacijaScreen(Screen):
-    def otvori_navigaciju(self):
-        odrediste = self.ids.input_odrediste.text.strip()
-        if not odrediste:
-            _prikazi_popup_poruku("Info", "Unesi odrediste pre otvaranja navigacije.", size_hint=(0.8, 0.3))
-            return
-
-        destinacija = urllib.parse.quote(odrediste)
-
-        # "google.navigation" je poseban link koji Google Maps na
-        # Androidu prepoznaje i odmah pokrece navigaciju korak-po-korak
-        # (bez ekrana za pregled rute na kome bi inace trebalo rucno
-        # kliknuti "Kreni"). Polazna tacka je uvek TRENUTNA GPS pozicija
-        # telefona u tom trenutku - ovaj format ne dozvoljava da se
-        # zada neka druga/starija polazna tacka.
-        url_navigacija = f"google.navigation:q={destinacija}&mode=d"
-
-        # Rezervni link, ako iz nekog razloga google.navigation ne
-        # uspe da se otvori (npr. Google Maps app nije instaliran) -
-        # ovaj samo prikazuje rutu, bez automatskog starta.
-        url_rezervni = f"https://www.google.com/maps/dir/?api=1&destination={destinacija}&travelmode=driving"
-
-        try:
-            webbrowser.open(url_navigacija)
-        except Exception:
-            try:
-                webbrowser.open(url_rezervni)
-            except Exception:
-                _prikazi_popup_poruku("Greska", "Ne mogu da otvorim navigaciju na ovom uredjaju.", size_hint=(0.8, 0.3))
-
-
-class GoogleApiScreen(Screen):
-    def on_pre_enter(self, *args):
-        self.ids.input_google_kljuc.text = API.google_kljuc
-
-    def sacuvaj_kljuc(self):
-        API.google_kljuc = self.ids.input_google_kljuc.text.strip()
-        app = App.get_running_app()
-        API.sacuvaj(app.user_data_dir)
-
-        _prikazi_popup_poruku("Info", "Google API kljuc sacuvan.", size_hint=(0.8, 0.3))
-
-
-def _dani_do_isteka(datum_str):
-    """Vraca broj dana do isteka za dati datum (format GGGG-MM-DD), ili
-    None ako datum nije unet ili nije validan. Broj moze biti
-    negativan ako je datum vec prosao (znaci da je vec isteklo)."""
-    if not datum_str:
-        return None
-    try:
-        datum = datetime.strptime(datum_str, "%Y-%m-%d").date()
-    except ValueError:
-        return None
-    return (datum - datetime.now().date()).days
-
-
-def _stanje_dokumenata_vozila():
-    """Vraca (tekst, boja) za kombinovani status registracije i
-    osiguranja - koristi se na ekranu Profil vozaca. Boja kartice
-    prati NAJGORE od ta dva stanja (crveno ako je bar jedno isteklo,
-    zuto ako bar jedno istice u naredni 30 dana, inace zeleno; sivo
-    ako nijedan datum jos nije unet)."""
-
-    def opis(dani, naziv):
-        if dani is None:
-            return f"{naziv}: nije unet datum isteka"
-        if dani < 0:
-            return f"{naziv}: ISTEKLO pre {abs(dani)} dana!"
-        if dani == 0:
-            return f"{naziv}: istice DANAS!"
-        return f"{naziv}: istice za {dani} dana"
-
-    def nivo(dani):
-        if dani is None:
-            return 0
-        if dani < 0:
-            return 3
-        if dani <= 30:
-            return 2
-        return 1
-
-    reg_dani = _dani_do_isteka(VOZAC.registracija_datum)
-    osig_dani = _dani_do_isteka(VOZAC.osiguranje_datum)
-
-    tekst = opis(reg_dani, "Registracija") + "\n" + opis(osig_dani, "Osiguranje")
-
-    boje = {
-        0: [0.35, 0.35, 0.45, 0.92],
-        1: [0.24, 0.46, 0.30, 0.95],
-        2: [0.60, 0.48, 0.16, 0.95],
-        3: [0.62, 0.24, 0.24, 0.95],
-    }
-    najgori_nivo = max(nivo(reg_dani), nivo(osig_dani))
-    return tekst, boje[najgori_nivo]
-
-
-class ProfilScreen(Screen):
-    tekst_dokumenti = StringProperty("")
-    boja_dokumenti = ListProperty([0.35, 0.35, 0.45, 0.92])
-
-    def on_pre_enter(self, *args):
-        self.ids.input_ime.text = VOZAC.ime_prezime
-        self.ids.input_telefon.text = VOZAC.telefon
-        self.ids.input_licenca.text = VOZAC.broj_licence
-        self.ids.input_tablice.text = VOZAC.tablice
-        self.ids.input_vozilo.text = VOZAC.vozilo
-        self.ids.input_registracija.text = VOZAC.registracija_datum
-        self.ids.input_osiguranje.text = VOZAC.osiguranje_datum
-        self._osvezi_dokumenti()
-
-    def _osvezi_dokumenti(self):
-        self.tekst_dokumenti, self.boja_dokumenti = _stanje_dokumenata_vozila()
-
-    def sacuvaj_profil(self):
-        reg_tekst = self.ids.input_registracija.text.strip()
-        osig_tekst = self.ids.input_osiguranje.text.strip()
-
-        for naziv, vrednost in (("Registracija", reg_tekst), ("Osiguranje", osig_tekst)):
-            if vrednost and _dani_do_isteka(vrednost) is None:
-                _prikazi_popup_poruku(
-                    "Greska",
-                    f"{naziv}: datum mora biti u formatu GGGG-MM-DD (npr. 2026-12-31), ili ostavi prazno.",
-                    size_hint=(0.85, 0.4),
-                )
-                return
-
-        VOZAC.ime_prezime = self.ids.input_ime.text.strip()
-        VOZAC.telefon = self.ids.input_telefon.text.strip()
-        VOZAC.broj_licence = self.ids.input_licenca.text.strip()
-        VOZAC.tablice = self.ids.input_tablice.text.strip()
-        VOZAC.vozilo = self.ids.input_vozilo.text.strip()
-        VOZAC.registracija_datum = reg_tekst
-        VOZAC.osiguranje_datum = osig_tekst
-
-        app = App.get_running_app()
-        VOZAC.sacuvaj(app.user_data_dir)
-        self._osvezi_dokumenti()
-
-        _prikazi_popup_poruku("Info", "Profil vozaca je sacuvan.", size_hint=(0.8, 0.3))
-
-
-class ValutaScreen(Screen):
-    tekst_kurs = StringProperty("")
-    valuta_izbor = StringProperty("RSD")
-
-    def on_pre_enter(self, *args):
-        self.valuta_izbor = KURS.valuta
-        self._osvezi_tekst()
-
-    def _osvezi_tekst(self):
-        if KURS.kurs_eur_rsd:
-            self.tekst_kurs = (
-                f"1 EUR = {KURS.kurs_eur_rsd:.2f} RSD\n"
-                f"(kurs od {KURS.datum_kursa or 'nepoznatog datuma'})"
-            )
-        else:
-            self.tekst_kurs = "Kurs jos nije povucen sa interneta."
-
-    def izaberi_valutu(self, valuta):
-        self.valuta_izbor = valuta
-        KURS.valuta = valuta
-        app = App.get_running_app()
-        KURS.sacuvaj(app.user_data_dir)
-
-    def osvezi_kurs_rucno(self):
-        app = App.get_running_app()
-
-        def posao():
-            uspeh, greska = KURS.osvezi_ako_treba(app.user_data_dir, prinudno=True)
-            Clock.schedule_once(lambda dt: self._posle_osvezavanja(uspeh, greska))
-
-        threading.Thread(target=posao, daemon=True).start()
-
-    def _posle_osvezavanja(self, uspeh, greska):
-        self._osvezi_tekst()
-        if uspeh:
-            _prikazi_popup_poruku("Info", "Kurs je osvezen.", size_hint=(0.8, 0.3))
-        else:
-            _prikazi_popup_poruku(
-                "Greska",
-                f"Nije uspelo povlacenje kursa:\n{greska}",
-                size_hint=(0.85, 0.4),
-            )
+# NavigacijaScreen -> ekran_navigacija.py
+# GoogleApiScreen -> ekran_google_api.py
+# ProfilScreen (+ _dani_do_isteka, _stanje_dokumenata_vozila) -> ekran_profil.py
+# ValutaScreen -> ekran_valuta.py
 
 
 def _stavka_bez_id(stavka):
@@ -6086,6 +5647,12 @@ def _prikazi_popup_poruku(naslov, tekst, size_hint=(0.85, 0.5)):
     return popup
 
 
+ekran_navigacija.poveži_popup(_prikazi_popup_poruku)
+ekran_google_api.poveži(API, _prikazi_popup_poruku)
+ekran_profil.poveži(VOZAC, _prikazi_popup_poruku)
+ekran_valuta.poveži(KURS, _prikazi_popup_poruku)
+
+
 def _prikazi_gresku_ekran(poruka):
     """Vraca prost Kivy ekran koji ispisuje gresku umesto da app pukne bez traga."""
     sv = ScrollView()
@@ -6137,7 +5704,14 @@ class TaksiApp(App):
                 target=lambda: KURS.osvezi_ako_treba(self.user_data_dir),
                 daemon=True,
             ).start()
-            root = Builder.load_string(KV + grafik_zarade.GRAFIK_KV)
+            root = Builder.load_string(
+                KV
+                + grafik_zarade.GRAFIK_KV
+                + ekran_navigacija.NAVIGACIJA_KV
+                + ekran_google_api.GOOGLE_API_KV
+                + ekran_profil.PROFIL_KV
+                + ekran_valuta.VALUTA_KV
+            )
             # Provera zakljucavanja (otisak) se pokrece tek NAKON sto je
             # citav ScreenManager sagradjen (vidi napomenu u
             # LockScreen.pokusaj_ili_preskoci) - zato ide kroz
