@@ -97,7 +97,6 @@ def _zaustavi_foreground_notifikaciju(service):
 def main():
     user_data_dir = odredi_user_data_dir()
     ocisti_stop_fajl(user_data_dir)
-    upisi_running_fajl(user_data_dir)
     service = _pokreni_foreground_notifikaciju()
 
     postavi_status(
@@ -120,6 +119,7 @@ def main():
     )
 
     pokrenut = tracker.pokreni()
+    upisi_running_fajl(user_data_dir)
     if not pokrenut:
         postavi_status(
             gps_status="Greska pri pokretanju GPS-a.",
@@ -135,6 +135,7 @@ def main():
             if treba_zaustaviti_servis(user_data_dir) or not stanje.aktivna:
                 break
 
+            upisi_running_fajl(user_data_dir)
             tracker.pull_lokaciju()
 
             stanje.ucitaj(user_data_dir)

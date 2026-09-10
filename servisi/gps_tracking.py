@@ -16,6 +16,7 @@ except Exception:  # pragma: no cover - Kivy nije obavezan za unit/probe skripte
 ANDROID_SERVICE_CLASS = "org.licno.taksiapp.ServiceGpstracking"
 STOP_FAJL = "gps_tracking_service.stop"
 RUNNING_FAJL = "gps_tracking_service.running"
+RUNNING_TTL_SEC = 15
 
 
 def odredi_user_data_dir(user_data_dir=None):
@@ -82,6 +83,14 @@ def obrisi_running_fajl(user_data_dir=None):
         pass
     except Exception:
         pass
+
+
+def procitaj_running_timestamp(user_data_dir=None):
+    try:
+        with open(putanja_running_fajla(user_data_dir), "r", encoding="utf-8") as f:
+            return float(f.read().strip())
+    except Exception:
+        return None
 
 
 def haversine_km(lat1, lon1, lat2, lon2):
@@ -514,7 +523,8 @@ def android_foreground_servis_pokrenut(user_data_dir=None):
                     return True
     except Exception:
         pass
-    return os.path.exists(putanja_running_fajla(user_data_dir))
+    ts = procitaj_running_timestamp(user_data_dir)
+    return ts is not None and (time.time() - ts) <= RUNNING_TTL_SEC
 
 
 def pokreni_android_foreground_servis(argument="", user_data_dir=None):

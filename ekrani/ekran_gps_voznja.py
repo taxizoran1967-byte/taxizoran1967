@@ -22,6 +22,7 @@ from servisi import database as db
 from servisi.gps_tracking import (
     AKTIVNA_VOZNJA,
     AndroidLocationTracker,
+    android_foreground_servis_pokrenut,
     android_foreground_servis_dostupan,
     dijagnostika_lokacije,
     dodaj_dijagnozu,
@@ -523,15 +524,6 @@ class GpsVoznjaScreen(Screen):
 
         app = App.get_running_app()
         self._ucitaj_stanje_voznje()
-        self._zaustavi_lokalni_gps()
-        if self._radi_preko_foreground_servisa():
-            zaustavljeno, greska = zaustavi_android_foreground_servis(
-                user_data_dir=app.user_data_dir,
-            )
-            if not zaustavljeno:
-                self.tekst_dijagnoza = (
-                    (AKTIVNA_VOZNJA.dijagnoza + "\n") if AKTIVNA_VOZNJA.dijagnoza else ""
-                ) + f"Foreground servis nije zaustavljen cisto ({greska})."
 
         if self._tajmer:
             self._tajmer.cancel()
@@ -598,6 +590,20 @@ class GpsVoznjaScreen(Screen):
     def _sacuvaj_zavrsenu_voznju(self, km, cena_po_km, ukupno, tarifa_naziv,
                                    polazak_adresa, dolazak_adresa):
         app = App.get_running_app()
+        self._ucitaj_stanje_voznje()
+        if AKTIVNA_VOZNJA.km > km:
+            km = AKTIVNA_VOZNJA.km
+
+        self._zaustavi_lokalni_gps()
+        if android_foreground_servis_pokrenut(app.user_data_dir):
+            zaustavljeno, greska = zaustavi_android_foreground_servis(
+                user_data_dir=app.user_data_dir,
+            )
+            if not zaustavljeno:
+                self.tekst_dijagnoza = (
+                    (AKTIVNA_VOZNJA.dijagnoza + "\n") if AKTIVNA_VOZNJA.dijagnoza else ""
+                ) + f"Foreground servis nije zaustavljen cisto ({greska})."
+
         vreme_pocetka_txt = None
         if AKTIVNA_VOZNJA.pocetak_vreme:
             try:
