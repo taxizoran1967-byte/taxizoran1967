@@ -7,7 +7,7 @@
 ## ✨ Glavne funkcije
 
 ### 📍 Praćenje vožnji
-- **GPS vožnja (automatski)** — prati GPS u realnom vremenu, automatski računa kilometražu i cenu
+- **GPS vožnja (automatski)** — prati GPS u realnom vremenu, automatski računa kilometražu i cenu, a na Androidu nastavlja praćenje i preko foreground servisa u pozadini
 - **Ručni unos** — kalkulator za vožnje koje se ne prate GPS-om
 - **Evidencija** — pregled svih vožnji sa pretragom po datumu, tekstu, ceni
 - **Izmena/brisanje** — editujem ili brišem postojeće vožnje

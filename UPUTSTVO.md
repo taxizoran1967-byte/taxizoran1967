@@ -40,7 +40,8 @@ Ovo je glavni način unosa vožnje dok voziš:
 1. **(Opciono)** Pre nego što klikneš "Počni vožnju", možeš uneti krajnju adresu u polje "Krajnja adresa" — ako je uneseš, čim klikneš Start, odmah će se otvoriti Google navigacija korak-po-korak ka toj adresi. Ako ostaviš prazno, i dalje sve radi normalno — samo bez automatskog otvaranja navigacije.
 2. Klikneš **POČNI VOŽNJU**. App traži dozvolu za lokaciju ako je prvi put, zatim počinje da meri kilometražu u realnom vremenu na ekranu.
 3. Ekran u toku vožnje prikazuje: adresu polaska, pređene kilometre, trajanje vožnje i trenutnu cenu (obračunatu uživo).
-4. Kad stigneš, klikneš **ZAVRŠI VOŽNJU**. App sam pronalazi tvoju trenutnu adresu (reverse geocoding) i čuva vožnju u Evidenciju.
+4. Na Androidu se uz aktivnu vožnju prikazuje trajna notifikacija — to znači da foreground servis nastavlja GPS praćenje i dok koristiš drugu aplikaciju.
+5. Kad stigneš, klikneš **ZAVRŠI VOŽNJU**. App sam pronalazi tvoju trenutnu adresu (reverse geocoding) i čuva vožnju u Evidenciju.
 
 **Bitne napomene:**
 - GPS vožnja koristi samo dve tarife: **Osnovnu** ili **Noćnu** — koja od njih važi zavisi isključivo od prekidača u **Podešavanja → Noćna tarifa** (nije automatski po satu). Za Vikend ili Aerodromski transfer koristi ručni unos (Kalkulator).
