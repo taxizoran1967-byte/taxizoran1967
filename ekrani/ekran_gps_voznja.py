@@ -489,8 +489,8 @@ class GpsVoznjaScreen(Screen):
         self._ucitaj_stanje_voznje()
         self.voznja_aktivna = AKTIVNA_VOZNJA.aktivna
         self.tekst_km = f"Predjeno: {AKTIVNA_VOZNJA.km:.2f} km"
-        self.tekst_gps_status = AKTIVNA_VOZNJA.gps_status or self.tekst_gps_status
-        self.tekst_dijagnoza = AKTIVNA_VOZNJA.dijagnoza or self.tekst_dijagnoza
+        self.tekst_gps_status = AKTIVNA_VOZNJA.gps_status
+        self.tekst_dijagnoza = AKTIVNA_VOZNJA.dijagnoza
 
         if AKTIVNA_VOZNJA.pocetak_vreme:
             pocetak = datetime.fromisoformat(AKTIVNA_VOZNJA.pocetak_vreme)
@@ -525,7 +525,9 @@ class GpsVoznjaScreen(Screen):
         self._ucitaj_stanje_voznje()
         self._zaustavi_lokalni_gps()
         if self._radi_preko_foreground_servisa():
-            zaustavljeno, greska = zaustavi_android_foreground_servis(app.user_data_dir)
+            zaustavljeno, greska = zaustavi_android_foreground_servis(
+                user_data_dir=app.user_data_dir,
+            )
             if not zaustavljeno:
                 self.tekst_dijagnoza = (
                     (AKTIVNA_VOZNJA.dijagnoza + "\n") if AKTIVNA_VOZNJA.dijagnoza else ""
