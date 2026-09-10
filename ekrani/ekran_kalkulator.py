@@ -12,6 +12,7 @@ from kivy.properties import StringProperty
 from kivy.app import App
 
 from servisi import database as db
+from servisi import validators  # ← NOVO: Import validatora
 
 
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji (ekran_evidencija.py
@@ -71,6 +72,10 @@ class KalkulatorScreen(Screen):
                 self.izracunaj()
 
     def izracunaj(self):
+        """
+        Izracunava cenu vožnje u realnom vremenu (bez validacije - samo prikaz).
+        Ako km nije validan, prikazuje default poruku.
+        """
         try:
             km = float(self.ids.input_km.text.replace(",", "."))
         except (ValueError, AttributeError):
@@ -85,38 +90,78 @@ class KalkulatorScreen(Screen):
         )
 
     def sacuvaj_voznju(self):
-        try:
-            km = float(self.ids.input_km.text.replace(",", "."))
-        except (ValueError, AttributeError):
-            self._poruka("Unesi ispravnu kilometrazu pre cuvanja.")
+        """
+        Čuva voznju u bazu sa VALIDACIJOM - koristi validators modul.
+        
+        Provera:
+        1. Kilometraža - mora biti broj > 0, < 500
+        2. Adrese - opcione, max 500 karaktera
+        3. Napomena - opciona, max 1000 karaktera
+        4. Tarifa - mora biti iz dostupne liste
+        """
+        
+        # 1. VALIDACIJA KILOMETRAŽE (NOVO - koristi validator)
+        ok, km, poruka_km = validators.validiraj_kilometrazu(
+            self.ids.input_km.text
+        )
+        if not ok:
+            self._poruka(poruka_km)
             return
-        if km <= 0:
-            self._poruka("Kilometraza mora biti veca od 0.")
+        
+        # 2. VALIDACIJA ADRESA (NOVO - koristi validator)
+        od_adresa = self.ids.input_od.text.strip()
+        ok, poruka_od = validators.validiraj_adresu(od_adresa)
+        if not ok:
+            self._poruka(poruka_od)
             return
-
+        
+        do_adresa = self.ids.input_do.text.strip()
+        ok, poruka_do = validators.validiraj_adresu(do_adresa)
+        if not ok:
+            self._poruka(poruka_do)
+            return
+        
+        # 3. VALIDACIJA NAPOMENE (NOVO - koristi validator)
+        napomena = self.ids.input_napomena.text.strip()
+        ok, poruka_napomena = validators.validiraj_napomenu(napomena)
+        if not ok:
+            self._poruka(poruka_napomena)
+            return
+        
+        # 4. VALIDACIJA TARIFE (NOVO - koristi validator)
         tarifa_naziv = self.ids.spinner_tarifa.text
+        ok, poruka_tarifa = validators.validiraj_tarifu(
+            tarifa_naziv, _DEFAULT_TARIFE
+        )
+        if not ok:
+            self._poruka(poruka_tarifa)
+            return
+        
+        # Sve validacije su prošle - računa cenu
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
         ukupno = _CENE_REF.start_fee + km * cena_po_km
 
+        # Ako se editujem, obriši staru vožnju
         if self.editing_id is not None:
             db.obrisi_voznju(self.editing_id)
 
+        # Dodaj novu vožnju u bazu
         db.dodaj_voznju(
-            od_adresa=self.ids.input_od.text.strip(),
-            do_adresa=self.ids.input_do.text.strip(),
+            od_adresa=od_adresa,
+            do_adresa=do_adresa,
             km=km,
             tarifa_naziv=tarifa_naziv,
             cena_po_km=cena_po_km,
             start_taksa=_CENE_REF.start_fee,
             ukupna_cena=ukupno,
-            napomena=self.ids.input_napomena.text.strip(),
+            napomena=napomena,
         )
 
         bila_izmena = self.editing_id is not None
         self.editing_id = None
         self.dugme_tekst = "Sacuvaj voznju"
 
-        # reset forme
+        # Reset forme
         self.ids.input_km.text = ""
         self.ids.input_od.text = ""
         self.ids.input_do.text = ""
@@ -129,6 +174,7 @@ class KalkulatorScreen(Screen):
             self._poruka(f"Sacuvano! Cena voznje: {_FORMATIRAJ_CENU(ukupno)}")
 
     def _poruka(self, tekst):
+        """Prikazuje popup poruku korisniku."""
         _PRIKAZI_POPUP("Info", tekst, size_hint=(0.8, 0.3))
 
 KALKULATOR_KV = """
