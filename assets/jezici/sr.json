@@ -1,0 +1,77 @@
+{
+  "_meta": {
+    "name": "Srpski",
+    "code": "sr",
+    "version": "0.1"
+  },
+
+  "home": {
+    "naslov": "TAXI ZORAN",
+    "gps_voznja": "GPS voznja (auto)",
+    "pocetak_rucno": "Pocetak voznje (rucno)",
+    "istorija": "Istorija voznji",
+    "izvestaj": "Izvestaj",
+    "profil": "Profil vozaca",
+    "podesavanja": "Podesavanja",
+    "uputstvo": "Uputstvo za upotrebu"
+  },
+
+  "kalkulator": {
+    "naslov": "Kalkulator voznje",
+    "unesi_km": "Unesi kilometrazu da vidis cenu",
+    "sacuvaj_voznju": "Sacuvaj voznju",
+    "sacuvaj_izmenu": "Sacuvaj izmenu",
+    "km_greska": "Unesi ispravnu kilometrazu pre cuvanja.",
+    "km_veca_od_nule": "Kilometraza mora biti veca od 0.",
+    "izmena_sacuvana": "Izmena sacuvana! Cena voznje: {cena}",
+    "sacuvano": "Sacuvano! Cena voznje: {cena}",
+    "tarifa": "Tarifa",
+    "kilometraza": "Kilometraza (km)",
+    "od": "Od (opciono)",
+    "do": "Do (opciono)",
+    "napomena": "Napomena (opciono)",
+    "od_hint": "adresa polazista",
+    "do_hint": "adresa odredista",
+    "napomena_hint": "npr. cekanje, prtljag...",
+    "cena_prikaz": "Cena: {cena}\n(start {start} + {km} km x {cena_km})",
+    "nocna_tarifa": "Nocna (22-07h)"
+  },
+
+  "profil": {
+    "naslov": "Profil vozaca",
+    "ime": "Ime i prezime",
+    "telefon": "Telefon",
+    "licenca": "Broj licence / dozvole za taksi",
+    "tablice": "Registarske tablice",
+    "vozilo": "Vozilo (marka i model)",
+    "registracija": "Registracija istice (format GGGG-MM-DD)",
+    "osiguranje": "Osiguranje istice (format GGGG-MM-DD)",
+    "sacuvaj": "Sacuvaj profil",
+    "greska": "Greska",
+    "datum_format": "{naziv}: datum mora biti u formatu GGGG-MM-DD (npr. 2026-12-31), ili ostavi prazno.",
+    "sacuvano": "Profil vozaca je sacuvan.",
+    "reg_nije_unet": "Registracija: nije unet datum isteka",
+    "reg_isteklo": "Registracija: ISTEKLO pre {dani} dana!",
+    "reg_istice_danas": "Registracija: istice DANAS!",
+    "reg_istice_za": "Registracija: istice za {dani} dana",
+    "osig_nije_unet": "Osiguranje: nije unet datum isteka",
+    "osig_isteklo": "Osiguranje: ISTEKLO pre {dani} dana!",
+    "osig_istice_danas": "Osiguranje: istice DANAS!",
+    "osig_istice_za": "Osiguranje: istice za {dani} dana",
+    "ime_hint": "npr. Petar Petrovic",
+    "telefon_hint": "npr. 065 123 4567",
+    "licenca_hint": "npr. TX-00123",
+    "tablice_hint": "npr. BG-1234-AB",
+    "vozilo_hint": "npr. Skoda Octavia",
+    "registracija_hint": "npr. 2026-12-31",
+    "osiguranje_hint": "npr. 2026-11-15",
+    "pdf_napomena": "Ovi podaci se prikazuju u zaglavlju PDF mesecnog izvestaja (Izvestaj -> Izvoz PDF)."
+  },
+
+  "buttons": {
+    "pocetna": "Pocetna",
+    "evidencija": "Evidencija",
+    "izvestaj": "Izvestaj",
+    "info": "Info"
+  }
+}
