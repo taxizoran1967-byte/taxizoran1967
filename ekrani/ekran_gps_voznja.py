@@ -24,12 +24,11 @@ import ssl
 from datetime import datetime
 
 from kivy.uix.screenmanager import Screen
-from kivy.properties import StringProperty, BooleanProperty, DictProperty
+from kivy.properties import StringProperty, BooleanProperty
 from kivy.app import App
 from kivy.clock import Clock
 
 from servisi import database as db
-from servisi import i18n
 
 try:
     import certifi
@@ -55,12 +54,6 @@ def poveži(cene_obj, api_obj, formatiraj_cenu_fn, prikazi_popup_fn):
     _API_REF = api_obj
     _FORMATIRAJ_CENU = formatiraj_cenu_fn
     _PRIKAZI_POPUP = prikazi_popup_fn
-
-
-def _app_prevod(kljuc, **kwargs):
-    app = App.get_running_app()
-    jezik = getattr(app, "jezik", "sr") if app else "sr"
-    return i18n.prevedi(jezik, kljuc, **kwargs)
 
 
 def haversine_km(lat1, lon1, lat2, lon2):
@@ -107,7 +100,7 @@ def reverse_geocode(lat, lon, callback, dijagnoza_callback=None):
         try:
             url = (
                 "https://maps.googleapis.com/maps/api/geocode/json"
-                f"?latlng={lat},{lon}&key={kljuc}&language={getattr(App.get_running_app(), 'jezik', 'sr')}"
+                f"?latlng={lat},{lon}&key={kljuc}&language=sr"
             )
             with urllib.request.urlopen(url, timeout=8, context=SSL_KONTEKST) as resp:
                 podaci = json.loads(resp.read().decode("utf-8"))
@@ -130,7 +123,7 @@ def reverse_geocode(lat, lon, callback, dijagnoza_callback=None):
         if not adresa:
             adresa = _osm_pokusaj(dnevnik)
         if not adresa:
-            adresa = _app_prevod("gps_address_unavailable")
+            adresa = "Adresa nije dostupna"
         Clock.schedule_once(lambda dt: callback(adresa))
         if dijagnoza_callback and dnevnik:
             tekst = "\n".join(dnevnik)
@@ -199,7 +192,6 @@ AKTIVNA_VOZNJA = AktivnaVoznjaState()
 
 
 class GpsVoznjaScreen(Screen):
-    tekstovi = DictProperty({})
     tekst_polazak = StringProperty("Nije zapoceta")
     tekst_km = StringProperty("Predjeno: 0.00 km")
     tekst_trajanje = StringProperty("Trajanje: 00:00:00")
@@ -212,46 +204,7 @@ class GpsVoznjaScreen(Screen):
     MIN_POMERAJ_KM = 0.01    # ignorisi mikro-skokove manje od 10m (GPS sum)
     MAX_BRZINA_KMH = 180     # ignorisi nerealne skokove (losa GPS tacka)
 
-    def _jezik(self):
-        app = App.get_running_app()
-        return getattr(app, "jezik", "sr") if app else "sr"
-
-    def _trazim_lokaciju(self):
-        return i18n.prevedi(self._jezik(), "gps_searching_location")
-
-    def _je_tekst_trazim_lokaciju(self, tekst):
-        return tekst in {
-            i18n.prevedi("sr", "gps_searching_location"),
-            i18n.prevedi("en", "gps_searching_location"),
-        }
-
-    def osvezi_tekstove(self):
-        jezik = self._jezik()
-        self.tekstovi = {
-            "title": i18n.prevedi(jezik, "gps_title"),
-            "home": i18n.prevedi(jezik, "nav_home"),
-            "history": i18n.prevedi(jezik, "gps_nav_history"),
-            "start_card": i18n.prevedi(jezik, "gps_start_card"),
-            "destination": i18n.prevedi(jezik, "gps_destination"),
-            "destination_hint": i18n.prevedi(jezik, "gps_destination_hint"),
-            "destination_info": i18n.prevedi(jezik, "gps_destination_info"),
-            "start_button": i18n.prevedi(jezik, "gps_start_button"),
-            "finish_button": i18n.prevedi(jezik, "gps_finish_button"),
-        }
-        if "input_dolazak_rucno" in self.ids:
-            self.ids.input_dolazak_rucno.hint_text = self.tekstovi["destination_hint"]
-        if not self.voznja_aktivna and not AKTIVNA_VOZNJA.aktivna:
-            self.tekst_polazak = i18n.prevedi(jezik, "gps_not_started")
-            self.tekst_km = i18n.prevedi(jezik, "gps_distance", km=0.0)
-            self.tekst_trajanje = i18n.prevedi(jezik, "gps_duration", duration="00:00:00")
-            self.tekst_cena = i18n.prevedi(
-                jezik, "gps_price", price=_FORMATIRAJ_CENU(0)
-            )
-        else:
-            self._osvezi_prikaz()
-
     def on_pre_enter(self, *args):
-        self.osvezi_tekstove()
         self._tajmer = None
         self._brojac_signala = None
         self._brojac_poll = None
@@ -259,22 +212,17 @@ class GpsVoznjaScreen(Screen):
         self._zadnje_vreme_lok = None
         if AKTIVNA_VOZNJA.aktivna:
             self.voznja_aktivna = True
-            self.tekst_polazak = (
-                AKTIVNA_VOZNJA.pocetak_adresa
-                or i18n.prevedi(self._jezik(), "gps_address_unavailable")
-            )
+            self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa or "Adresa nije dostupna"
             self._osvezi_prikaz()
             self._pokreni_tajmer()
             self._android_gps_start()  # ponovo zakaci listener + omoguci poll
             self._brojac_poll = Clock.schedule_interval(self._pull_lokaciju, 2)
         else:
             self.voznja_aktivna = False
-            self.tekst_polazak = i18n.prevedi(self._jezik(), "gps_not_started")
-            self.tekst_km = i18n.prevedi(self._jezik(), "gps_distance", km=0.0)
-            self.tekst_trajanje = i18n.prevedi(self._jezik(), "gps_duration", duration="00:00:00")
-            self.tekst_cena = i18n.prevedi(
-                self._jezik(), "gps_price", price=_FORMATIRAJ_CENU(0)
-            )
+            self.tekst_polazak = "Nije zapoceta"
+            self.tekst_km = "Predjeno: 0.00 km"
+            self.tekst_trajanje = "Trajanje: 00:00:00"
+            self.tekst_cena = "Cena: 0 RSD"
 
     def on_leave(self, *args):
         if self._tajmer:
@@ -327,14 +275,16 @@ class GpsVoznjaScreen(Screen):
                 Permission.ACCESS_COARSE_LOCATION,
             ]
             if not all(check_permission(p) for p in potrebne):
-                self.tekst_gps_status = i18n.prevedi(self._jezik(), "gps_request_permission")
+                self.tekst_gps_status = "Trazim dozvolu za lokaciju..."
 
                 def na_odgovor(dozvole, rezultati):
                     if all(rezultati):
                         Clock.schedule_once(lambda dt: self._stvarno_pokreni_gps())
                     else:
-                        self.tekst_gps_status = i18n.prevedi(
-                            self._jezik(), "gps_permission_denied"
+                        self.tekst_gps_status = (
+                            "Dozvola za lokaciju NIJE odobrena. Idi u "
+                            "Podesavanja telefona -> Aplikacije -> Taksi App "
+                            "-> Dozvole -> Lokacija -> Dozvoli."
                         )
 
                 request_permissions(potrebne, na_odgovor)
@@ -350,11 +300,11 @@ class GpsVoznjaScreen(Screen):
 
         pokrenuto = self._android_gps_start()
         if not pokrenuto:
-            self.tekst_gps_status = i18n.prevedi(self._jezik(), "gps_start_error")
+            self.tekst_gps_status = "Greska pri pokretanju GPS-a."
             return
 
         self.voznja_aktivna = True
-        self.tekst_gps_status = i18n.prevedi(self._jezik(), "gps_searching_signal")
+        self.tekst_gps_status = "Trazim GPS signal..."
         self._sekundi_bez_signala = 0
         self._zadnje_vreme_lok = None
         self._brojac_signala = Clock.schedule_interval(self._proveri_signal, 1)
@@ -363,7 +313,7 @@ class GpsVoznjaScreen(Screen):
         AKTIVNA_VOZNJA.pocetak_vreme = datetime.now().isoformat()
         AKTIVNA_VOZNJA.pocetak_lat = None
         AKTIVNA_VOZNJA.pocetak_lon = None
-        AKTIVNA_VOZNJA.pocetak_adresa = self._trazim_lokaciju()
+        AKTIVNA_VOZNJA.pocetak_adresa = "Trazim lokaciju..."
         AKTIVNA_VOZNJA.zadnja_lat = None
         AKTIVNA_VOZNJA.zadnja_lon = None
         AKTIVNA_VOZNJA.km = 0.0
@@ -394,8 +344,8 @@ class GpsVoznjaScreen(Screen):
                 webbrowser.open(url_rezervni)
             except Exception:
                 _PRIKAZI_POPUP(
-                    i18n.prevedi(self._jezik(), "gps_navigation_error_title"),
-                    i18n.prevedi(self._jezik(), "gps_navigation_error"),
+                    "Greska",
+                    "Ne mogu da otvorim navigaciju, ali GPS voznja je pokrenuta normalno.",
                     size_hint=(0.8, 0.3),
                 )
 
@@ -528,7 +478,7 @@ class GpsVoznjaScreen(Screen):
 
             return pokrenut_bar_jedan
         except Exception as e:
-            self.tekst_gps_status = f"{i18n.prevedi(self._jezik(), 'gps_start_error')} {e}"
+            self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}"
             return False
 
     def _android_gps_stop(self):
@@ -548,15 +498,15 @@ class GpsVoznjaScreen(Screen):
             return
         self._sekundi_bez_signala += 1
         if self._sekundi_bez_signala == 15:
-            self.tekst_gps_status = i18n.prevedi(self._jezik(), "gps_no_signal_yet")
-        elif self._sekundi_bez_signala > 15 and self._sekundi_bez_signala % 10 == 0:
-            self.tekst_gps_status = i18n.prevedi(
-                self._jezik(),
-                "gps_still_searching_signal",
-                seconds=self._sekundi_bez_signala,
+            self.tekst_gps_status = (
+                "Jos uvek nema GPS signala. Voznja je pokrenuta i ceka "
+                "prvi signal - km i cena ce poceti da se racunaju cim "
+                "GPS uhvati poziciju."
             )
+        elif self._sekundi_bez_signala > 15 and self._sekundi_bez_signala % 10 == 0:
+            self.tekst_gps_status = f"Jos uvek tražim signal... ({self._sekundi_bez_signala}s)"
 
-        self.tekst_polazak = self._trazim_lokaciju()
+        self.tekst_polazak = "Trazim lokaciju..."
         self._pokreni_tajmer()
 
     # ---------------- TOKOM VOZNJE ----------------
@@ -581,7 +531,7 @@ class GpsVoznjaScreen(Screen):
             AKTIVNA_VOZNJA.zadnja_lon = lon
             AKTIVNA_VOZNJA.zadnje_vreme = time.time()
             AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
-            self.tekst_gps_status = i18n.prevedi(self._jezik(), "gps_active")
+            self.tekst_gps_status = "GPS aktivan, pratim voznju."
             reverse_geocode(
                 lat, lon, self._postavi_pocetnu_adresu,
                 dijagnoza_callback=self._geokod_dijagnoza,
@@ -591,9 +541,7 @@ class GpsVoznjaScreen(Screen):
         # od druge tacke nadalje, filtriramo lose precizne skokove
         # (bitno za tacnost kilometraze tokom stvarne voznje)
         if tacnost and tacnost > self.MIN_TACNOST_M:
-            self.tekst_gps_status = i18n.prevedi(
-                self._jezik(), "gps_weak_signal", accuracy=tacnost
-            )
+            self.tekst_gps_status = f"Slab GPS signal (+/-{tacnost:.0f}m), cekam bolji..."
             return
 
         # racunaj pomeraj od poslednje tacke
@@ -641,7 +589,7 @@ class GpsVoznjaScreen(Screen):
             self._tajmer = Clock.schedule_interval(lambda dt: self._osvezi_prikaz(), 1)
 
     def _osvezi_prikaz(self):
-        self.tekst_km = i18n.prevedi(self._jezik(), "gps_distance", km=AKTIVNA_VOZNJA.km)
+        self.tekst_km = f"Predjeno: {AKTIVNA_VOZNJA.km:.2f} km"
 
         if AKTIVNA_VOZNJA.pocetak_vreme:
             pocetak = datetime.fromisoformat(AKTIVNA_VOZNJA.pocetak_vreme)
@@ -649,22 +597,16 @@ class GpsVoznjaScreen(Screen):
             ukupno_sec = int(trajanje.total_seconds())
             h, ostatak = divmod(ukupno_sec, 3600)
             m, s = divmod(ostatak, 60)
-            self.tekst_trajanje = i18n.prevedi(
-                self._jezik(), "gps_duration", duration=f"{h:02d}:{m:02d}:{s:02d}"
-            )
+            self.tekst_trajanje = f"Trajanje: {h:02d}:{m:02d}:{s:02d}"
 
         cena_po_km = _CENE_REF.tarife.get(
             "Nocna (22-07h)" if _CENE_REF.nocna_aktivna else "Osnovna (07-22h)",
             _CENE_REF.tarife["Osnovna (07-22h)"],
         )
         cena = _CENE_REF.start_fee + AKTIVNA_VOZNJA.km * cena_po_km
-        self.tekst_cena = i18n.prevedi(
-            self._jezik(), "gps_price", price=_FORMATIRAJ_CENU(cena)
-        )
+        self.tekst_cena = f"Cena: {_FORMATIRAJ_CENU(cena)}"
 
-        if AKTIVNA_VOZNJA.pocetak_adresa and not self._je_tekst_trazim_lokaciju(
-            AKTIVNA_VOZNJA.pocetak_adresa
-        ):
+        if AKTIVNA_VOZNJA.pocetak_adresa and AKTIVNA_VOZNJA.pocetak_adresa != "Trazim lokaciju...":
             self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa
 
     # ---------------- KRAJ VOZNJE ----------------
@@ -686,7 +628,7 @@ class GpsVoznjaScreen(Screen):
             self._brojac_poll = None
 
         self.voznja_aktivna = False
-        self.tekst_gps_status = i18n.prevedi(self._jezik(), "gps_lookup_destination")
+        self.tekst_gps_status = "Trazim krajnju adresu..."
 
         # ako GPS nije uspeo da izmeri km, koristi rucni unos (ako postoji polje)
         km = AKTIVNA_VOZNJA.km
@@ -706,11 +648,9 @@ class GpsVoznjaScreen(Screen):
         ukupno = _CENE_REF.start_fee + km * cena_po_km
         tarifa_naziv = "Nocna (22-07h)" if _CENE_REF.nocna_aktivna else "Osnovna (07-22h)"
 
-        polazak_adresa = AKTIVNA_VOZNJA.pocetak_adresa or i18n.prevedi(
-            self._jezik(), "gps_address_unavailable"
-        )
-        if self._je_tekst_trazim_lokaciju(polazak_adresa):
-            polazak_adresa = i18n.prevedi(self._jezik(), "gps_address_unavailable")
+        polazak_adresa = AKTIVNA_VOZNJA.pocetak_adresa or "Adresa nije dostupna"
+        if polazak_adresa == "Trazim lokaciju...":
+            polazak_adresa = "Adresa nije dostupna"
 
         rucni_dolazak = self.ids.input_dolazak_rucno.text.strip()
 
@@ -730,7 +670,7 @@ class GpsVoznjaScreen(Screen):
         else:
             self._sacuvaj_zavrsenu_voznju(
                 km, cena_po_km, ukupno, tarifa_naziv, polazak_adresa,
-                i18n.prevedi(self._jezik(), "gps_address_unavailable"),
+                "Adresa nije dostupna",
             )
 
     def _sacuvaj_zavrsenu_voznju(self, km, cena_po_km, ukupno, tarifa_naziv,
@@ -752,7 +692,7 @@ class GpsVoznjaScreen(Screen):
             cena_po_km=cena_po_km,
             start_taksa=_CENE_REF.start_fee,
             ukupna_cena=ukupno,
-            napomena=i18n.prevedi(self._jezik(), "gps_auto_note"),
+            napomena="GPS voznja (automatski unos)",
             vreme_pocetka=vreme_pocetka_txt,
         )
 
@@ -761,31 +701,19 @@ class GpsVoznjaScreen(Screen):
 
         self.tekst_gps_status = ""
         self.tekst_dijagnoza = ""
-        self.tekst_polazak = i18n.prevedi(self._jezik(), "gps_not_started")
-        self.tekst_km = i18n.prevedi(self._jezik(), "gps_distance", km=0.0)
-        self.tekst_trajanje = i18n.prevedi(self._jezik(), "gps_duration", duration="00:00:00")
-        self.tekst_cena = i18n.prevedi(
-            self._jezik(), "gps_price", price=_FORMATIRAJ_CENU(0)
-        )
+        self.tekst_polazak = "Nije zapoceta"
+        self.tekst_km = "Predjeno: 0.00 km"
+        self.tekst_trajanje = "Trajanje: 00:00:00"
+        self.tekst_cena = f"Cena: {_FORMATIRAJ_CENU(0)}"
         self.ids.input_dolazak_rucno.text = ""
 
         self._poruka(
-            i18n.prevedi(
-                self._jezik(),
-                "gps_finished_body",
-                start=polazak_adresa,
-                end=dolazak_adresa,
-                km=km,
-                price=_FORMATIRAJ_CENU(ukupno),
-            )
+            f"Voznja sacuvana!\n{polazak_adresa}\n-> {dolazak_adresa}\n"
+            f"{km:.2f} km, {_FORMATIRAJ_CENU(ukupno)}"
         )
 
     def _poruka(self, tekst):
-        _PRIKAZI_POPUP(
-            i18n.prevedi(self._jezik(), "gps_finished_title"),
-            tekst,
-            size_hint=(0.85, 0.4),
-        )
+        _PRIKAZI_POPUP("Voznja zavrsena", tekst, size_hint=(0.85, 0.4))
 
 GPS_VOZNJA_KV = """
 # ============================================================
@@ -797,15 +725,15 @@ GPS_VOZNJA_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: root.tekstovi.get("title", "")
+            text: "GPS voznja"
 
         NavBar:
             RoundButton:
-                label_text: root.tekstovi.get("home", "")
+                label_text: "Pocetna"
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: root.tekstovi.get("history", "")
+                label_text: "Istorija"
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "evidencija"
 
@@ -826,7 +754,7 @@ GPS_VOZNJA_KV = """
                     padding: dp(14)
                     spacing: dp(4)
                     Label:
-                        text: root.tekstovi.get("start_card", "")
+                        text: "POLAZAK"
                         font_size: '13sp'
                         bold: True
                         color: 0.78, 0.74, 0.92, 1
@@ -845,14 +773,14 @@ GPS_VOZNJA_KV = """
                         height: self.texture_size[1]
 
                 FieldLabel:
-                    text: root.tekstovi.get("destination", "")
+                    text: "Krajnja adresa (opciono - unesi je PRE 'Pocni voznju' da odmah krene Google navigacija)"
 
                 PastelTextInput:
                     id: input_dolazak_rucno
-                    hint_text: root.tekstovi.get("destination_hint", "")
+                    hint_text: "npr. Nemanjina 4, Beograd"
 
                 FieldLabel:
-                    text: root.tekstovi.get("destination_info", "")
+                    text: "Ostavi prazno da sve radi kao do sad - GPS sam nalazi i polaznu i krajnju adresu."
                     size_hint_y: None
                     height: dp(34)
                     text_size: self.width, None
@@ -908,7 +836,7 @@ GPS_VOZNJA_KV = """
 
                 RoundButton:
                     id: dugme_start
-                    label_text: root.tekstovi.get("start_button", "")
+                    label_text: "POCNI VOZNJU"
                     tint: 0.30, 0.52, 0.36, 1
                     text_color: 0.92, 1, 0.94, 1
                     size_hint_y: None
@@ -918,7 +846,7 @@ GPS_VOZNJA_KV = """
 
                 RoundButton:
                     id: dugme_zavrsi
-                    label_text: root.tekstovi.get("finish_button", "")
+                    label_text: "ZAVRSI VOZNJU"
                     tint: 0.74, 0.28, 0.32, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None

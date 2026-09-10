@@ -892,93 +892,93 @@ ScreenManager:
         ScrollView:
             do_scroll_x: False
             GridLayout:
-                cols: 2
+                cols: 1
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: dp(14)
                 padding: dp(2), dp(4)
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/earnings_chart.png"
                     tekst: root.tekstovi.get("chart", "")
                     on_release: app.root.current = "grafik"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/navigation.png"
                     tekst: root.tekstovi.get("navigation", "")
                     on_release: app.root.current = "navigacija"
 
-                HomeMenuButton:
+                MenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: root.tekstovi.get("language", "Jezik / Language")
+                    on_release: app.root.current = "jezik"
+
+                MenuButton:
                     icon_src: "assets/icons/night_tariff.png"
                     tekst: root.tekstovi.get("night_tariff", "")
                     on_release: app.root.current = "nocna_tarifa"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/service.png"
                     tekst: root.tekstovi.get("service", "")
                     on_release: app.root.current = "servis"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/fuel.png"
                     tekst: root.tekstovi.get("fuel", "")
                     on_release: app.root.current = "gorivo"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/calculator.png"
                     tekst: root.tekstovi.get("other_costs", "")
                     on_release: app.root.current = "troskovi"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/weekly_report.png"
                     tekst: root.tekstovi.get("weekly_report", "")
                     on_release: app.root.current = "izvestaj"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/monthly_report.png"
                     tekst: root.tekstovi.get("monthly_report", "")
                     on_release: app.root.current = "izvestaj"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/calculator.png"
                     tekst: root.tekstovi.get("calculator", "")
                     on_release: app.root.current = "kalkulator"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/profil.png"
                     tekst: root.tekstovi.get("profile", "")
                     on_release: app.root.current = "profil"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/poziv.png"
                     tekst: root.tekstovi.get("dispatcher", "")
                     on_release: app.root.current = "poziv"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: root.tekstovi.get("prices", "")
                     on_release: app.root.current = "cene"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: root.tekstovi.get("google_api", "")
                     on_release: app.root.current = "google_api"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: root.tekstovi.get("currency", "")
                     on_release: app.root.current = "valuta"
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
-                    tekst: root.tekstovi.get("language", "")
-                    on_release: app.root.current = "jezik"
-
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: root.tekstovi.get("backup", "")
                     on_release: app.root.current = "backup"
 
-                HomeMenuButton:
+                MenuButton:
                     icon_src: "assets/icons/settings.png"
                     tekst: root.tekstovi.get("security", "")
                     on_release: app.root.current = "sigurnost"
