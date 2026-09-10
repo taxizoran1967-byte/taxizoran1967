@@ -15,6 +15,7 @@ except Exception:  # pragma: no cover - Kivy nije obavezan za unit/probe skripte
 
 ANDROID_SERVICE_CLASS = "org.licno.taksiapp.ServiceGpstracking"
 STOP_FAJL = "gps_tracking_service.stop"
+RUNNING_FAJL = "gps_tracking_service.running"
 
 
 def odredi_user_data_dir(user_data_dir=None):
@@ -41,6 +42,10 @@ def putanja_stop_fajla(user_data_dir=None):
     return os.path.join(odredi_user_data_dir(user_data_dir), STOP_FAJL)
 
 
+def putanja_running_fajla(user_data_dir=None):
+    return os.path.join(odredi_user_data_dir(user_data_dir), RUNNING_FAJL)
+
+
 def ocisti_stop_fajl(user_data_dir=None):
     try:
         os.remove(putanja_stop_fajla(user_data_dir))
@@ -60,6 +65,23 @@ def postavi_stop_fajl(user_data_dir=None):
 
 def treba_zaustaviti_servis(user_data_dir=None):
     return os.path.exists(putanja_stop_fajla(user_data_dir))
+
+
+def upisi_running_fajl(user_data_dir=None):
+    try:
+        with open(putanja_running_fajla(user_data_dir), "w", encoding="utf-8") as f:
+            f.write(str(time.time()))
+    except Exception:
+        pass
+
+
+def obrisi_running_fajl(user_data_dir=None):
+    try:
+        os.remove(putanja_running_fajla(user_data_dir))
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
 
 
 def haversine_km(lat1, lon1, lat2, lon2):
@@ -478,10 +500,29 @@ def _android_kontekst_za_servis():
     return ActivityThread.currentApplication()
 
 
+def android_foreground_servis_pokrenut(user_data_dir=None):
+    try:
+        from jnius import autoclass
+
+        Context = autoclass("android.content.Context")
+        kontekst = _android_kontekst_za_servis()
+        if kontekst is not None:
+            manager = kontekst.getSystemService(Context.ACTIVITY_SERVICE)
+            servisi = manager.getRunningServices(100)
+            for servis in servisi:
+                if servis.service.getClassName() == ANDROID_SERVICE_CLASS:
+                    return True
+    except Exception:
+        pass
+    return os.path.exists(putanja_running_fajla(user_data_dir))
+
+
 def pokreni_android_foreground_servis(argument="", user_data_dir=None):
     try:
         from jnius import autoclass
 
+        if android_foreground_servis_pokrenut(user_data_dir):
+            return True, ""
         ocisti_stop_fajl(user_data_dir)
         service = autoclass(ANDROID_SERVICE_CLASS)
         kontekst = _android_kontekst_za_servis()

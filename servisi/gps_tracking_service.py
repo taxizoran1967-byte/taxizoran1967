@@ -9,11 +9,13 @@ from servisi.gps_tracking import (
     AktivnaVoznjaState,
     obradi_lokaciju_i_sacuvaj,
     dijagnostika_lokacije,
+    obrisi_running_fajl,
     dodaj_dijagnozu,
     ocisti_stop_fajl,
     odredi_user_data_dir,
     postavi_status,
     treba_zaustaviti_servis,
+    upisi_running_fajl,
 )
 
 
@@ -95,6 +97,7 @@ def _zaustavi_foreground_notifikaciju(service):
 def main():
     user_data_dir = odredi_user_data_dir()
     ocisti_stop_fajl(user_data_dir)
+    upisi_running_fajl(user_data_dir)
     service = _pokreni_foreground_notifikaciju()
 
     postavi_status(
@@ -157,6 +160,7 @@ def main():
             time.sleep(2)
     finally:
         tracker.zaustavi()
+        obrisi_running_fajl(user_data_dir)
         _zaustavi_foreground_notifikaciju(service)
 
 
