@@ -1325,10 +1325,9 @@ class TaksiApp(App):
         return True
 
     def on_resume(self):
-        # Kad se korisnik vrati (npr. posle poziva), ponovo
-        # zakacinjemo GPS oslonac i osvezavamo prikaz ako je voznja
-        # u toku - Android ume da "otkine" listener dok je app u
-        # pozadini, pa ga vracamo rucno umesto da samo cekamo.
+        # Kad se korisnik vrati, GPS ekran sada samo obnavlja prikaz i
+        # po potrebi vraca fallback pracenje; foreground servis na
+        # Androidu nastavlja da radi nezavisno od ovog lifecycle toka.
         try:
             if not ekran_gps_voznja.AKTIVNA_VOZNJA.aktivna:
                 return
@@ -1336,12 +1335,7 @@ class TaksiApp(App):
             if sm is None:
                 return
             ekran = sm.get_screen("gps_voznja")
-            ekran._android_gps_start()
-            if getattr(ekran, "_tajmer", None) is None:
-                ekran._pokreni_tajmer()
-            if getattr(ekran, "_brojac_poll", None) is None:
-                ekran._brojac_poll = Clock.schedule_interval(ekran._pull_lokaciju, 2)
-            ekran._osvezi_prikaz()
+            ekran.obnovi_pracenje_ako_treba()
         except Exception:
             pass
 

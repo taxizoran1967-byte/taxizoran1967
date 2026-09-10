@@ -18,7 +18,7 @@ requirements = python3,kivy,sqlite3,plyer,certifi,reportlab,pillow
 orientation = portrait
 fullscreen = 0
 
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,MANAGE_EXTERNAL_STORAGE,READ_MEDIA_IMAGES,READ_MEDIA_VIDEO,READ_MEDIA_AUDIO,READ_EXTERNAL_STORAGE,USE_FINGERPRINT,USE_BIOMETRIC
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,FOREGROUND_SERVICE,MANAGE_EXTERNAL_STORAGE,READ_MEDIA_IMAGES,READ_MEDIA_VIDEO,READ_MEDIA_AUDIO,READ_EXTERNAL_STORAGE,USE_FINGERPRINT,USE_BIOMETRIC
 
 android.archs = arm64-v8a
 
@@ -33,8 +33,8 @@ p4a.local_recipes = ./p4a-recipes
 # FingerprintResultListener) - vidi biometrics.py za objasnjenje zasto
 # je ovo potrebno.
 android.add_src = java-src
+services = gpstracking:servisi/gps_tracking_service.py:foreground:sticky:foregroundServiceType=location
 
 [buildozer]
 log_level = 2
 warn_on_root = 1
-
