@@ -28,7 +28,7 @@ from kivy.properties import StringProperty, BooleanProperty
 from kivy.app import App
 from kivy.clock import Clock
 
-import database as db
+from servisi import database as db
 
 try:
     import certifi

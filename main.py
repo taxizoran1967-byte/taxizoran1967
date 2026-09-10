@@ -43,26 +43,25 @@ from kivy.uix.scrollview import ScrollView
 from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from datetime import datetime, timedelta, time as dt_time
 
-import database as db
-import grafik_zarade
-import ekran_navigacija
-import ekran_google_api
-import ekran_profil
-import ekran_valuta
-import ekran_sigurnost
-import ekran_uputstvo
-import ekran_dispeceri
-import ekran_backup
-import ekran_izvoz
-import ekran_cenovnik
-import ekran_gorivo
-import ekran_servis
-import ekran_troskovi
-import ekran_kalkulator
-import ekran_evidencija
-import ekran_izvestaj
-import ekran_gps_voznja
-import biometrics
+from servisi import database as db
+from servisi import grafik_zarade
+from ekrani import ekran_navigacija
+from ekrani import ekran_google_api
+from ekrani import ekran_profil
+from ekrani import ekran_valuta
+from ekrani import ekran_sigurnost
+from ekrani import ekran_uputstvo
+from ekrani import ekran_dispeceri
+from ekrani import ekran_backup
+from ekrani import ekran_izvoz
+from ekrani import ekran_cenovnik
+from ekrani import ekran_gorivo
+from ekrani import ekran_servis
+from ekrani import ekran_troskovi
+from ekrani import ekran_kalkulator
+from ekrani import ekran_evidencija
+from ekrani import ekran_izvestaj
+from ekrani import ekran_gps_voznja
 
 try:
     from androidstorage4kivy import SharedStorage, ShareSheet

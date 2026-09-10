@@ -16,7 +16,7 @@ from kivy.properties import StringProperty
 from kivy.app import App
 from kivy.clock import Clock
 
-import database as db
+from servisi import database as db
 
 try:
     from androidstorage4kivy import SharedStorage, ShareSheet

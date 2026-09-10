@@ -12,8 +12,8 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.label import Label
 from kivy.properties import StringProperty
 
-import database as db
-import ekran_kalkulator
+from servisi import database as db
+from ekrani import ekran_kalkulator
 
 
 # ============================================================

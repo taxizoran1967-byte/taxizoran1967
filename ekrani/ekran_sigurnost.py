@@ -17,7 +17,7 @@ from kivy.properties import StringProperty, BooleanProperty
 from kivy.app import App
 from kivy.clock import Clock
 
-import biometrics
+from servisi import biometrics
 
 
 class SigurnostPodesavanja:

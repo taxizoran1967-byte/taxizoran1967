@@ -11,7 +11,7 @@ from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
 from kivy.app import App
 
-import database as db
+from servisi import database as db
 
 
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji (ekran_evidencija.py

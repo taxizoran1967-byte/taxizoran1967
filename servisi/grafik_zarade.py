@@ -34,7 +34,7 @@ from kivy.animation import Animation
 from kivy.metrics import dp
 from kivy.clock import Clock
 
-import database as db
+from servisi import database as db
 
 # ============================================================
 # VALUTA - main.py ovo postavlja posle uvoza (izbegava kruzni import)

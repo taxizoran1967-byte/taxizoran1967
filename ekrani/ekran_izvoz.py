@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
 
-import database as db
+from servisi import database as db
 
 
 # ============================================================
