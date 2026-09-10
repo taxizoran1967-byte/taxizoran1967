@@ -206,6 +206,9 @@ class GpsVoznjaScreen(Screen):
         self._osvezi_prikaz()
         self._pokreni_tajmer()
 
+        if AKTIVNA_VOZNJA.izvor_pracenja == "zavrsetak_u_toku":
+            return
+
         if self._radi_preko_foreground_servisa():
             app = App.get_running_app()
             pokrenuto, greska = pokreni_android_foreground_servis(
@@ -540,6 +543,12 @@ class GpsVoznjaScreen(Screen):
 
         self.voznja_aktivna = False
         self.tekst_gps_status = "Trazim krajnju adresu..."
+        postavi_status(
+            gps_status=self.tekst_gps_status,
+            izvor_pracenja="zavrsetak_u_toku",
+            user_data_dir=app.user_data_dir,
+        )
+        self._ucitaj_stanje_voznje()
 
         # ako GPS nije uspeo da izmeri km, koristi rucni unos (ako postoji polje)
         km = AKTIVNA_VOZNJA.km
