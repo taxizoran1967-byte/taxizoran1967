@@ -458,14 +458,36 @@ def android_foreground_servis_dostupan():
         return False
 
 
+def _android_kontekst_za_servis():
+    from jnius import autoclass
+
+    PythonActivity = autoclass("org.kivy.android.PythonActivity")
+    kontekst = PythonActivity.mActivity
+    if kontekst is not None:
+        return kontekst
+
+    try:
+        PythonService = autoclass("org.kivy.android.PythonService")
+        kontekst = PythonService.mService
+        if kontekst is not None:
+            return kontekst
+    except Exception:
+        pass
+
+    ActivityThread = autoclass("android.app.ActivityThread")
+    return ActivityThread.currentApplication()
+
+
 def pokreni_android_foreground_servis(argument="", user_data_dir=None):
     try:
         from jnius import autoclass
 
         ocisti_stop_fajl(user_data_dir)
         service = autoclass(ANDROID_SERVICE_CLASS)
-        activity = autoclass("org.kivy.android.PythonActivity").mActivity
-        service.start(activity, argument or "")
+        kontekst = _android_kontekst_za_servis()
+        if kontekst is None:
+            return False, "Android kontekst nije dostupan"
+        service.start(kontekst, argument or "")
         return True, ""
     except Exception as e:
         return False, str(e)
@@ -477,8 +499,10 @@ def zaustavi_android_foreground_servis(user_data_dir=None):
 
         postavi_stop_fajl(user_data_dir)
         service = autoclass(ANDROID_SERVICE_CLASS)
-        activity = autoclass("org.kivy.android.PythonActivity").mActivity
-        service.stop(activity)
+        kontekst = _android_kontekst_za_servis()
+        if kontekst is None:
+            return False, "Android kontekst nije dostupan"
+        service.stop(kontekst)
         return True, ""
     except Exception as e:
         return False, str(e)

@@ -207,7 +207,10 @@ class GpsVoznjaScreen(Screen):
         self._pokreni_tajmer()
 
         if self._radi_preko_foreground_servisa():
-            pokrenuto, greska = pokreni_android_foreground_servis()
+            app = App.get_running_app()
+            pokrenuto, greska = pokreni_android_foreground_servis(
+                user_data_dir=app.user_data_dir,
+            )
             if not pokrenuto:
                 self.tekst_dijagnoza = (
                     (AKTIVNA_VOZNJA.dijagnoza + "\n") if AKTIVNA_VOZNJA.dijagnoza else ""
@@ -243,8 +246,10 @@ class GpsVoznjaScreen(Screen):
                             try:
                                 request_permissions(
                                     [pozadinska],
-                                    lambda *_: Clock.schedule_once(
-                                        lambda dt: self._stvarno_pokreni_gps()
+                                    lambda _, rezultati_bg: Clock.schedule_once(
+                                        lambda dt: self._nastavi_posle_pozadinske_dozvole(
+                                            all(rezultati_bg)
+                                        )
                                     ),
                                 )
                                 return
@@ -264,7 +269,11 @@ class GpsVoznjaScreen(Screen):
                 try:
                     request_permissions(
                         [pozadinska],
-                        lambda *_: Clock.schedule_once(lambda dt: self._stvarno_pokreni_gps()),
+                        lambda _, rezultati_bg: Clock.schedule_once(
+                            lambda dt: self._nastavi_posle_pozadinske_dozvole(
+                                all(rezultati_bg)
+                            )
+                        ),
                     )
                     return
                 except Exception:
@@ -274,13 +283,31 @@ class GpsVoznjaScreen(Screen):
 
         self._stvarno_pokreni_gps()
 
-    def _stvarno_pokreni_gps(self):
+    def _nastavi_posle_pozadinske_dozvole(self, dozvola_odobrena):
+        if dozvola_odobrena:
+            self._stvarno_pokreni_gps()
+            return
+
+        self._stvarno_pokreni_gps(
+            koristi_foreground_servis=False,
+            poruka_o_dozvoli=(
+                "Pozadinska lokacija nije odobrena - koristim lokalni fallback, "
+                "pa GPS mozda nece pratiti voznju dok je app u pozadini."
+            ),
+        )
+
+    def _stvarno_pokreni_gps(self, koristi_foreground_servis=None, poruka_o_dozvoli=None):
         app = App.get_running_app()
         dijagnoza = dijagnostika_lokacije()
+        if poruka_o_dozvoli:
+            dijagnoza = f"{dijagnoza}\n{poruka_o_dozvoli}" if dijagnoza else poruka_o_dozvoli
         self.tekst_dijagnoza = dijagnoza
         self._zaustavi_lokalni_gps()
 
-        koristi_servis = android_foreground_servis_dostupan()
+        if koristi_foreground_servis is None:
+            koristi_servis = android_foreground_servis_dostupan()
+        else:
+            koristi_servis = koristi_foreground_servis and android_foreground_servis_dostupan()
         izvor_pracenja = "foreground_service" if koristi_servis else "lokalni_fallback"
         inicijalizuj_aktivnu_voznju(izvor_pracenja, app.user_data_dir)
         postavi_status(
