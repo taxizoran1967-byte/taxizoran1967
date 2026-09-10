@@ -17,10 +17,8 @@ import json
 import math
 import time
 import threading
-import urllib.request
 import urllib.parse
 import webbrowser
-import ssl
 from datetime import datetime
 
 from kivy.uix.screenmanager import Screen
@@ -29,12 +27,7 @@ from kivy.app import App
 from kivy.clock import Clock
 
 from servisi import database as db
-
-try:
-    import certifi
-    SSL_KONTEKST = ssl.create_default_context(cafile=certifi.where())
-except Exception:
-    SSL_KONTEKST = ssl.create_default_context()
+from servisi import api_helper  # ← NOVO: Import api_helper-a
 
 
 # ============================================================
@@ -70,70 +63,43 @@ def haversine_km(lat1, lon1, lat2, lon2):
 
 
 def reverse_geocode(lat, lon, callback, dijagnoza_callback=None):
-    """Pretvara GPS koordinate u adresu. Ako je unet Google API kljuc
-    (Podesavanja -> Google API), koristi Google Geocoding (tacnije).
-    Ako kljuca nema, ili Google poziv ne uspe, koristi besplatan
-    OpenStreetMap Nominatim kao rezervu. Radi u pozadinskoj niti da
-    ne blokira interfejs; rezultat vraca preko callback-a na glavnoj
-    niti. Ako je prosledjen dijagnoza_callback, saljepravi razlog
-    google/osm neuspeha (za prikaz na ekranu, radi resavanja problema)."""
-
-    def _osm_pokusaj(dnevnik):
-        try:
-            url = (
-                "https://nominatim.openstreetmap.org/reverse?format=json"
-                f"&lat={lat}&lon={lon}&zoom=18&addressdetails=1"
-            )
-            req = urllib.request.Request(
-                url, headers={"User-Agent": "TaksiApp/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=8, context=SSL_KONTEKST) as resp:
-                podaci = json.loads(resp.read().decode("utf-8"))
-            if podaci.get("display_name"):
-                return podaci["display_name"]
-            dnevnik.append(f"OSM: nema display_name u odgovoru ({podaci})")
-        except Exception as e:
-            dnevnik.append(f"OSM greska: {e}")
-        return None
-
-    def _google_pokusaj(kljuc, dnevnik):
-        try:
-            url = (
-                "https://maps.googleapis.com/maps/api/geocode/json"
-                f"?latlng={lat},{lon}&key={kljuc}&language=sr"
-            )
-            with urllib.request.urlopen(url, timeout=8, context=SSL_KONTEKST) as resp:
-                podaci = json.loads(resp.read().decode("utf-8"))
-            if podaci.get("status") == "OK" and podaci.get("results"):
-                return podaci["results"][0]["formatted_address"]
-            dnevnik.append(
-                f"Google status: {podaci.get('status')} - "
-                f"{podaci.get('error_message', '(bez poruke)')}"
-            )
-        except Exception as e:
-            dnevnik.append(f"Google greska: {e}")
-        return None
-
+    """
+    Pretvara GPS koordinate u adresu koristeći api_helper modul.
+    
+    Ako je unet Google API ključ (Podesavanja -> Google API), koristi
+    Google Geocoding (tačnije). Ako ključa nema ili Google poziv ne uspe,
+    koristi besplatan OpenStreetMap Nominatim kao fallback.
+    
+    Radi u pozadinskoj niti da ne blokira interfejs; rezultat vraća
+    preko callback-a na glavnoj niti.
+    
+    Args:
+        lat (float): Geografska širina
+        lon (float): Geografska dužina
+        callback: Funkcija(adresa) koja se poziva sa rezultatom
+        dijagnoza_callback: Opciono - funkcija(tekst) sa debug info-om
+    """
     def posao():
-        dnevnik = []
-        adresa = None
-        kljuc = _API_REF.google_kljuc.strip()
-        if kljuc:
-            adresa = _google_pokusaj(kljuc, dnevnik)
-        if not adresa:
-            adresa = _osm_pokusaj(dnevnik)
-        if not adresa:
-            adresa = "Adresa nije dostupna"
-        Clock.schedule_once(lambda dt: callback(adresa))
-        if dijagnoza_callback and dnevnik:
-            tekst = "\n".join(dnevnik)
-            Clock.schedule_once(lambda dt: dijagnoza_callback(tekst))
+        google_kljuc = _API_REF.google_kljuc.strip() if _API_REF else ""
+        
+        # Koristi api_helper za pronalaženje adrese
+        ok, adresa, poruka_greske = api_helper.poveži_google_geocoding(
+            google_kljuc, lat, lon, timeout=8
+        )
+        
+        if ok:
+            Clock.schedule_once(lambda dt: callback(adresa))
+        else:
+            # Fallback - koristi "nepoznato" umesto praznog
+            Clock.schedule_once(lambda dt: callback("Adresa nije dostupna"))
+            if dijagnoza_callback and poruka_greske:
+                Clock.schedule_once(lambda dt: dijagnoza_callback(poruka_greske))
 
     threading.Thread(target=posao, daemon=True).start()
 
 
 class AktivnaVoznjaState:
-    """Cuva stanje trenutno aktivne GPS voznje u fajl, da se ne
+    """Čuva stanje trenutno aktivne GPS vožnje u fajl, da se ne
     izgubi ako korisnik zatvori i ponovo otvori aplikaciju."""
 
     def __init__(self):
@@ -145,8 +111,8 @@ class AktivnaVoznjaState:
         self.zadnja_lat = None
         self.zadnja_lon = None
         self.zadnje_vreme = None  # time.time() kad je zadnja_lat/lon primljena -
-                                   # sluzi da se izracuna PRAVO proteklo vreme
-                                   # do sledece tacke (vidi _obradi_lokaciju)
+                                   # služi da se izračuna PRAVO proteklo vreme
+                                   # do sledeće tačke (vidi _obradi_lokaciju)
         self.km = 0.0
 
     def _putanja(self, user_data_dir):
@@ -200,9 +166,9 @@ class GpsVoznjaScreen(Screen):
     tekst_dijagnoza = StringProperty("")
     voznja_aktivna = BooleanProperty(False)
 
-    MIN_TACNOST_M = 50       # ignorisi GPS tacke losije preciznosti od ovoga (metri)
-    MIN_POMERAJ_KM = 0.01    # ignorisi mikro-skokove manje od 10m (GPS sum)
-    MAX_BRZINA_KMH = 180     # ignorisi nerealne skokove (losa GPS tacka)
+    MIN_TACNOST_M = 50       # ignorisi GPS tačke lošije preciznosti od ovoga (metri)
+    MIN_POMERAJ_KM = 0.01    # ignorisi mikro-skokove manje od 10m (GPS šum)
+    MAX_BRZINA_KMH = 180     # ignorisi nerealne skokove (loša GPS tačka)
 
     def on_pre_enter(self, *args):
         self._tajmer = None
@@ -215,7 +181,7 @@ class GpsVoznjaScreen(Screen):
             self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa or "Adresa nije dostupna"
             self._osvezi_prikaz()
             self._pokreni_tajmer()
-            self._android_gps_start()  # ponovo zakaci listener + omoguci poll
+            self._android_gps_start()  # ponovo zakači listener + omogući poll
             self._brojac_poll = Clock.schedule_interval(self._pull_lokaciju, 2)
         else:
             self.voznja_aktivna = False
@@ -235,11 +201,11 @@ class GpsVoznjaScreen(Screen):
             self._brojac_poll.cancel()
             self._brojac_poll = None
 
-    # ---------------- POCETAK VOZNJE ----------------
+    # ---------------- POČETAK VOŽNJE ----------------
 
     def _dijagnostika_lokacije(self):
-        """Vraca tekst sa stvarnim stanjem dozvola i GPS-a na uredjaju,
-        da se tacno vidi gde je problem umesto nagadjanja."""
+        """Vraća tekst sa stvarnim stanjem dozvola i GPS-a na uređaju,
+        da se tačno vidi gde je problem umesto nagađanja."""
         redovi = []
         try:
             from android.permissions import check_permission, Permission
@@ -258,8 +224,8 @@ class GpsVoznjaScreen(Screen):
             lm = activity.getSystemService(Context.LOCATION_SERVICE)
             gps_on = lm.isProviderEnabled("gps")
             mreza_on = lm.isProviderEnabled("network")
-            redovi.append(f"GPS provajder ukljucen: {'DA' if gps_on else 'NE'}")
-            redovi.append(f"Mrezni provajder ukljucen: {'DA' if mreza_on else 'NE'}")
+            redovi.append(f"GPS provajder uključen: {'DA' if gps_on else 'NE'}")
+            redovi.append(f"Mrežni provajder uključen: {'DA' if mreza_on else 'NE'}")
         except Exception as e:
             redovi.append(f"Ne mogu da proverim GPS status: {e}")
 
@@ -275,7 +241,7 @@ class GpsVoznjaScreen(Screen):
                 Permission.ACCESS_COARSE_LOCATION,
             ]
             if not all(check_permission(p) for p in potrebne):
-                self.tekst_gps_status = "Trazim dozvolu za lokaciju..."
+                self.tekst_gps_status = "Tražim dozvolu za lokaciju..."
 
                 def na_odgovor(dozvole, rezultati):
                     if all(rezultati):
@@ -300,11 +266,11 @@ class GpsVoznjaScreen(Screen):
 
         pokrenuto = self._android_gps_start()
         if not pokrenuto:
-            self.tekst_gps_status = "Greska pri pokretanju GPS-a."
+            self.tekst_gps_status = "Greška pri pokretanju GPS-a."
             return
 
         self.voznja_aktivna = True
-        self.tekst_gps_status = "Trazim GPS signal..."
+        self.tekst_gps_status = "Tražim GPS signal..."
         self._sekundi_bez_signala = 0
         self._zadnje_vreme_lok = None
         self._brojac_signala = Clock.schedule_interval(self._proveri_signal, 1)
@@ -313,7 +279,7 @@ class GpsVoznjaScreen(Screen):
         AKTIVNA_VOZNJA.pocetak_vreme = datetime.now().isoformat()
         AKTIVNA_VOZNJA.pocetak_lat = None
         AKTIVNA_VOZNJA.pocetak_lon = None
-        AKTIVNA_VOZNJA.pocetak_adresa = "Trazim lokaciju..."
+        AKTIVNA_VOZNJA.pocetak_adresa = "Tražim lokaciju..."
         AKTIVNA_VOZNJA.zadnja_lat = None
         AKTIVNA_VOZNJA.zadnja_lon = None
         AKTIVNA_VOZNJA.km = 0.0
@@ -321,12 +287,12 @@ class GpsVoznjaScreen(Screen):
         app = App.get_running_app()
         AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
 
-        # Ako je krajnja adresa unesena PRE klika na "Pocni voznju",
-        # odmah otvaramo Google navigaciju ka njoj. GPS voznja (merenje
-        # km i cene) je vec pokrenuta iznad i nastavlja da radi u
+        # Ako je krajnja adresa unesena PRE klika na "Počni voznju",
+        # odmah otvaramo Google navigaciju ka njoj. GPS vožnja (merenje
+        # km i cene) je već pokrenuta iznad i nastavlja da radi u
         # pozadini - otvaranje Google Maps-a ne gasi ovu app, Android
         # je samo stavlja u pozadinu (a on_pause/on_resume u app.py
-        # vec vodi racuna da GPS nastavi da meri kad se vratis).
+        # već vodi računa da GPS nastavi da meri kad se vratiš).
         self._pokreni_navigaciju_ako_ima_adrese()
 
     def _pokreni_navigaciju_ako_ima_adrese(self):
@@ -344,17 +310,17 @@ class GpsVoznjaScreen(Screen):
                 webbrowser.open(url_rezervni)
             except Exception:
                 _PRIKAZI_POPUP(
-                    "Greska",
-                    "Ne mogu da otvorim navigaciju, ali GPS voznja je pokrenuta normalno.",
+                    "Greška",
+                    "Ne mogu da otvorim navigaciju, ali GPS vožnja je pokrenuta normalno.",
                     size_hint=(0.8, 0.3),
                 )
 
     def _pull_lokaciju(self, dt):
-        """Umesto da cekamo da Android sam posalje novu tacku (push,
-        sto se pokazalo nepouzdano - verovatno MIUI blokira stalno
+        """Umesto da čekamo da Android sam pošalje novu tačku (push,
+        što se pokazalo nepouzdano - verovatno MIUI blokira stalno
         slanje u pozadini), aktivno pitamo za trenutnu poslednju
-        poznatu lokaciju na svake 2 sekunde (pull). Isti trik koji je
-        upalio za pocetnu tacku vožnje."""
+        poznatu lokaciju na svakih 2 sekunde (pull). Isti trik koji je
+        upralio za početnu tačku vožnje."""
         try:
             from jnius import autoclass
 
@@ -379,7 +345,7 @@ class GpsVoznjaScreen(Screen):
 
             vreme = najbolja.getTime()
             if self._zadnje_vreme_lok is not None and vreme <= self._zadnje_vreme_lok:
-                return  # ista tacka kao pre, nista novo
+                return  # ista tačka kao pre, ništa novo
 
             self._zadnje_vreme_lok = vreme
             self._obradi_lokaciju({
@@ -391,10 +357,10 @@ class GpsVoznjaScreen(Screen):
             pass
 
     def _android_gps_start(self):
-        """Direktno preko Android sistema trazi lokaciju - i GPS i
-        mrezni provajder istovremeno (sta god prvo javi signal), jer
-        plyer sam po sebi koristi samo GPS provajder sto se pokazalo
-        nepouzdano na nekim uredjajima/podesavanjima."""
+        """Direktno preko Android sistema traži lokaciju - i GPS i
+        mrežni provajder istovremeno (šta god prvo javi signal), jer
+        plyer sam po sebi koristi samo GPS provajder što se pokazalo
+        nepouzdano na nekim uređajima/podešavanjima."""
         try:
             from jnius import autoclass, PythonJavaClass, java_method
 
@@ -452,9 +418,9 @@ class GpsVoznjaScreen(Screen):
             if not pokrenut_bar_jedan and greske:
                 self.tekst_dijagnoza += "\n" + "\n".join(greske)
 
-            # Odmah probaj i poslednju poznatu (keširanu) lokaciju -
-            # ne cekaj obavezno novi "zivi" signal. Google Maps i
-            # slicne app takodje prvo koriste ovo, zato deluju trenutno.
+            # Odmah probaj i poslednju poznatu (keširana) lokaciju -
+            # ne čekaj obavezno novi "živi" signal. Google Maps i
+            # slične app također prvo koriste ovo, zato deluju trenutno.
             najbolja = None
             for provider in (LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER):
                 try:
@@ -467,18 +433,18 @@ class GpsVoznjaScreen(Screen):
                     pass
 
             if najbolja is not None:
-                self.tekst_dijagnoza += "\nPronadjena keširana lokacija - koristim je."
+                self.tekst_dijagnoza += "\nPronađena keširana lokacija - koristim je."
                 Clock.schedule_once(lambda dt: self._obradi_lokaciju({
                     "lat": najbolja.getLatitude(),
                     "lon": najbolja.getLongitude(),
                     "accuracy": najbolja.getAccuracy(),
                 }))
             else:
-                self.tekst_dijagnoza += "\nNema keširane lokacije, cekam zivi signal."
+                self.tekst_dijagnoza += "\nNema keširane lokacije, čekam živi signal."
 
             return pokrenut_bar_jedan
         except Exception as e:
-            self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {e}"
+            self.tekst_gps_status = f"Greška pri pokretanju GPS-a: {e}"
             return False
 
     def _android_gps_stop(self):
@@ -499,17 +465,17 @@ class GpsVoznjaScreen(Screen):
         self._sekundi_bez_signala += 1
         if self._sekundi_bez_signala == 15:
             self.tekst_gps_status = (
-                "Jos uvek nema GPS signala. Voznja je pokrenuta i ceka "
-                "prvi signal - km i cena ce poceti da se racunaju cim "
+                "Još uvek nema GPS signala. Vožnja je pokrenuta i čeka "
+                "prvi signal - km i cena će početi da se računaju čim "
                 "GPS uhvati poziciju."
             )
         elif self._sekundi_bez_signala > 15 and self._sekundi_bez_signala % 10 == 0:
-            self.tekst_gps_status = f"Jos uvek tražim signal... ({self._sekundi_bez_signala}s)"
+            self.tekst_gps_status = f"Još uvek tražim signal... ({self._sekundi_bez_signala}s)"
 
-        self.tekst_polazak = "Trazim lokaciju..."
+        self.tekst_polazak = "Tražim lokaciju..."
         self._pokreni_tajmer()
 
-    # ---------------- TOKOM VOZNJE ----------------
+    # ---------------- TOKOM VOŽNJE ----------------
 
     def _obradi_lokaciju(self, podaci):
         lat = podaci.get("lat")
@@ -521,52 +487,52 @@ class GpsVoznjaScreen(Screen):
         app = App.get_running_app()
 
         if AKTIVNA_VOZNJA.pocetak_lat is None:
-            # ovo je prva validna tacka - pocetak voznje.
-            # Ne filtriramo je po preciznosti (kesirane/mrezne lokacije
-            # su cesto manje precizne od 50m, ali su i dalje mnogo
-            # bolje nego nista za pocetnu adresu i orijentaciju).
+            # ovo je prva validna tačka - početak vožnje.
+            # Ne filtriramo je po preciznosti (keširane/mrežne lokacije
+            # su često manje precizne od 50m, ali su i dalje mnogo
+            # bolje nego ništa za početnu adresu i orijentaciju).
             AKTIVNA_VOZNJA.pocetak_lat = lat
             AKTIVNA_VOZNJA.pocetak_lon = lon
             AKTIVNA_VOZNJA.zadnja_lat = lat
             AKTIVNA_VOZNJA.zadnja_lon = lon
             AKTIVNA_VOZNJA.zadnje_vreme = time.time()
             AKTIVNA_VOZNJA.sacuvaj(app.user_data_dir)
-            self.tekst_gps_status = "GPS aktivan, pratim voznju."
+            self.tekst_gps_status = "GPS aktivan, pratim vožnju."
             reverse_geocode(
                 lat, lon, self._postavi_pocetnu_adresu,
                 dijagnoza_callback=self._geokod_dijagnoza,
             )
             return
 
-        # od druge tacke nadalje, filtriramo lose precizne skokove
-        # (bitno za tacnost kilometraze tokom stvarne voznje)
+        # od druge tačke nadalje, filtriramo loše precizne skokove
+        # (bitno za tačnost kilometraže tokom stvarne vožnje)
         if tacnost and tacnost > self.MIN_TACNOST_M:
-            self.tekst_gps_status = f"Slab GPS signal (+/-{tacnost:.0f}m), cekam bolji..."
+            self.tekst_gps_status = f"Slab GPS signal (+/-{tacnost:.0f}m), čekam bolji..."
             return
 
-        # racunaj pomeraj od poslednje tacke
+        # računaj pomeraj od poslednje tačke
         udaljenost = haversine_km(
             AKTIVNA_VOZNJA.zadnja_lat, AKTIVNA_VOZNJA.zadnja_lon, lat, lon
         )
 
         if udaljenost < self.MIN_POMERAJ_KM:
-            return  # mikro-sum, ignorisi
+            return  # mikro-šum, ignoriši
 
-        # PRAVO proteklo vreme od poslednje prihvacene tacke (ne
+        # PRAVO proteklo vreme od poslednje prihvaćene tačke (ne
         # pretpostavljeni fiksni razmak) - bitno kad je telefon bio u
         # pozadini (npr. korisnik gledao Google Maps par minuta): bez
-        # ovoga bi provera brzine ispod pogresno protumacila normalan
+        # ovoga bi provera brzine ispod pogrešno protumačila normalan
         # pomeraj kao "nerealan skok" i TRAJNO odbacila te kilometre.
         sada = time.time()
         proteklo_sec = sada - (AKTIVNA_VOZNJA.zadnje_vreme or sada)
-        proteklo_sec = max(proteklo_sec, 1.0)  # minimum 1s - stiti od deljenja
-                                                 # gotovo nulom kod dve tacke
+        proteklo_sec = max(proteklo_sec, 1.0)  # minimum 1s - štiti od deljenja
+                                                 # gotovo nulom kod dve tačke
                                                  # koje stignu skoro istovremeno
 
-        # provera nerealnog skoka (losa GPS tacka)
+        # provera nerealnog skoka (loša GPS tačka)
         brzina_kmh = udaljenost / (proteklo_sec / 3600.0)
         if brzina_kmh > self.MAX_BRZINA_KMH:
-            return  # verovatno GPS greska, ignorisi tacku
+            return  # verovatno GPS greška, ignoriši tačku
 
         AKTIVNA_VOZNJA.km += udaljenost
         AKTIVNA_VOZNJA.zadnja_lat = lat
@@ -606,10 +572,10 @@ class GpsVoznjaScreen(Screen):
         cena = _CENE_REF.start_fee + AKTIVNA_VOZNJA.km * cena_po_km
         self.tekst_cena = f"Cena: {_FORMATIRAJ_CENU(cena)}"
 
-        if AKTIVNA_VOZNJA.pocetak_adresa and AKTIVNA_VOZNJA.pocetak_adresa != "Trazim lokaciju...":
+        if AKTIVNA_VOZNJA.pocetak_adresa and AKTIVNA_VOZNJA.pocetak_adresa != "Tražim lokaciju...":
             self.tekst_polazak = AKTIVNA_VOZNJA.pocetak_adresa
 
-    # ---------------- KRAJ VOZNJE ----------------
+    # ---------------- KRAJ VOŽNJE ----------------
 
     def zavrsi_voznju(self):
         if not AKTIVNA_VOZNJA.aktivna:
@@ -628,9 +594,9 @@ class GpsVoznjaScreen(Screen):
             self._brojac_poll = None
 
         self.voznja_aktivna = False
-        self.tekst_gps_status = "Trazim krajnju adresu..."
+        self.tekst_gps_status = "Tražim krajnju adresu..."
 
-        # ako GPS nije uspeo da izmeri km, koristi rucni unos (ako postoji polje)
+        # ako GPS nije uspeo da izmeri km, koristi ručni unos (ako postoji polje)
         km = AKTIVNA_VOZNJA.km
         if km <= 0:
             polje_km = self.ids.get("input_km_rucno")
@@ -649,7 +615,7 @@ class GpsVoznjaScreen(Screen):
         tarifa_naziv = "Nocna (22-07h)" if _CENE_REF.nocna_aktivna else "Osnovna (07-22h)"
 
         polazak_adresa = AKTIVNA_VOZNJA.pocetak_adresa or "Adresa nije dostupna"
-        if polazak_adresa == "Trazim lokaciju...":
+        if polazak_adresa == "Tražim lokaciju...":
             polazak_adresa = "Adresa nije dostupna"
 
         rucni_dolazak = self.ids.input_dolazak_rucno.text.strip()
@@ -692,7 +658,7 @@ class GpsVoznjaScreen(Screen):
             cena_po_km=cena_po_km,
             start_taksa=_CENE_REF.start_fee,
             ukupna_cena=ukupno,
-            napomena="GPS voznja (automatski unos)",
+            napomena="GPS vožnja (automatski unos)",
             vreme_pocetka=vreme_pocetka_txt,
         )
 
@@ -708,12 +674,12 @@ class GpsVoznjaScreen(Screen):
         self.ids.input_dolazak_rucno.text = ""
 
         self._poruka(
-            f"Voznja sacuvana!\n{polazak_adresa}\n-> {dolazak_adresa}\n"
+            f"Vožnja sačuvana!\n{polazak_adresa}\n-> {dolazak_adresa}\n"
             f"{km:.2f} km, {_FORMATIRAJ_CENU(ukupno)}"
         )
 
     def _poruka(self, tekst):
-        _PRIKAZI_POPUP("Voznja zavrsena", tekst, size_hint=(0.85, 0.4))
+        _PRIKAZI_POPUP("Vožnja završena", tekst, size_hint=(0.85, 0.4))
 
 GPS_VOZNJA_KV = """
 # ============================================================
