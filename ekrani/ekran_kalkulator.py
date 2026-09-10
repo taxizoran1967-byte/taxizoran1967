@@ -5,6 +5,7 @@ izracunata cena) - koristi se i za dodavanje NOVE voznje i za IZMENU
 postojece (kad korisnik klikne "Izmeni" na ekranu Evidencija).
 
 Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
+MODIFIKOVANO: Koristi _t() za jezičke tekstove
 """
 
 from kivy.uix.screenmanager import Screen
@@ -12,6 +13,7 @@ from kivy.properties import StringProperty
 from kivy.app import App
 
 from servisi import database as db
+from servisi import jezici
 
 
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji (ekran_evidencija.py
@@ -41,14 +43,17 @@ def poveži(default_tarife, cene_obj, formatiraj_cenu_fn, prikazi_popup_fn):
 
 
 class KalkulatorScreen(Screen):
-    tekst_cene = StringProperty("Unesi kilometrazu da vidis cenu")
-    dugme_tekst = StringProperty("Sacuvaj voznju")
+    tekst_cene = StringProperty(jezici._t("kalkulator.unesi_km"))
+    dugme_tekst = StringProperty(jezici._t("kalkulator.sacuvaj_voznju"))
+    
     @property
     def tarife_lista(self):
         return list(_DEFAULT_TARIFE.keys())
+    
     editing_id = None
 
     def on_pre_enter(self, *args):
+        # Osvežavanje tekstova pri ulasku (u slučaju promene jezika)
         global EDIT_VOZNJA
         if EDIT_VOZNJA is not None:
             v = EDIT_VOZNJA
@@ -60,38 +65,44 @@ class KalkulatorScreen(Screen):
             tarifa = v.get("tarifa_naziv")
             if tarifa in self.tarife_lista and "spinner_tarifa" in self.ids:
                 self.ids.spinner_tarifa.text = tarifa
-            self.dugme_tekst = "Sacuvaj izmenu"
+            self.dugme_tekst = jezici._t("kalkulator.sacuvaj_izmenu")
             self.izracunaj()
             EDIT_VOZNJA = None
         else:
             self.editing_id = None
-            self.dugme_tekst = "Sacuvaj voznju"
+            self.dugme_tekst = jezici._t("kalkulator.sacuvaj_voznju")
             if _CENE_REF.nocna_aktivna and "spinner_tarifa" in self.ids:
-                self.ids.spinner_tarifa.text = "Nocna (22-07h)"
+                self.ids.spinner_tarifa.text = jezici._t("kalkulator.nocna_tarifa")
                 self.izracunaj()
 
     def izracunaj(self):
         try:
             km = float(self.ids.input_km.text.replace(",", "."))
         except (ValueError, AttributeError):
-            self.tekst_cene = "Unesi kilometrazu da vidis cenu"
+            self.tekst_cene = jezici._t("kalkulator.unesi_km")
             return
+        
         tarifa_naziv = self.ids.spinner_tarifa.text
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
         ukupno = _CENE_REF.start_fee + km * cena_po_km
-        self.tekst_cene = (
-            f"Cena: {_FORMATIRAJ_CENU(ukupno)}\n"
-            f"(start {_FORMATIRAJ_CENU(_CENE_REF.start_fee)} + {km:g} km x {_FORMATIRAJ_CENU(cena_po_km)})"
+        
+        self.tekst_cene = jezici._t(
+            "kalkulator.cena_prikaz",
+            cena=_FORMATIRAJ_CENU(ukupno),
+            start=_FORMATIRAJ_CENU(_CENE_REF.start_fee),
+            km=f"{km:g}",
+            cena_km=_FORMATIRAJ_CENU(cena_po_km)
         )
 
     def sacuvaj_voznju(self):
         try:
             km = float(self.ids.input_km.text.replace(",", "."))
         except (ValueError, AttributeError):
-            self._poruka("Unesi ispravnu kilometrazu pre cuvanja.")
+            self._poruka(jezici._t("kalkulator.km_greska"))
             return
+        
         if km <= 0:
-            self._poruka("Kilometraza mora biti veca od 0.")
+            self._poruka(jezici._t("kalkulator.km_veca_od_nule"))
             return
 
         tarifa_naziv = self.ids.spinner_tarifa.text
@@ -114,22 +125,26 @@ class KalkulatorScreen(Screen):
 
         bila_izmena = self.editing_id is not None
         self.editing_id = None
-        self.dugme_tekst = "Sacuvaj voznju"
+        self.dugme_tekst = jezici._t("kalkulator.sacuvaj_voznju")
 
         # reset forme
         self.ids.input_km.text = ""
         self.ids.input_od.text = ""
         self.ids.input_do.text = ""
         self.ids.input_napomena.text = ""
-        self.tekst_cene = "Unesi kilometrazu da vidis cenu"
+        self.tekst_cene = jezici._t("kalkulator.unesi_km")
 
         if bila_izmena:
-            self._poruka(f"Izmena sacuvana! Cena voznje: {_FORMATIRAJ_CENU(ukupno)}")
+            self._poruka(
+                jezici._t("kalkulator.izmena_sacuvana", cena=_FORMATIRAJ_CENU(ukupno))
+            )
         else:
-            self._poruka(f"Sacuvano! Cena voznje: {_FORMATIRAJ_CENU(ukupno)}")
+            self._poruka(
+                jezici._t("kalkulator.sacuvano", cena=_FORMATIRAJ_CENU(ukupno))
+            )
 
     def _poruka(self, tekst):
-        _PRIKAZI_POPUP("Info", tekst, size_hint=(0.8, 0.3))
+        _PRIKAZI_POPUP(jezici._t("buttons.info"), tekst, size_hint=(0.8, 0.3))
 
 KALKULATOR_KV = """
 # ============================================================
