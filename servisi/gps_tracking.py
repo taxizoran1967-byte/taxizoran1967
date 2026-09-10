@@ -145,6 +145,8 @@ class AktivnaVoznjaState:
             pass
 
     def sacuvaj(self, user_data_dir=None):
+        putanja = self._putanja(user_data_dir)
+        privremena = f"{putanja}.tmp"
         podaci = {
             "aktivna": self.aktivna,
             "pocetak_vreme": self.pocetak_vreme,
@@ -159,8 +161,9 @@ class AktivnaVoznjaState:
             "dijagnoza": self.dijagnoza,
             "izvor_pracenja": self.izvor_pracenja,
         }
-        with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
+        with open(privremena, "w", encoding="utf-8") as f:
             json.dump(podaci, f, ensure_ascii=False, indent=2)
+        os.replace(privremena, putanja)
 
     def resetuj(self, user_data_dir=None):
         self.__init__()

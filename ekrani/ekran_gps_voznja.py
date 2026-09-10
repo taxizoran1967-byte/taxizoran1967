@@ -395,12 +395,18 @@ class GpsVoznjaScreen(Screen):
             self._lokalni_tracker = None
 
     def _lokalna_dijagnoza(self, tekst):
+        if threading.current_thread() is not threading.main_thread():
+            Clock.schedule_once(lambda dt: self._lokalna_dijagnoza(tekst))
+            return
         app = App.get_running_app()
         dodaj_dijagnozu(tekst, app.user_data_dir)
         self._ucitaj_stanje_voznje()
         self.tekst_dijagnoza = AKTIVNA_VOZNJA.dijagnoza
 
     def _lokalna_greska(self, tekst):
+        if threading.current_thread() is not threading.main_thread():
+            Clock.schedule_once(lambda dt: self._lokalna_greska(tekst))
+            return
         app = App.get_running_app()
         self.tekst_gps_status = f"Greska pri pokretanju GPS-a: {tekst}"
         postavi_status(

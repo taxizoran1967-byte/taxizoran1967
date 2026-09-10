@@ -120,13 +120,13 @@ def main():
 
     try:
         pokrenut = tracker.pokreni()
-        upisi_running_fajl(user_data_dir)
         if not pokrenut:
             postavi_status(
                 gps_status="Greska pri pokretanju GPS-a.",
                 user_data_dir=user_data_dir,
             )
             return
+        upisi_running_fajl(user_data_dir)
 
         sekundi_bez_signala = 0
 
