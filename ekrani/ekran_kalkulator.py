@@ -8,10 +8,11 @@ Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
 """
 
 from kivy.uix.screenmanager import Screen
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, DictProperty, ListProperty
 from kivy.app import App
 
 from servisi import database as db
+from servisi import i18n
 
 
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji (ekran_evidencija.py
@@ -41,14 +42,71 @@ def poveži(default_tarife, cene_obj, formatiraj_cenu_fn, prikazi_popup_fn):
 
 
 class KalkulatorScreen(Screen):
+    tekstovi = DictProperty({})
     tekst_cene = StringProperty("Unesi kilometrazu da vidis cenu")
     dugme_tekst = StringProperty("Sacuvaj voznju")
+    tarife_prikaz = ListProperty([])
     @property
     def tarife_lista(self):
         return list(_DEFAULT_TARIFE.keys())
     editing_id = None
+    _prikaz_u_tarifu = {}
+
+    def osvezi_tekstove(self):
+        app = App.get_running_app()
+        jezik = getattr(app, "jezik", "sr") if app else "sr"
+        self.tekstovi = {
+            "title": i18n.prevedi(jezik, "calc_title"),
+            "home": i18n.prevedi(jezik, "nav_home"),
+            "history": i18n.prevedi(jezik, "calc_nav_history"),
+            "report": i18n.prevedi(jezik, "calc_nav_report"),
+            "tariff": i18n.prevedi(jezik, "calc_tariff"),
+            "distance": i18n.prevedi(jezik, "calc_distance"),
+            "distance_hint": i18n.prevedi(jezik, "calc_distance_hint"),
+            "from": i18n.prevedi(jezik, "calc_from"),
+            "from_hint": i18n.prevedi(jezik, "calc_from_hint"),
+            "to": i18n.prevedi(jezik, "calc_to"),
+            "to_hint": i18n.prevedi(jezik, "calc_to_hint"),
+            "note": i18n.prevedi(jezik, "calc_note"),
+            "note_hint": i18n.prevedi(jezik, "calc_note_hint"),
+            "save": i18n.prevedi(jezik, "calc_save_ride"),
+            "save_edit": i18n.prevedi(jezik, "calc_save_edit"),
+        }
+        self.tarife_prikaz = [
+            i18n.prevedi_tarifu(tarifa, jezik) for tarifa in self.tarife_lista
+        ]
+        self._prikaz_u_tarifu = dict(zip(self.tarife_prikaz, self.tarife_lista))
+        self.dugme_tekst = (
+            self.tekstovi["save_edit"] if self.editing_id is not None else self.tekstovi["save"]
+        )
+        self._osvezi_spinner_tarife()
+        self.izracunaj()
+
+    def _osvezi_spinner_tarife(self):
+        spinner = self.ids.get("spinner_tarifa")
+        if spinner is None:
+            return
+        trenutni_kljuc = self._tarifa_kljuc()
+        spinner.values = self.tarife_prikaz
+        spinner.text = i18n.prevedi_tarifu(trenutni_kljuc, self._jezik())
+
+    def _jezik(self):
+        app = App.get_running_app()
+        return getattr(app, "jezik", "sr") if app else "sr"
+
+    def _tarifa_kljuc(self):
+        spinner = self.ids.get("spinner_tarifa")
+        if spinner is None:
+            return self.tarife_lista[0]
+        tekst = spinner.text
+        if tekst in self._prikaz_u_tarifu:
+            return self._prikaz_u_tarifu[tekst]
+        if tekst in self.tarife_lista:
+            return tekst
+        return self.tarife_lista[0]
 
     def on_pre_enter(self, *args):
+        self.osvezi_tekstove()
         global EDIT_VOZNJA
         if EDIT_VOZNJA is not None:
             v = EDIT_VOZNJA
@@ -59,42 +117,49 @@ class KalkulatorScreen(Screen):
             self.ids.input_napomena.text = v.get("napomena") or ""
             tarifa = v.get("tarifa_naziv")
             if tarifa in self.tarife_lista and "spinner_tarifa" in self.ids:
-                self.ids.spinner_tarifa.text = tarifa
-            self.dugme_tekst = "Sacuvaj izmenu"
+                self.ids.spinner_tarifa.text = i18n.prevedi_tarifu(tarifa, self._jezik())
+            self.dugme_tekst = self.tekstovi["save_edit"]
             self.izracunaj()
             EDIT_VOZNJA = None
         else:
             self.editing_id = None
-            self.dugme_tekst = "Sacuvaj voznju"
+            self.dugme_tekst = self.tekstovi["save"]
             if _CENE_REF.nocna_aktivna and "spinner_tarifa" in self.ids:
-                self.ids.spinner_tarifa.text = "Nocna (22-07h)"
+                self.ids.spinner_tarifa.text = i18n.prevedi_tarifu("Nocna (22-07h)", self._jezik())
                 self.izracunaj()
 
     def izracunaj(self):
         try:
             km = float(self.ids.input_km.text.replace(",", "."))
         except (ValueError, AttributeError):
-            self.tekst_cene = "Unesi kilometrazu da vidis cenu"
+            self.tekst_cene = i18n.prevedi(self._jezik(), "calc_enter_km")
             return
-        tarifa_naziv = self.ids.spinner_tarifa.text
+        tarifa_naziv = self._tarifa_kljuc()
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
         ukupno = _CENE_REF.start_fee + km * cena_po_km
         self.tekst_cene = (
-            f"Cena: {_FORMATIRAJ_CENU(ukupno)}\n"
-            f"(start {_FORMATIRAJ_CENU(_CENE_REF.start_fee)} + {km:g} km x {_FORMATIRAJ_CENU(cena_po_km)})"
+            i18n.prevedi(self._jezik(), "calc_price", price=_FORMATIRAJ_CENU(ukupno))
+            + "\n"
+            + i18n.prevedi(
+                self._jezik(),
+                "calc_formula",
+                start=_FORMATIRAJ_CENU(_CENE_REF.start_fee),
+                km=f"{km:g}",
+                price=_FORMATIRAJ_CENU(cena_po_km),
+            )
         )
 
     def sacuvaj_voznju(self):
         try:
             km = float(self.ids.input_km.text.replace(",", "."))
         except (ValueError, AttributeError):
-            self._poruka("Unesi ispravnu kilometrazu pre cuvanja.")
+            self._poruka(i18n.prevedi(self._jezik(), "calc_invalid_km"))
             return
         if km <= 0:
-            self._poruka("Kilometraza mora biti veca od 0.")
+            self._poruka(i18n.prevedi(self._jezik(), "calc_km_positive"))
             return
 
-        tarifa_naziv = self.ids.spinner_tarifa.text
+        tarifa_naziv = self._tarifa_kljuc()
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
         ukupno = _CENE_REF.start_fee + km * cena_po_km
 
@@ -114,19 +179,27 @@ class KalkulatorScreen(Screen):
 
         bila_izmena = self.editing_id is not None
         self.editing_id = None
-        self.dugme_tekst = "Sacuvaj voznju"
+        self.dugme_tekst = self.tekstovi["save"]
 
         # reset forme
         self.ids.input_km.text = ""
         self.ids.input_od.text = ""
         self.ids.input_do.text = ""
         self.ids.input_napomena.text = ""
-        self.tekst_cene = "Unesi kilometrazu da vidis cenu"
+        self.tekst_cene = i18n.prevedi(self._jezik(), "calc_enter_km")
 
         if bila_izmena:
-            self._poruka(f"Izmena sacuvana! Cena voznje: {_FORMATIRAJ_CENU(ukupno)}")
+            self._poruka(
+                i18n.prevedi(
+                    self._jezik(), "calc_edit_saved", price=_FORMATIRAJ_CENU(ukupno)
+                )
+            )
         else:
-            self._poruka(f"Sacuvano! Cena voznje: {_FORMATIRAJ_CENU(ukupno)}")
+            self._poruka(
+                i18n.prevedi(
+                    self._jezik(), "calc_saved", price=_FORMATIRAJ_CENU(ukupno)
+                )
+            )
 
     def _poruka(self, tekst):
         _PRIKAZI_POPUP("Info", tekst, size_hint=(0.8, 0.3))
@@ -141,21 +214,21 @@ KALKULATOR_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Kalkulator voznje"
+            text: root.tekstovi.get("title", "")
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekstovi.get("home", "")
                 tint: 0.36, 0.46, 0.64, 1
                 font_size: '13sp'
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Evidencija"
+                label_text: root.tekstovi.get("history", "")
                 tint: 0.36, 0.46, 0.64, 1
                 font_size: '13sp'
                 on_release: root.manager.current = "evidencija"
             RoundButton:
-                label_text: "Izvestaj"
+                label_text: root.tekstovi.get("report", "")
                 tint: 0.36, 0.46, 0.64, 1
                 font_size: '13sp'
                 on_release: root.manager.current = "izvestaj"
@@ -170,12 +243,12 @@ KALKULATOR_KV = """
                 padding: dp(4)
 
                 FieldLabel:
-                    text: "Tarifa"
+                    text: root.tekstovi.get("tariff", "")
 
                 Spinner:
                     id: spinner_tarifa
-                    text: root.tarife_lista[0]
-                    values: root.tarife_lista
+                    text: root.tarife_prikaz[0] if root.tarife_prikaz else ""
+                    values: root.tarife_prikaz
                     size_hint_y: None
                     height: dp(48)
                     background_color: 0.78, 0.80, 0.90, 1
@@ -183,34 +256,34 @@ KALKULATOR_KV = """
                     on_text: root.izracunaj()
 
                 FieldLabel:
-                    text: "Kilometraza (km)"
+                    text: root.tekstovi.get("distance", "")
 
                 PastelTextInput:
                     id: input_km
-                    hint_text: "npr. 8.5"
+                    hint_text: root.tekstovi.get("distance_hint", "")
                     input_filter: "float"
                     on_text: root.izracunaj()
 
                 FieldLabel:
-                    text: "Od (opciono)"
+                    text: root.tekstovi.get("from", "")
 
                 PastelTextInput:
                     id: input_od
-                    hint_text: "adresa polazista"
+                    hint_text: root.tekstovi.get("from_hint", "")
 
                 FieldLabel:
-                    text: "Do (opciono)"
+                    text: root.tekstovi.get("to", "")
 
                 PastelTextInput:
                     id: input_do
-                    hint_text: "adresa odredista"
+                    hint_text: root.tekstovi.get("to_hint", "")
 
                 FieldLabel:
-                    text: "Napomena (opciono)"
+                    text: root.tekstovi.get("note", "")
 
                 PastelTextInput:
                     id: input_napomena
-                    hint_text: "npr. cekanje, prtljag..."
+                    hint_text: root.tekstovi.get("note_hint", "")
 
                 PastelCard:
                     tint: 0.28, 0.48, 0.34, 0.92

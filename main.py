@@ -40,15 +40,17 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-from kivy.properties import StringProperty, BooleanProperty, ListProperty
+from kivy.properties import StringProperty, BooleanProperty, ListProperty, DictProperty
 from datetime import datetime, timedelta, time as dt_time
 
 from servisi import database as db
 from servisi import grafik_zarade
+from servisi import i18n
 from ekrani import ekran_navigacija
 from ekrani import ekran_google_api
 from ekrani import ekran_profil
 from ekrani import ekran_valuta
+from ekrani import ekran_jezik
 from ekrani import ekran_sigurnost
 from ekrani import ekran_uputstvo
 from ekrani import ekran_dispeceri
@@ -179,6 +181,7 @@ GORIVO = JsonLog("gorivo.json")
 SERVIS = JsonLog("servis.json")
 TROSKOVI = JsonLog("troskovi.json")
 DISPECERI = JsonLog("dispeceri.json")
+JEZIK = i18n.JezikPodesavanja()
 
 
 class ApiPodesavanja:
@@ -578,6 +581,7 @@ ScreenManager:
     GoogleApiScreen:
     ProfilScreen:
     ValutaScreen:
+    JezikScreen:
     BackupScreen:
     IzvozPdfScreen:
     GrafikZaradeScreen:
@@ -835,37 +839,37 @@ ScreenManager:
 
                 HomeMenuButton:
                     icon_src: "assets/icons/start_ride.png"
-                    tekst: "GPS voznja (auto)"
+                    tekst: root.tekstovi.get("gps_auto", "")
                     on_release: app.root.current = "gps_voznja"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/end_ride.png"
-                    tekst: "Pocetak voznje (rucno)"
+                    tekst: root.tekstovi.get("manual_ride", "")
                     on_release: app.root.current = "kalkulator"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/history.png"
-                    tekst: "Istorija voznji"
+                    tekst: root.tekstovi.get("history", "")
                     on_release: app.root.current = "evidencija"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/daily_report.png"
-                    tekst: "Izvestaj"
+                    tekst: root.tekstovi.get("report", "")
                     on_release: app.root.current = "izvestaj"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/profil.png"
-                    tekst: "Profil vozaca"
+                    tekst: root.tekstovi.get("profile", "")
                     on_release: app.root.current = "profil"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Podesavanja"
+                    tekst: root.tekstovi.get("settings", "")
                     on_release: app.root.current = "podesavanja"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Uputstvo za upotrebu"
+                    tekst: root.tekstovi.get("instructions", "")
                     on_release: app.root.current = "uputstvo"
 
 # ============================================================
@@ -877,11 +881,11 @@ ScreenManager:
     ScreenRoot:
 
         TitleLabel:
-            text: "Podesavanja"
+            text: root.tekstovi.get("title", "")
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekstovi.get("home", "")
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
 
@@ -896,82 +900,87 @@ ScreenManager:
 
                 HomeMenuButton:
                     icon_src: "assets/icons/earnings_chart.png"
-                    tekst: "Grafik zarade"
+                    tekst: root.tekstovi.get("chart", "")
                     on_release: app.root.current = "grafik"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/navigation.png"
-                    tekst: "Navigacija"
+                    tekst: root.tekstovi.get("navigation", "")
                     on_release: app.root.current = "navigacija"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/night_tariff.png"
-                    tekst: "Nocna tarifa"
+                    tekst: root.tekstovi.get("night_tariff", "")
                     on_release: app.root.current = "nocna_tarifa"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/service.png"
-                    tekst: "Servis vozila"
+                    tekst: root.tekstovi.get("service", "")
                     on_release: app.root.current = "servis"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/fuel.png"
-                    tekst: "Gorivo"
+                    tekst: root.tekstovi.get("fuel", "")
                     on_release: app.root.current = "gorivo"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/calculator.png"
-                    tekst: "Ostali troskovi"
+                    tekst: root.tekstovi.get("other_costs", "")
                     on_release: app.root.current = "troskovi"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/weekly_report.png"
-                    tekst: "Nedeljni izvestaj"
+                    tekst: root.tekstovi.get("weekly_report", "")
                     on_release: app.root.current = "izvestaj"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/monthly_report.png"
-                    tekst: "Mesecni izvestaj"
+                    tekst: root.tekstovi.get("monthly_report", "")
                     on_release: app.root.current = "izvestaj"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/calculator.png"
-                    tekst: "Kalkulator"
+                    tekst: root.tekstovi.get("calculator", "")
                     on_release: app.root.current = "kalkulator"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/profil.png"
-                    tekst: "Profil vozaca"
+                    tekst: root.tekstovi.get("profile", "")
                     on_release: app.root.current = "profil"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/poziv.png"
-                    tekst: "Poziv / Dispecer"
+                    tekst: root.tekstovi.get("dispatcher", "")
                     on_release: app.root.current = "poziv"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Cene / Tarife"
+                    tekst: root.tekstovi.get("prices", "")
                     on_release: app.root.current = "cene"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Google API"
+                    tekst: root.tekstovi.get("google_api", "")
                     on_release: app.root.current = "google_api"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Valuta"
+                    tekst: root.tekstovi.get("currency", "")
                     on_release: app.root.current = "valuta"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Backup podataka"
+                    tekst: root.tekstovi.get("language", "")
+                    on_release: app.root.current = "jezik"
+
+                HomeMenuButton:
+                    icon_src: "assets/icons/settings.png"
+                    tekst: root.tekstovi.get("backup", "")
                     on_release: app.root.current = "backup"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Sigurnost (otisak prsta)"
+                    tekst: root.tekstovi.get("security", "")
                     on_release: app.root.current = "sigurnost"
 
 # NavigacijaScreen, GoogleApiScreen, ProfilScreen, ValutaScreen su
@@ -1089,7 +1098,23 @@ class ScreenRoot(BoxLayout):
 
 
 class HomeScreen(Screen):
-    pass
+    tekstovi = DictProperty({})
+
+    def on_pre_enter(self, *args):
+        self.osvezi_tekstove()
+
+    def osvezi_tekstove(self):
+        app = App.get_running_app()
+        jezik = getattr(app, "jezik", "sr") if app else "sr"
+        self.tekstovi = {
+            "gps_auto": i18n.prevedi(jezik, "home_gps_auto"),
+            "manual_ride": i18n.prevedi(jezik, "home_manual_ride"),
+            "history": i18n.prevedi(jezik, "home_history"),
+            "report": i18n.prevedi(jezik, "home_report"),
+            "profile": i18n.prevedi(jezik, "home_profile"),
+            "settings": i18n.prevedi(jezik, "home_settings"),
+            "instructions": i18n.prevedi(jezik, "home_instructions"),
+        }
 
 
 
@@ -1097,7 +1122,35 @@ class HomeScreen(Screen):
 
 
 class PodesavanjaScreen(Screen):
-    pass
+    tekstovi = DictProperty({})
+
+    def on_pre_enter(self, *args):
+        self.osvezi_tekstove()
+
+    def osvezi_tekstove(self):
+        app = App.get_running_app()
+        jezik = getattr(app, "jezik", "sr") if app else "sr"
+        self.tekstovi = {
+            "title": i18n.prevedi(jezik, "settings_title"),
+            "home": i18n.prevedi(jezik, "nav_home"),
+            "chart": i18n.prevedi(jezik, "settings_chart"),
+            "navigation": i18n.prevedi(jezik, "settings_navigation"),
+            "night_tariff": i18n.prevedi(jezik, "settings_night_tariff"),
+            "service": i18n.prevedi(jezik, "settings_service"),
+            "fuel": i18n.prevedi(jezik, "settings_fuel"),
+            "other_costs": i18n.prevedi(jezik, "settings_other_costs"),
+            "weekly_report": i18n.prevedi(jezik, "settings_weekly_report"),
+            "monthly_report": i18n.prevedi(jezik, "settings_monthly_report"),
+            "calculator": i18n.prevedi(jezik, "settings_calculator"),
+            "profile": i18n.prevedi(jezik, "settings_profile"),
+            "dispatcher": i18n.prevedi(jezik, "settings_dispatcher"),
+            "prices": i18n.prevedi(jezik, "settings_prices"),
+            "google_api": i18n.prevedi(jezik, "settings_google_api"),
+            "currency": i18n.prevedi(jezik, "settings_currency"),
+            "language": i18n.prevedi(jezik, "settings_language"),
+            "backup": i18n.prevedi(jezik, "settings_backup"),
+            "security": i18n.prevedi(jezik, "settings_security"),
+        }
 
 
 class PlaceholderScreen(Screen):
@@ -1245,6 +1298,24 @@ def _prikazi_gresku_ekran(poruka):
 
 class TaksiApp(App):
     background_img = StringProperty(BACKGROUND_IMG)
+    jezik = StringProperty("sr")
+
+    def postavi_jezik(self, jezik):
+        if jezik not in i18n.SUPPORTED_LANGUAGES:
+            return
+        self.jezik = jezik
+        JEZIK.jezik = jezik
+        JEZIK.sacuvaj(self.user_data_dir)
+        self.osvezi_tekstove_ekrana()
+
+    def osvezi_tekstove_ekrana(self, manager=None):
+        sm = manager or self.root
+        if sm is None:
+            return
+        for ekran in sm.screens:
+            osvezi = getattr(ekran, "osvezi_tekstove", None)
+            if callable(osvezi):
+                osvezi()
 
     def build(self):
         # Globalni hvatac neuhvacenih gresaka posle pokretanja (npr. u dugmadima)
@@ -1262,6 +1333,8 @@ class TaksiApp(App):
             API.ucitaj(self.user_data_dir)
             VOZAC.ucitaj(self.user_data_dir)
             KURS.ucitaj(self.user_data_dir)
+            JEZIK.ucitaj(self.user_data_dir)
+            self.jezik = JEZIK.jezik
             ekran_sigurnost.SIGURNOST.ucitaj(self.user_data_dir)
             DISPECERI.ucitaj(self.user_data_dir)
             ekran_dispeceri.SMENE.ucitaj(self.user_data_dir)
@@ -1279,6 +1352,7 @@ class TaksiApp(App):
                 + ekran_google_api.GOOGLE_API_KV
                 + ekran_profil.PROFIL_KV
                 + ekran_valuta.VALUTA_KV
+                + ekran_jezik.JEZIK_KV
                 + ekran_sigurnost.SIGURNOST_KV
                 + ekran_uputstvo.UPUTSTVO_KV
                 + ekran_dispeceri.DISPECERI_KV
@@ -1293,6 +1367,7 @@ class TaksiApp(App):
                 + ekran_izvestaj.IZVESTAJ_KV
                 + ekran_gps_voznja.GPS_VOZNJA_KV
             )
+            self.osvezi_tekstove_ekrana(root)
             # Provera zakljucavanja (otisak) se pokrece tek NAKON sto je
             # citav ScreenManager sagradjen (vidi napomenu u
             # LockScreen.pokusaj_ili_preskoci) - zato ide kroz
