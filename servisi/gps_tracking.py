@@ -509,8 +509,8 @@ def _android_kontekst_za_servis():
     return ActivityThread.currentApplication()
 
 
-def android_foreground_servis_pokrenut(user_data_dir=None):
-    if treba_zaustaviti_servis(user_data_dir):
+def android_foreground_servis_pokrenut(user_data_dir=None, ignorisi_stop_fajl=False):
+    if not ignorisi_stop_fajl and treba_zaustaviti_servis(user_data_dir):
         return False
     try:
         from jnius import autoclass

@@ -595,7 +595,10 @@ class GpsVoznjaScreen(Screen):
             km = AKTIVNA_VOZNJA.km
 
         self._zaustavi_lokalni_gps()
-        if android_foreground_servis_pokrenut(app.user_data_dir):
+        if android_foreground_servis_pokrenut(
+            app.user_data_dir,
+            ignorisi_stop_fajl=True,
+        ):
             zaustavljeno, greska = zaustavi_android_foreground_servis(
                 user_data_dir=app.user_data_dir,
             )

@@ -118,18 +118,18 @@ def main():
         ),
     )
 
-    pokrenut = tracker.pokreni()
-    upisi_running_fajl(user_data_dir)
-    if not pokrenut:
-        postavi_status(
-            gps_status="Greska pri pokretanju GPS-a.",
-            user_data_dir=user_data_dir,
-        )
-        return
-
-    sekundi_bez_signala = 0
-
     try:
+        pokrenut = tracker.pokreni()
+        upisi_running_fajl(user_data_dir)
+        if not pokrenut:
+            postavi_status(
+                gps_status="Greska pri pokretanju GPS-a.",
+                user_data_dir=user_data_dir,
+            )
+            return
+
+        sekundi_bez_signala = 0
+
         while True:
             stanje = AktivnaVoznjaState()
             stanje.ucitaj(user_data_dir)
