@@ -1,0 +1,36 @@
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+*.egg
+*.dist-info/
+
+# Kivy
+.buildozer/
+bin/
+build/
+.gradle/
+.buildozer/
+
+# App data (lokalni)
+taksi_evidencija.db
+*.json
+crash_log.txt
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Virtual environment
+venv/
+ENV/
+env/
+
+# Backup
+*.bak
+*.orig

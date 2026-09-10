@@ -1,0 +1,17 @@
+# Kivy UI Framework
+kivy==2.2.1
+
+# Android support
+plyer==2.1.0
+
+# PDF generation
+reportlab==4.0.7
+
+# Image processing
+Pillow==10.0.0
+
+# SSL certificates
+certifi==2023.7.22
+
+# Optional: for encryption (future use)
+# cryptography==41.0.0
