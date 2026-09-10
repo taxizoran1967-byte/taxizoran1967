@@ -125,6 +125,7 @@ def main():
             gps_status="Greska pri pokretanju GPS-a.",
             user_data_dir=user_data_dir,
         )
+        return
 
     sekundi_bez_signala = 0
 

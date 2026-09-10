@@ -600,9 +600,24 @@ class GpsVoznjaScreen(Screen):
                 user_data_dir=app.user_data_dir,
             )
             if not zaustavljeno:
+                poruka = f"Foreground servis nije zaustavljen cisto ({greska})."
                 self.tekst_dijagnoza = (
                     (AKTIVNA_VOZNJA.dijagnoza + "\n") if AKTIVNA_VOZNJA.dijagnoza else ""
-                ) + f"Foreground servis nije zaustavljen cisto ({greska})."
+                ) + poruka
+                postavi_status(
+                    gps_status="Ne mogu bezbedno da zaustavim GPS servis. Pokusaj ponovo.",
+                    dijagnoza=self.tekst_dijagnoza,
+                    izvor_pracenja="zavrsetak_u_toku",
+                    user_data_dir=app.user_data_dir,
+                )
+                self._ucitaj_stanje_voznje()
+                self.voznja_aktivna = True
+                self._pokreni_tajmer()
+                self._poruka(
+                    "Ne mogu bezbedno da zavrsim voznju dok je GPS servis jos aktivan. "
+                    "Pokusaj ponovo za nekoliko sekundi."
+                )
+                return
 
         vreme_pocetka_txt = None
         if AKTIVNA_VOZNJA.pocetak_vreme:

@@ -510,6 +510,8 @@ def _android_kontekst_za_servis():
 
 
 def android_foreground_servis_pokrenut(user_data_dir=None):
+    if treba_zaustaviti_servis(user_data_dir):
+        return False
     try:
         from jnius import autoclass
 
@@ -549,6 +551,7 @@ def zaustavi_android_foreground_servis(user_data_dir=None):
         from jnius import autoclass
 
         postavi_stop_fajl(user_data_dir)
+        obrisi_running_fajl(user_data_dir)
         service = autoclass(ANDROID_SERVICE_CLASS)
         kontekst = _android_kontekst_za_servis()
         if kontekst is None:
