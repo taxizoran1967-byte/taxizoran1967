@@ -1,0 +1,77 @@
+{
+  "_meta": {
+    "name": "English",
+    "code": "en",
+    "version": "0.1"
+  },
+
+  "home": {
+    "naslov": "TAXI ZORAN",
+    "gps_voznja": "GPS ride (auto)",
+    "pocetak_rucno": "Start ride (manual)",
+    "istorija": "Ride history",
+    "izvestaj": "Report",
+    "profil": "Driver profile",
+    "podesavanja": "Settings",
+    "uputstvo": "Instructions"
+  },
+
+  "kalkulator": {
+    "naslov": "Ride calculator",
+    "unesi_km": "Enter kilometers to see price",
+    "sacuvaj_voznju": "Save ride",
+    "sacuvaj_izmenu": "Save changes",
+    "km_greska": "Enter valid kilometers before saving.",
+    "km_veca_od_nule": "Kilometers must be greater than 0.",
+    "izmena_sacuvana": "Changes saved! Ride price: {cena}",
+    "sacuvano": "Saved! Ride price: {cena}",
+    "tarifa": "Tariff",
+    "kilometraza": "Distance (km)",
+    "od": "From (optional)",
+    "do": "To (optional)",
+    "napomena": "Notes (optional)",
+    "od_hint": "departure address",
+    "do_hint": "destination address",
+    "napomena_hint": "e.g. waiting, luggage...",
+    "cena_prikaz": "Price: {cena}\n(start {start} + {km} km x {cena_km})",
+    "nocna_tarifa": "Night (22-07h)"
+  },
+
+  "profil": {
+    "naslov": "Driver profile",
+    "ime": "Name and surname",
+    "telefon": "Phone",
+    "licenca": "Taxi license number",
+    "tablice": "License plates",
+    "vozilo": "Vehicle (make and model)",
+    "registracija": "Registration expires (format YYYY-MM-DD)",
+    "osiguranje": "Insurance expires (format YYYY-MM-DD)",
+    "sacuvaj": "Save profile",
+    "greska": "Error",
+    "datum_format": "{naziv}: date must be in YYYY-MM-DD format (e.g. 2026-12-31), or leave empty.",
+    "sacuvano": "Driver profile saved.",
+    "reg_nije_unet": "Registration: expiration date not entered",
+    "reg_isteklo": "Registration: EXPIRED {dani} days ago!",
+    "reg_istice_danas": "Registration: expires TODAY!",
+    "reg_istice_za": "Registration: expires in {dani} days",
+    "osig_nije_unet": "Insurance: expiration date not entered",
+    "osig_isteklo": "Insurance: EXPIRED {dani} days ago!",
+    "osig_istice_danas": "Insurance: expires TODAY!",
+    "osig_istice_za": "Insurance: expires in {dani} days",
+    "ime_hint": "e.g. John Smith",
+    "telefon_hint": "e.g. +381 65 123 4567",
+    "licenca_hint": "e.g. TX-00123",
+    "tablice_hint": "e.g. BG-1234-AB",
+    "vozilo_hint": "e.g. Skoda Octavia",
+    "registracija_hint": "e.g. 2026-12-31",
+    "osiguranje_hint": "e.g. 2026-11-15",
+    "pdf_napomena": "These details appear in the header of monthly PDF reports (Report -> Export PDF)."
+  },
+
+  "buttons": {
+    "pocetna": "Home",
+    "evidencija": "History",
+    "izvestaj": "Report",
+    "info": "Info"
+  }
+}
