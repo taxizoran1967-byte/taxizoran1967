@@ -4,7 +4,7 @@ package.name = taksiapp
 package.domain = org.licno
 
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas,ttf
+source.include_exts = py,png,jpg,kv,atlas,ttf,json
 
 version = 0.1
 

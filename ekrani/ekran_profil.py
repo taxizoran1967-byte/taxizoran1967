@@ -4,7 +4,6 @@ Ekran Profil vozaca - licni podaci i podaci o vozilu, plus pracenje
 roka isteka registracije/osiguranja.
 
 Izdvojen iz main.py - isti obrazac kao grafik_zarade.py.
-MODIFIKOVANO: Koristi _t() za jezičke tekstove
 """
 
 from datetime import datetime
@@ -12,8 +11,6 @@ from datetime import datetime
 from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty, ListProperty
 from kivy.app import App
-
-from servisi import jezici
 
 
 # ============================================================
@@ -51,14 +48,14 @@ def _stanje_dokumenata_vozila():
     zuto ako bar jedno istice u naredni 30 dana, inace zeleno; sivo
     ako nijedan datum jos nije unet)."""
 
-    def opis(dani, naziv_key):
+    def opis(dani, naziv):
         if dani is None:
-            return jezici._t(f"profil.{naziv_key}_nije_unet")
+            return f"{naziv}: nije unet datum isteka"
         if dani < 0:
-            return jezici._t(f"profil.{naziv_key}_isteklo", dani=abs(dani))
+            return f"{naziv}: ISTEKLO pre {abs(dani)} dana!"
         if dani == 0:
-            return jezici._t(f"profil.{naziv_key}_istice_danas")
-        return jezici._t(f"profil.{naziv_key}_istice_za", dani=dani)
+            return f"{naziv}: istice DANAS!"
+        return f"{naziv}: istice za {dani} dana"
 
     def nivo(dani):
         if dani is None:
@@ -72,7 +69,7 @@ def _stanje_dokumenata_vozila():
     reg_dani = _dani_do_isteka(_VOZAC_REF.registracija_datum)
     osig_dani = _dani_do_isteka(_VOZAC_REF.osiguranje_datum)
 
-    tekst = opis(reg_dani, "reg") + "\n" + opis(osig_dani, "osig")
+    tekst = opis(reg_dani, "Registracija") + "\n" + opis(osig_dani, "Osiguranje")
 
     boje = {
         0: [0.35, 0.35, 0.45, 0.92],
@@ -105,13 +102,11 @@ class ProfilScreen(Screen):
         reg_tekst = self.ids.input_registracija.text.strip()
         osig_tekst = self.ids.input_osiguranje.text.strip()
 
-        # Provera validnosti datuma
-        for naziv_key, vrednost in (("reg", reg_tekst), ("osig", osig_tekst)):
+        for naziv, vrednost in (("Registracija", reg_tekst), ("Osiguranje", osig_tekst)):
             if vrednost and _dani_do_isteka(vrednost) is None:
-                naziv = jezici._t(f"profil.{naziv_key}_nije_unet").split(":")[0]
                 _PRIKAZI_POPUP(
-                    jezici._t("profil.greska"),
-                    jezici._t("profil.datum_format", naziv=naziv),
+                    "Greska",
+                    f"{naziv}: datum mora biti u formatu GGGG-MM-DD (npr. 2026-12-31), ili ostavi prazno.",
                     size_hint=(0.85, 0.4),
                 )
                 return
@@ -128,7 +123,7 @@ class ProfilScreen(Screen):
         _VOZAC_REF.sacuvaj(app.user_data_dir)
         self._osvezi_dokumenti()
 
-        _PRIKAZI_POPUP(jezici._t("buttons.info"), jezici._t("profil.sacuvano"), size_hint=(0.8, 0.3))
+        _PRIKAZI_POPUP("Info", "Profil vozaca je sacuvan.", size_hint=(0.8, 0.3))
 
 
 PROFIL_KV = """
