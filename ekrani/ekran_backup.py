@@ -10,6 +10,8 @@ Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
 import os
 import json
 import shutil
+import glob
+from datetime import datetime, timedelta
 
 from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
@@ -25,7 +27,11 @@ except Exception:
     _DELJENJE_DOSTUPNO = False
 
 
-BACKUP_FAJL_NAZIV = "backup_taksi.json"
+BACKUP_PREFIX = "backup_taksi"
+BACKUP_FAJL_NAZIV = "backup_taksi.json"  # stari, fiksni naziv - i dalje se
+                                          # prepoznaje pri ucitavanju/deljenju
+                                          # radi kompatibilnosti sa backupima
+                                          # napravljenim pre ove izmene.
 
 
 # ============================================================
@@ -55,6 +61,30 @@ def poveži(vozac_obj, gorivo_obj, servis_obj, troskovi_obj,
     _ZATRAZI_DOZVOLU_SVI_FAJLOVI = zatrazi_dozvolu_fn
     _PUTANJA_BACKUP_FOLDERA = putanja_backup_fn
     _PRIKAZI_POPUP = prikazi_popup_fn
+
+
+def _novo_ime_backupa():
+    """Svaki backup dobija JEDINSTVENO ime sa datumom i vremenom (npr.
+    backup_taksi_2026-09-11_143045.json), da se stari backupi NE
+    prepisuju - ostaju svi u folderu, po datumu kad su napravljeni."""
+    vreme = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    return f"{BACKUP_PREFIX}_{vreme}.json"
+
+
+def _svi_backup_fajlovi(folder):
+    """Vraca sve backup fajlove u folderu (i stari fiksni naziv i novi
+    format sa datumom), sortirane od NAJNOVIJEG ka najstarijem."""
+    obrazac = os.path.join(folder, f"{BACKUP_PREFIX}*.json")
+    fajlovi = glob.glob(obrazac)
+    fajlovi.sort(key=os.path.getmtime, reverse=True)
+    return fajlovi
+
+
+def _najnoviji_backup_fajl(folder):
+    """Vraca putanju najnovijeg backup fajla u folderu, ili None ako
+    nijedan ne postoji."""
+    fajlovi = _svi_backup_fajlovi(folder)
+    return fajlovi[0] if fajlovi else None
 
 
 def _stavka_bez_id(stavka):
@@ -109,7 +139,7 @@ def _sacuvaj_backup_fajl():
 
     folder = _PUTANJA_BACKUP_FOLDERA()
     os.makedirs(folder, exist_ok=True)
-    putanja = os.path.join(folder, BACKUP_FAJL_NAZIV)
+    putanja = os.path.join(folder, _novo_ime_backupa())
     with open(putanja, "w", encoding="utf-8") as f:
         json.dump(podaci, f, ensure_ascii=False, indent=2)
 
@@ -127,9 +157,10 @@ def _auto_backup_ako_treba(*_args):
     try:
         if not _IMA_DOZVOLU_SVI_FAJLOVI():
             return
-        putanja = os.path.join(_PUTANJA_BACKUP_FOLDERA(), BACKUP_FAJL_NAZIV)
-        if os.path.exists(putanja):
-            poslednja_izmena = datetime.fromtimestamp(os.path.getmtime(putanja))
+        folder = _PUTANJA_BACKUP_FOLDERA()
+        najnoviji = _najnoviji_backup_fajl(folder)
+        if najnoviji is not None:
+            poslednja_izmena = datetime.fromtimestamp(os.path.getmtime(najnoviji))
             if datetime.now() - poslednja_izmena < timedelta(hours=24):
                 return
         _sacuvaj_backup_fajl()
@@ -144,7 +175,7 @@ class BackupScreen(Screen):
         self._osvezi_status()
 
     def _osvezi_status(self):
-        putanja = os.path.join(_PUTANJA_BACKUP_FOLDERA(), BACKUP_FAJL_NAZIV)
+        folder = _PUTANJA_BACKUP_FOLDERA()
         if _IMA_DOZVOLU_SVI_FAJLOVI():
             dozvola_txt = "Dozvola za fajlove: DA"
         else:
@@ -157,9 +188,20 @@ class BackupScreen(Screen):
 
         vozac_txt = "popunjeni" if _VOZAC_REF.ime_prezime else "nisu popunjeni"
 
+        svi_backupi = _svi_backup_fajlovi(folder)
+        if svi_backupi:
+            backup_txt = (
+                f"Sacuvanih backupa: {len(svi_backupi)} "
+                f"(najnoviji: {os.path.basename(svi_backupi[0])})"
+            )
+        else:
+            backup_txt = "Jos uvek nema nijednog backupa."
+
         self.tekst_status = (
             f"{dozvola_txt}\n\n"
-            f"Backup fajl se cuva ovde:\n{putanja}\n\n"
+            f"Backup fajlovi se cuvaju ovde:\n{folder}\n"
+            f"{backup_txt}\n"
+            f"(svaki backup je poseban fajl sa datumom - stari se ne brisu)\n\n"
             f"Voznji trenutno u bazi: {broj}\n"
             f"Unosa goriva: {len(_GORIVO_REF.stavke)}\n"
             f"Unosa servisa: {len(_SERVIS_REF.stavke)}\n"
@@ -209,19 +251,20 @@ class BackupScreen(Screen):
             )
             return
 
-        putanja = os.path.join(_PUTANJA_BACKUP_FOLDERA(), BACKUP_FAJL_NAZIV)
-        try:
-            with open(putanja, "r", encoding="utf-8") as f:
-                podaci = json.load(f)
-        except FileNotFoundError:
+        folder = _PUTANJA_BACKUP_FOLDERA()
+        putanja = _najnoviji_backup_fajl(folder)
+        if putanja is None:
             _PRIKAZI_POPUP(
                 "Nema backup fajla",
-                f"Nije pronadjen fajl:\n{putanja}\n\n"
+                f"Nije pronadjen nijedan backup fajl u:\n{folder}\n\n"
                 f"Prvo napravi backup na starom telefonu, pa taj fajl "
                 f"prebaci u isti folder na ovom telefonu.",
                 size_hint=(0.88, 0.5),
             )
             return
+        try:
+            with open(putanja, "r", encoding="utf-8") as f:
+                podaci = json.load(f)
         except Exception as e:
             _PRIKAZI_POPUP(
                 "Greska", f"Ne mogu da procitam backup:\n{e}", size_hint=(0.88, 0.4)
@@ -272,12 +315,13 @@ class BackupScreen(Screen):
 
         _PRIKAZI_POPUP(
             "Vraceno iz backupa",
+            f"Ucitan fajl: {os.path.basename(putanja)}\n\n"
             f"Voznje - dodato: {dodato}, preskoceno (vec postoje): {preskoceno}\n"
             f"Gorivo - dodato novih unosa: {dodato_gorivo}\n"
             f"Servisi - dodato novih unosa: {dodato_servisi}\n"
             f"Ostali troskovi - dodato novih unosa: {dodato_troskovi}\n"
             f"Podaci o vozacu: {'azurirani' if vozac_podaci else 'nije bilo u ovom backupu'}",
-            size_hint=(0.88, 0.55),
+            size_hint=(0.88, 0.6),
         )
         self._osvezi_status()
 
@@ -294,8 +338,9 @@ class BackupScreen(Screen):
             )
             return
 
-        putanja = os.path.join(_PUTANJA_BACKUP_FOLDERA(), BACKUP_FAJL_NAZIV)
-        if not os.path.exists(putanja):
+        folder = _PUTANJA_BACKUP_FOLDERA()
+        putanja = _najnoviji_backup_fajl(folder)
+        if putanja is None:
             _PRIKAZI_POPUP(
                 "Nema backup fajla",
                 "Prvo napravi backup klikom na 'Sacuvaj backup sada', pa onda podeli.",
@@ -308,7 +353,7 @@ class BackupScreen(Screen):
             # SharedStorage ocekuje fajl iz privatnog prostora aplikacije,
             # a nas backup je u javnom Download folderu - zato prvo
             # napravimo privatnu kopiju, pa nju delimo.
-            privatna_kopija = os.path.join(app.user_data_dir, BACKUP_FAJL_NAZIV)
+            privatna_kopija = os.path.join(app.user_data_dir, os.path.basename(putanja))
             shutil.copyfile(putanja, privatna_kopija)
 
             skladiste = SharedStorage()
