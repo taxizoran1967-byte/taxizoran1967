@@ -59,7 +59,7 @@ jobs:
         run: |
           python -m venv .reportlab-venv
           .reportlab-venv/bin/python -m pip install --upgrade pip setuptools wheel
-          .reportlab-venv/bin/python -m pip install reportlab==3.6.12 certifi et_xmlfile openpyxl pillow
+          .reportlab-venv/bin/python -m pip install reportlab==3.6.12
 
       - name: Vendor reportlab into app source
         run: |
