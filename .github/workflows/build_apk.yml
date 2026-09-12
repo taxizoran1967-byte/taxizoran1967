@@ -45,15 +45,15 @@ jobs:
         run: |
           yes | buildozer android p4a -- --help || true
 
-      - name: Remove broken reportlab recipe (forces plain pip install)
+           - name: Fetch python-for-android (without full build yet)
         run: |
-          RECIPE_DIR=".buildozer/android/platform/python-for-android/pythonforandroid/recipes/reportlab"
-          if [ -d "$RECIPE_DIR" ]; then
-            echo "Uklanjam stari reportlab recept: $RECIPE_DIR"
-            rm -rf "$RECIPE_DIR"
-          else
-            echo "Reportlab recept nije pronadjen (mozda vec uklonjen ili p4a jos nije skinut) - nastavljam."
-          fi
+          yes | buildozer android p4a -- --help || true
+
+      - name: Build APK with buildozer
+        run: |
+          yes | buildozer android debug
+        env:
+          ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
 
       - name: Build APK with buildozer
         run: |
