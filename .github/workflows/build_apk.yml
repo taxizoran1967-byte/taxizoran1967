@@ -70,7 +70,7 @@ jobs:
 
           spec = importlib.util.find_spec("reportlab")
           if spec is None or spec.origin is None:
-              raise SystemExit("reportlab nije instaliran")
+              raise SystemExit("reportlab is not installed in the isolated vendoring environment")
 
           source_dir = Path(spec.origin).resolve().parent
           target_dir = Path("reportlab")
@@ -81,7 +81,7 @@ jobs:
           shutil.copytree(
               source_dir,
               target_dir,
-              ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
+              ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "*.so", "*.pyd", "*.dylib"),
           )
 
           for pattern in (
