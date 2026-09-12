@@ -13,7 +13,7 @@ presplash.filename = %(source.dir)s/presplash.png
 icon.adaptive_foreground.filename = %(source.dir)s/icon_fg.png
 icon.adaptive_background.filename = %(source.dir)s/icon_bg.png
 
-requirements = python3,kivy,sqlite3,plyer,certifi,reportlab==3.6.12,pillow,et_xmlfile,openpyxl
+requirements = python3,kivy,sqlite3,plyer,certifi,pillow,et_xmlfile,openpyxl
 
 orientation = portrait
 fullscreen = 0

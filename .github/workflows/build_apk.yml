@@ -55,6 +55,10 @@ jobs:
             echo "Reportlab recept nije pronadjen (mozda vec uklonjen ili p4a jos nije skinut) - nastavljam."
           fi
 
+      - name: Install reportlab directly
+        run: |
+          pip install reportlab==3.6.12 certifi et_xmlfile openpyxl pillow
+
       - name: Build APK with buildozer
         run: |
           yes | buildozer android debug
