@@ -79,8 +79,17 @@ jobs:
           shutil.copytree(
               source_dir,
               target_dir,
-              ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "*.so", "*.pyd"),
+              ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
           )
+
+          for pattern in (
+              "lib/_rl_accel.*",
+              "lib/pyHnj.*",
+              "graphics/_renderPM.*",
+          ):
+              for path in target_dir.glob(pattern):
+                  path.unlink()
+
           print(f"Vendored reportlab: {source_dir} -> {target_dir}")
           PY
 
