@@ -96,18 +96,20 @@ jobs:
           PY
 
       - name: Build APK with buildozer
+        id: build_apk
         run: |
           yes | buildozer android debug
         env:
           ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
 
       - name: Upload APK artifact
+        id: upload_apk
         uses: actions/upload-artifact@v4
         with:
           name: taksi-app-apk
           path: bin/*.apk
 
       - name: Clean vendored reportlab workspace
-        if: success()
+        if: always() && steps.build_apk.outcome == 'success' && steps.upload_apk.outcome == 'success'
         run: |
           rm -rf reportlab .reportlab-venv
