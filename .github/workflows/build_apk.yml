@@ -57,7 +57,7 @@ jobs:
 
       - name: Install reportlab directly
         run: |
-          python -m pip install reportlab==3.6.12 certifi et_xmlfile openpyxl pillow
+          python -m pip install --user reportlab==3.6.12 certifi et_xmlfile openpyxl pillow
 
       - name: Vendor reportlab into app source
         run: |
