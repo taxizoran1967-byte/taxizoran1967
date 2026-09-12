@@ -101,13 +101,13 @@ jobs:
         env:
           ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
 
-      - name: Clean vendored reportlab workspace
-        if: always()
-        run: |
-          rm -rf reportlab .reportlab-venv
-
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: taksi-app-apk
           path: bin/*.apk
+
+      - name: Clean vendored reportlab workspace
+        if: success()
+        run: |
+          rm -rf reportlab .reportlab-venv
