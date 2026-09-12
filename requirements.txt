@@ -4,8 +4,8 @@ kivy==2.2.1
 # Android support
 plyer==2.1.0
 
-# PDF generation
-reportlab==4.0.7
+# PDF generation (3.6.12 je stabilna za Android, novije verzije imaju dependency conflicts)
+reportlab==3.6.12
 
 # Image processing
 Pillow==10.0.0
