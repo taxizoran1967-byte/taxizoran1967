@@ -7,7 +7,6 @@ Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
 """
 
 import os
-import csv
 import calendar
 import re
 from datetime import datetime, timedelta
@@ -55,91 +54,245 @@ def poveži(gorivo_obj, servis_obj, troskovi_obj, vozac_obj,
     _PRIKAZI_POPUP = prikazi_popup_fn
 
 
-def generisi_izvestaj_csv(pocetak_str, kraj_str, putanja_fajla):
-    """Pravi CSV fajl (za Excel) sa svim voznjama, gorivom, servisima i
-    ostalim troskovima za izabrani period, u JEDNOJ tabeli - lakse za
-    knjigovodju da sabira/filtrira nego cetiri posebna fajla. Kolone:
-    Datum, Tip, Opis, Prihod, Rashod, Napomena. Sortirano po datumu.
+def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla):
+    """Pravi profesionalni Excel (.xlsx) izvestaj za knjigovodstvo, za
+    isti period koji koristi i generisi_izvestaj_pdf().
 
-    Pise se sa UTF-8 BOM na pocetku, da Excel ispravno prikaze slova
-    kao sto su c, c, s, dj, z (bez toga Excel cesto pokvari ta slova)."""
+    Za razliku od PDF-a (napravljen za stampu/citanje), ovaj fajl je
+    napravljen da se DALJE OBRADJUJE u Excel-u:
+      - poseban list za svaku kategoriju (Voznje, Gorivo, Servisi,
+        Troskovi) - sirovi podaci, red po red, sa zamrznutim
+        zaglavljem i automatskim filterom na svakoj koloni,
+      - list "Pregled" na pocetku sa zbirnim brojkama koje su PRAVE
+        Excel formule (SUM/COUNT preko celih kolona drugih listova),
+        ne samo gotovi brojevi - otvara se i moze da se proveri
+        odakle dolazi svaki zbir, i automatski se osvezavaju ako
+        neko naknadno rucno doda/izmeni po neki red.
+
+    Iznosi su UVEK u RSD (dinarima), onako kako se cuvaju u bazi - bez
+    obzira na to da li je u samoj app-i trenutno izabran prikaz u RSD
+    ili EUR, jer za knjigovodstvo treba prava, nepromenjena vrednost.
+
+    Vraca broj redova (voznje + gorivo + servisi + troskovi) upisanih
+    ukupno, za prikaz u potvrdnoj poruci.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
     voznje = db.voznje_izmedju(pocetak_str, kraj_str)
     gorivo_period = _STAVKE_IZMEDJU(_GORIVO_REF.stavke, pocetak_str, kraj_str)
     servisi_period = _STAVKE_IZMEDJU(_SERVIS_REF.stavke, pocetak_str, kraj_str)
     troskovi_period = _STAVKE_IZMEDJU(_TROSKOVI_REF.stavke, pocetak_str, kraj_str)
 
-    redovi = []
+    FONT_ZAGLAVLJA = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+    FILL_ZAGLAVLJA = PatternFill(start_color="3A3560", end_color="3A3560", fill_type="solid")
+    FONT_NASLOV = Font(name="Calibri", bold=True, size=16, color="3A3560")
+    FONT_PODNASLOV = Font(name="Calibri", size=10, italic=True, color="666666")
+    FONT_SEKCIJA = Font(name="Calibri", bold=True, size=12, color="3A3560")
+    FONT_ZBIR = Font(name="Calibri", bold=True, size=11)
+    FONT_NETO = Font(name="Calibri", bold=True, size=13, color="FFFFFF")
+    FILL_NETO = PatternFill(start_color="2E7D32", end_color="2E7D32", fill_type="solid")
+    OKVIR = Border(
+        left=Side(style="thin", color="CCCCCC"), right=Side(style="thin", color="CCCCCC"),
+        top=Side(style="thin", color="CCCCCC"), bottom=Side(style="thin", color="CCCCCC"),
+    )
+    RSD = '#,##0.00" RSD"'
+    DATUM_FMT = "yyyy-mm-dd"
 
-    for v in voznje:
-        vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else ""
-        opis = f"Voznja {vreme_pocetka}-{v['vreme']}: {v['od_adresa'] or '-'} -> {v['do_adresa'] or '-'} ({v['km']:g} km)"
-        redovi.append({
-            "datum": v["datum"],
-            "tip": "Voznja",
-            "opis": opis,
-            "prihod": v["ukupna_cena"],
-            "rashod": 0,
-            "napomena": "",
-        })
+    def _datum_celija(datum_str):
+        try:
+            return datetime.strptime(datum_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return datum_str or "-"
 
-    for s in gorivo_period:
-        km_pumpe = s.get("km_pumpe")
-        opis = f"Gorivo: {s.get('tip', '-')}, {s.get('litara', 0):g} l"
-        if km_pumpe:
-            opis += f" (na {km_pumpe:g} km)"
-        redovi.append({
-            "datum": s.get("datum", ""),
-            "tip": "Gorivo",
-            "opis": opis,
-            "prihod": 0,
-            "rashod": s.get("cena", 0),
-            "napomena": s.get("napomena") or "",
-        })
+    def _list_sa_zaglavljem(ws, kolone, sirine):
+        for idx, naziv in enumerate(kolone, start=1):
+            c = ws.cell(row=1, column=idx, value=naziv)
+            c.font = FONT_ZAGLAVLJA
+            c.fill = FILL_ZAGLAVLJA
+            c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        ws.freeze_panes = "A2"
+        ws.row_dimensions[1].height = 26
+        for idx, sirina in enumerate(sirine, start=1):
+            ws.column_dimensions[get_column_letter(idx)].width = sirina
 
-    for s in servisi_period:
-        km_s = s.get("km")
-        opis = f"Servis: {s.get('vrsta', '-')}"
-        if km_s:
-            opis += f" (na {km_s:g} km)"
-        redovi.append({
-            "datum": s.get("datum", ""),
-            "tip": "Servis",
-            "opis": opis,
-            "prihod": 0,
-            "rashod": s.get("cena", 0),
-            "napomena": s.get("napomena") or "",
-        })
+    wb = Workbook()
 
-    for s in troskovi_period:
-        redovi.append({
-            "datum": s.get("datum", ""),
-            "tip": "Ostali trosak",
-            "opis": s.get("vrsta", "-"),
-            "prihod": 0,
-            "rashod": s.get("cena", 0),
-            "napomena": s.get("napomena") or "",
-        })
+    # ------------------------------------------------------------
+    # LIST: Voznje
+    # ------------------------------------------------------------
+    ws_v = wb.active
+    ws_v.title = "Voznje"
+    _list_sa_zaglavljem(
+        ws_v,
+        ["R.br.", "Datum", "Pocetak", "Kraj", "Adresa polaska", "Adresa dolaska",
+         "Km", "Tarifa", "Cena/km", "Start taksa", "Ukupna cena", "Napomena"],
+        [6, 12, 9, 9, 32, 32, 8, 20, 10, 12, 13, 30],
+    )
+    for i, v in enumerate(voznje, start=1):
+        vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else "-"
+        red = i + 1
+        ws_v.append([
+            i, _datum_celija(v["datum"]), vreme_pocetka, v["vreme"],
+            v["od_adresa"] or "-", v["do_adresa"] or "-",
+            v["km"], v["tarifa_naziv"], v["cena_po_km"], v["start_taksa"],
+            v["ukupna_cena"], v["napomena"] or "",
+        ])
+        ws_v.cell(row=red, column=2).number_format = DATUM_FMT
+        ws_v.cell(row=red, column=7).number_format = "#,##0.0"
+        ws_v.cell(row=red, column=9).number_format = RSD
+        ws_v.cell(row=red, column=10).number_format = RSD
+        ws_v.cell(row=red, column=11).number_format = RSD
+    if voznje:
+        ws_v.auto_filter.ref = f"A1:L{len(voznje) + 1}"
 
-    redovi.sort(key=lambda r: r["datum"])
+    # ------------------------------------------------------------
+    # LIST: Gorivo
+    # ------------------------------------------------------------
+    ws_g = wb.create_sheet("Gorivo")
+    _list_sa_zaglavljem(
+        ws_g,
+        ["R.br.", "Datum", "Tip", "Litara", "Km na pumpi", "Cena", "Napomena"],
+        [6, 12, 12, 10, 14, 13, 32],
+    )
+    gorivo_sortirano = sorted(gorivo_period, key=lambda s: s.get("datum", ""))
+    for i, s in enumerate(gorivo_sortirano, start=1):
+        red = i + 1
+        ws_g.append([
+            i, _datum_celija(s.get("datum")), s.get("tip", "-"),
+            s.get("litara", 0), s.get("km_pumpe") or "-", s.get("cena", 0),
+            s.get("napomena") or "",
+        ])
+        ws_g.cell(row=red, column=2).number_format = DATUM_FMT
+        ws_g.cell(row=red, column=4).number_format = "#,##0.00"
+        ws_g.cell(row=red, column=6).number_format = RSD
+    if gorivo_sortirano:
+        ws_g.auto_filter.ref = f"A1:G{len(gorivo_sortirano) + 1}"
 
-    with open(putanja_fajla, "w", encoding="utf-8-sig", newline="") as f:
-        pisac = csv.writer(f, delimiter=";")
-        pisac.writerow(["Datum", "Tip", "Opis", "Prihod (RSD)", "Rashod (RSD)", "Napomena"])
-        for r in redovi:
-            pisac.writerow([
-                r["datum"], r["tip"], r["opis"],
-                f"{r['prihod']:g}" if r["prihod"] else "",
-                f"{r['rashod']:g}" if r["rashod"] else "",
-                r["napomena"],
-            ])
+    # ------------------------------------------------------------
+    # LIST: Servisi
+    # ------------------------------------------------------------
+    ws_s = wb.create_sheet("Servisi")
+    _list_sa_zaglavljem(
+        ws_s,
+        ["R.br.", "Datum", "Vrsta servisa", "Kilometraza", "Cena", "Napomena"],
+        [6, 12, 26, 14, 13, 32],
+    )
+    servisi_sortirano = sorted(servisi_period, key=lambda s: s.get("datum", ""))
+    for i, s in enumerate(servisi_sortirano, start=1):
+        red = i + 1
+        ws_s.append([
+            i, _datum_celija(s.get("datum")), s.get("vrsta", "-"),
+            s.get("km") or "-", s.get("cena", 0), s.get("napomena") or "",
+        ])
+        ws_s.cell(row=red, column=2).number_format = DATUM_FMT
+        ws_s.cell(row=red, column=5).number_format = RSD
+    if servisi_sortirano:
+        ws_s.auto_filter.ref = f"A1:F{len(servisi_sortirano) + 1}"
 
-        ukupan_prihod = sum(r["prihod"] for r in redovi)
-        ukupan_rashod = sum(r["rashod"] for r in redovi)
-        pisac.writerow([])
-        pisac.writerow(["", "", "UKUPNO", f"{ukupan_prihod:g}", f"{ukupan_rashod:g}", ""])
-        pisac.writerow(["", "", "NETO (prihod - rashod)", f"{ukupan_prihod - ukupan_rashod:g}", "", ""])
+    # ------------------------------------------------------------
+    # LIST: Troskovi
+    # ------------------------------------------------------------
+    ws_t = wb.create_sheet("Troskovi")
+    _list_sa_zaglavljem(
+        ws_t,
+        ["R.br.", "Datum", "Vrsta", "Cena", "Napomena"],
+        [6, 12, 22, 13, 32],
+    )
+    troskovi_sortirano = sorted(troskovi_period, key=lambda s: s.get("datum", ""))
+    for i, s in enumerate(troskovi_sortirano, start=1):
+        red = i + 1
+        ws_t.append([
+            i, _datum_celija(s.get("datum")), s.get("vrsta", "-"),
+            s.get("cena", 0), s.get("napomena") or "",
+        ])
+        ws_t.cell(row=red, column=2).number_format = DATUM_FMT
+        ws_t.cell(row=red, column=4).number_format = RSD
+    if troskovi_sortirano:
+        ws_t.auto_filter.ref = f"A1:E{len(troskovi_sortirano) + 1}"
 
-    return len(redovi)
+    # ------------------------------------------------------------
+    # LIST: Pregled (summary) - formule preko celih kolona drugih
+    # listova, tako da rade tacno bez obzira koliko redova ima.
+    # ------------------------------------------------------------
+    ws_p = wb.create_sheet("Pregled", 0)
+    ws_p.column_dimensions["A"].width = 38
+    ws_p.column_dimensions["B"].width = 24
+
+    ws_p.merge_cells("A1:B1")
+    ws_p["A1"] = naslov_izvestaja
+    ws_p["A1"].font = FONT_NASLOV
+
+    ws_p.merge_cells("A2:B2")
+    ws_p["A2"] = f"Period: {pocetak_str} do {kraj_str}"
+    ws_p["A2"].font = FONT_PODNASLOV
+
+    red = 4
+
+    linije_vozaca = []
+    if _VOZAC_REF.ime_prezime:
+        linije_vozaca.append(("Ime i prezime", _VOZAC_REF.ime_prezime))
+    if _VOZAC_REF.broj_licence:
+        linije_vozaca.append(("Licenca", _VOZAC_REF.broj_licence))
+    if _VOZAC_REF.telefon:
+        linije_vozaca.append(("Telefon", _VOZAC_REF.telefon))
+    if _VOZAC_REF.vozilo:
+        linije_vozaca.append(("Vozilo", _VOZAC_REF.vozilo))
+    if _VOZAC_REF.tablice:
+        linije_vozaca.append(("Tablice", _VOZAC_REF.tablice))
+
+    if linije_vozaca:
+        ws_p.cell(row=red, column=1, value="Podaci o vozacu").font = FONT_SEKCIJA
+        red += 1
+        for naziv, vrednost in linije_vozaca:
+            ws_p.cell(row=red, column=1, value=naziv)
+            ws_p.cell(row=red, column=2, value=vrednost)
+            red += 1
+        red += 1
+
+    ws_p.cell(row=red, column=1, value="Zbirni pregled (formule - vidi ostale listove)").font = FONT_SEKCIJA
+    red += 1
+
+    def _red_pregleda(naziv, formula, fmt=None, bold=False):
+        nonlocal red
+        c1 = ws_p.cell(row=red, column=1, value=naziv)
+        c2 = ws_p.cell(row=red, column=2, value=formula)
+        c1.border = OKVIR
+        c2.border = OKVIR
+        if fmt:
+            c2.number_format = fmt
+        if bold:
+            c1.font = FONT_ZBIR
+            c2.font = FONT_ZBIR
+        vraceni_red = red
+        red += 1
+        return vraceni_red
+
+    red_km = _red_pregleda("Ukupno predjeno (voznje)", "=SUM(Voznje!G:G)", fmt='#,##0.0" km"')
+    _red_pregleda("Broj voznji", "=COUNT(Voznje!G:G)")
+    red_bruto = _red_pregleda("Bruto zarada (voznje)", "=SUM(Voznje!K:K)", fmt=RSD, bold=True)
+    red_gorivo = _red_pregleda("Gorivo (trosak)", "=SUM(Gorivo!F:F)", fmt=RSD)
+    _red_pregleda("   od toga - litara goriva", "=SUM(Gorivo!D:D)", fmt='#,##0.00" l"')
+    red_servisi = _red_pregleda("Servisi (trosak)", "=SUM(Servisi!E:E)", fmt=RSD)
+    red_troskovi = _red_pregleda("Ostali troskovi", "=SUM(Troskovi!D:D)", fmt=RSD)
+
+    red += 1
+    ws_p.row_dimensions[red].height = 30
+    c1 = ws_p.cell(row=red, column=1, value="NETO (bruto zarada - gorivo - servisi - ostali troskovi)")
+    c2 = ws_p.cell(row=red, column=2, value=f"=B{red_bruto}-B{red_gorivo}-B{red_servisi}-B{red_troskovi}")
+    c1.font = FONT_NETO
+    c1.fill = FILL_NETO
+    c1.alignment = Alignment(wrap_text=True, vertical="center")
+    c2.font = FONT_NETO
+    c2.fill = FILL_NETO
+    c2.alignment = Alignment(vertical="center")
+    c2.number_format = RSD
+
+    wb.active = wb.sheetnames.index("Pregled")
+    wb.save(putanja_fajla)
+
+    return len(voznje) + len(gorivo_period) + len(servisi_period) + len(troskovi_period)
 
 
 def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla):
@@ -646,7 +799,7 @@ class IzvozPdfScreen(Screen):
                 "Greska", f"Pravljenje PDF-a nije uspelo:\n{e}", size_hint=(0.88, 0.45)
             )
 
-    def izvezi_csv(self):
+    def izvezi_excel(self):
         tip = self.ids.spinner_period.text
         unos = self.ids.input_period.text.strip()
 
@@ -679,7 +832,7 @@ class IzvozPdfScreen(Screen):
             _PRIKAZI_POPUP(
                 "Nema podataka",
                 f"Nema nijedne voznje, unosa goriva, servisa ni troskova za period "
-                f"{pocetak} do {kraj} - CSV nije napravljen.",
+                f"{pocetak} do {kraj} - Excel nije napravljen.",
                 size_hint=(0.88, 0.45),
             )
             return
@@ -687,17 +840,17 @@ class IzvozPdfScreen(Screen):
         try:
             folder = _PUTANJA_BACKUP_FOLDERA()
             os.makedirs(folder, exist_ok=True)
-            putanja = os.path.join(folder, f"izvestaj_{pocetak}_do_{kraj}.csv")
-            broj_redova = generisi_izvestaj_csv(pocetak, kraj, putanja)
+            putanja = os.path.join(folder, f"izvestaj_{pocetak}_do_{kraj}.xlsx")
+            broj_redova = generisi_izvestaj_excel(naslov, pocetak, kraj, putanja)
             _PRIKAZI_POPUP(
                 "Sacuvano",
-                f"CSV izvestaj ({broj_redova} redova) sacuvan u:\n{putanja}\n\n"
+                f"Excel izvestaj ({broj_redova} redova, 5 listova) sacuvan u:\n{putanja}\n\n"
                 f"Otvori ga u Excel-u ili prosledi knjigovodji.",
                 size_hint=(0.88, 0.5),
             )
         except Exception as e:
             _PRIKAZI_POPUP(
-                "Greska", f"Pravljenje CSV-a nije uspelo:\n{e}", size_hint=(0.88, 0.45)
+                "Greska", f"Pravljenje Excel fajla nije uspelo:\n{e}", size_hint=(0.88, 0.45)
             )
 
 IZVOZ_KV = """
@@ -778,15 +931,15 @@ IZVOZ_KV = """
                     on_release: root.izvezi_pdf()
 
                 RoundButton:
-                    label_text: "Izvezi CSV (Excel)"
+                    label_text: "Izvezi Excel"
                     tint: 0.30, 0.46, 0.56, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
                     height: dp(56)
-                    on_release: root.izvezi_csv()
+                    on_release: root.izvezi_excel()
 
                 FieldLabel:
-                    text: "PDF je za stampu, CSV je za Excel/knjigovodju - oba se cuvaju u isti folder kao i backup: Preuzimanja/TaksiApp."
+                    text: "PDF je za stampu, Excel (sa 5 listova i formulama) je za knjigovodju - oba se cuvaju u isti folder kao i backup: Preuzimanja/TaksiApp."
                     size_hint_y: None
                     height: dp(60)
                     text_size: self.width, None

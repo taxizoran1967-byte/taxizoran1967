@@ -13,5 +13,8 @@ Pillow==10.0.0
 # SSL certificates
 certifi==2023.7.22
 
+# Excel export (formatirani .xlsx izvestaji)
+openpyxl==3.1.2
+
 # Optional: for encryption (future use)
 # cryptography==41.0.0
