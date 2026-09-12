@@ -24,7 +24,7 @@ jobs:
           sudo apt-get install -y \
             git zip unzip openjdk-17-jdk python3-pip autoconf autoconf-archive libtool libltdl-dev \
             pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
-            cmake libffi-dev libssl-dev build-essential
+            cmake libffi-dev libssl-dev build-essential libfreetype6-dev
 
       - name: Install buildozer and Cython
         run: |
@@ -55,14 +55,61 @@ jobs:
             echo "Reportlab recept nije pronadjen (mozda vec uklonjen ili p4a jos nije skinut) - nastavljam."
           fi
 
+      - name: Install reportlab directly
+        run: |
+          python -m venv .reportlab-venv
+          .reportlab-venv/bin/python -m pip install --upgrade pip setuptools wheel
+          .reportlab-venv/bin/python -m pip install reportlab==3.6.12
+
+      - name: Vendor reportlab into app source
+        run: |
+          .reportlab-venv/bin/python - <<'PY'
+          import importlib.util
+          import shutil
+          from pathlib import Path
+
+          spec = importlib.util.find_spec("reportlab")
+          if spec is None or spec.origin is None:
+              raise SystemExit("reportlab is not installed in the isolated vendoring environment")
+
+          source_dir = Path(spec.origin).resolve().parent
+          target_dir = Path("reportlab")
+
+          if target_dir.exists():
+              shutil.rmtree(target_dir)
+
+          shutil.copytree(
+              source_dir,
+              target_dir,
+              ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", "*.so", "*.pyd", "*.dylib"),
+          )
+
+          for pattern in (
+              "lib/_rl_accel.*",
+              "lib/pyHnj.*",
+              "graphics/_renderPM.*",
+          ):
+              for path in target_dir.glob(pattern):
+                  path.unlink()
+
+          print(f"Vendored reportlab: {source_dir} -> {target_dir}")
+          PY
+
       - name: Build APK with buildozer
+        id: build_apk
         run: |
           yes | buildozer android debug
         env:
           ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
 
       - name: Upload APK artifact
+        id: upload_apk
         uses: actions/upload-artifact@v4
         with:
           name: taksi-app-apk
           path: bin/*.apk
+
+      - name: Clean vendored reportlab workspace
+        if: always() && steps.build_apk.outcome == 'success' && steps.upload_apk.outcome == 'success'
+        run: |
+          rm -rf reportlab .reportlab-venv
