@@ -182,12 +182,14 @@ DISPECERI = JsonLog("dispeceri.json")
 
 
 class ApiPodesavanja:
-    """Cuva Google Geocoding API kljuc, unet direktno u aplikaciji
+    """Cuva Google Geocoding API kljuc i OCR.space API kljuc (za
+    skeniranje racuna za gorivo), oba uneta direktno u aplikaciji
     (Podesavanja -> Google API), bez potrebe za build-om da bi se
-    izmenio ili dodao."""
+    izmenili ili dodali."""
 
     def __init__(self):
         self.google_kljuc = ""
+        self.ocr_kljuc = ""
 
     def _putanja(self, user_data_dir):
         return os.path.join(user_data_dir, "api.json")
@@ -197,11 +199,12 @@ class ApiPodesavanja:
             with open(self._putanja(user_data_dir), "r", encoding="utf-8") as f:
                 podaci = json.load(f)
             self.google_kljuc = podaci.get("google_kljuc", "")
+            self.ocr_kljuc = podaci.get("ocr_kljuc", "")
         except (FileNotFoundError, ValueError, json.JSONDecodeError):
             pass
 
     def sacuvaj(self, user_data_dir):
-        podaci = {"google_kljuc": self.google_kljuc}
+        podaci = {"google_kljuc": self.google_kljuc, "ocr_kljuc": self.ocr_kljuc}
         with open(self._putanja(user_data_dir), "w", encoding="utf-8") as f:
             json.dump(podaci, f, ensure_ascii=False, indent=2)
 
@@ -1208,7 +1211,7 @@ ekran_izvoz.poveži(
     _putanja_backup_foldera, _prikazi_popup_poruku,
 )
 ekran_cenovnik.poveži(CENE, _prikazi_popup_poruku)
-ekran_gorivo.poveži(GORIVO, formatiraj_cenu, napravi_red_liste, _prikazi_popup_poruku)
+ekran_gorivo.poveži(GORIVO, API, formatiraj_cenu, napravi_red_liste, _prikazi_popup_poruku)
 ekran_servis.poveži(SERVIS, GORIVO, formatiraj_cenu, napravi_red_liste, _prikazi_popup_poruku)
 ekran_troskovi.poveži(TROSKOVI, formatiraj_cenu, napravi_red_liste, _prikazi_popup_poruku)
 ekran_kalkulator.poveži(DEFAULT_TARIFE, CENE, formatiraj_cenu, _prikazi_popup_poruku)
