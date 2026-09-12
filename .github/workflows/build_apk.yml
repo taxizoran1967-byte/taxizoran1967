@@ -58,6 +58,7 @@ jobs:
       - name: Install reportlab directly
         run: |
           python -m venv .reportlab-venv
+          .reportlab-venv/bin/python -m pip install --upgrade pip setuptools wheel
           .reportlab-venv/bin/python -m pip install reportlab==3.6.12 certifi et_xmlfile openpyxl pillow
 
       - name: Vendor reportlab into app source
