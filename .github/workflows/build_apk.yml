@@ -57,7 +57,7 @@ jobs:
 
       - name: Install reportlab directly
         run: |
-          pip install reportlab==3.6.12 certifi et_xmlfile openpyxl pillow
+          python -m pip install reportlab==3.6.12 certifi et_xmlfile openpyxl pillow
 
       - name: Build APK with buildozer
         run: |
