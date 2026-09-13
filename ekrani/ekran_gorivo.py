@@ -47,11 +47,6 @@ class GorivoScreen(Screen):
     def on_pre_enter(self, *args):
         self.tekst_ocr_status = ""
         self.ucitaj_gorivo()
-        try:
-            if self.izmena_id is None and not self.ids.input_datum_gorivo.text.strip():
-                self.ids.input_datum_gorivo.text = datetime.now().strftime("%Y-%m-%d")
-        except Exception:
-            pass
 
     def skeniraj_racun(self):
         if not _API_REF.ocr_kljuc:
@@ -245,7 +240,7 @@ class GorivoScreen(Screen):
             _GORIVO_REF.dodaj(app.user_data_dir, stavka)
             self._poruka("Unos sacuvan.")
 
-        self.ids.input_datum_gorivo.text = datetime.now().strftime("%Y-%m-%d")
+        self.ids.input_datum_gorivo.text = ""
         self.ids.input_litara.text = ""
         self.ids.input_cena_goriva.text = ""
         self.ids.input_km_pumpe.text = ""
@@ -350,7 +345,7 @@ GORIVO_KV = """
 
                 PastelTextInput:
                     id: input_datum_gorivo
-                    hint_text: "npr. 2026-09-14"
+                    hint_text: "prazno = danasnji datum, ili upisi GGGG-MM-DD"
 
                 FieldLabel:
                     text: "Kolicina (litara)"
