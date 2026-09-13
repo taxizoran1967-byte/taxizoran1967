@@ -47,8 +47,11 @@ class GorivoScreen(Screen):
     def on_pre_enter(self, *args):
         self.tekst_ocr_status = ""
         self.ucitaj_gorivo()
-        if self.izmena_id is None and not self.ids.input_datum_gorivo.text.strip():
-            self.ids.input_datum_gorivo.text = datetime.now().strftime("%Y-%m-%d")
+        try:
+            if self.izmena_id is None and not self.ids.input_datum_gorivo.text.strip():
+                self.ids.input_datum_gorivo.text = datetime.now().strftime("%Y-%m-%d")
+        except Exception:
+            pass
 
     def skeniraj_racun(self):
         if not _API_REF.ocr_kljuc:
@@ -90,6 +93,16 @@ class GorivoScreen(Screen):
         self._poruka(f"OCR nije uspeo:\n{poruka}")
 
     def _primeni_ocr(self, podaci):
+        try:
+            self._primeni_ocr_podatke(podaci)
+        except Exception as e:
+            self.tekst_ocr_status = ""
+            self._poruka(
+                f"Racun je procitan, ali je doslo do greske pri popunjavanju "
+                f"polja - javi ovu poruku da se ispravi:\n{e}"
+            )
+
+    def _primeni_ocr_podatke(self, podaci):
         litara = podaci.get("litara")
         cena_po_litru = podaci.get("cena_po_litru")
         ukupna_cena = podaci.get("ukupna_cena")
