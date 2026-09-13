@@ -29,8 +29,20 @@ _JPEG_KVALITET = 70
 def _pripremi_sliku(putanja_slike):
     """Smanjuje sliku (dimenzije i JPEG kvalitet) da stane ispod
     ogranicenja besplatnog OCR.space naloga (1 MB po slici).
-    Vraca (bajtovi, naziv_fajla, content_type)."""
+    Vraca (bajtovi, naziv_fajla, content_type).
+
+    Koristi Image.draft() da JPEG dekoduje odmah u manjoj rezoluciji
+    (umesto da prvo ucita celu sliku pa je tek onda smanji) - moderne
+    kamere prave slike od 12+ megapiksela i puno ucitavanje takve
+    slike u memoriju je obaralo aplikaciju na telefonu (padala je
+    trenutno, jer se to desava ispod Python-a i ne moze se uhvatiti
+    sa try/except)."""
     slika = Image.open(putanja_slike)
+    try:
+        slika.draft("RGB", (_MAKS_DIMENZIJA, _MAKS_DIMENZIJA))
+    except Exception:
+        pass  # draft() radi samo za JPEG - za ostale formate samo nastavi normalno
+
     if slika.mode != "RGB":
         slika = slika.convert("RGB")
 
