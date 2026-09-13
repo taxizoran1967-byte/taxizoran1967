@@ -734,15 +734,17 @@ ScreenManager:
         width: dp(48)
         canvas.before:
             StencilPush
-            Ellipse:
+            RoundedRectangle:
                 pos: self.pos
                 size: self.size
+                radius: [dp(11)]
             StencilUse
         canvas.after:
             StencilUnUse
-            Ellipse:
+            RoundedRectangle:
                 pos: self.pos
                 size: self.size
+                radius: [dp(11)]
             StencilPop
         Image:
             source: root.icon_src
@@ -781,15 +783,17 @@ ScreenManager:
             size: dp(74), dp(74)
             canvas.before:
                 StencilPush
-                Ellipse:
+                RoundedRectangle:
                     pos: self.pos
                     size: self.size
+                    radius: [dp(16)]
                 StencilUse
             canvas.after:
                 StencilUnUse
-                Ellipse:
+                RoundedRectangle:
                     pos: self.pos
                     size: self.size
+                    radius: [dp(16)]
                 StencilPop
             Image:
                 source: root.icon_src
@@ -867,7 +871,7 @@ ScreenManager:
                     on_release: app.root.current = "podesavanja"
 
                 HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
+                    icon_src: "assets/icons/uputstvo.png"
                     tekst: "Uputstvo za upotrebu"
                     on_release: app.root.current = "uputstvo"
 
@@ -953,27 +957,27 @@ ScreenManager:
                     on_release: app.root.current = "poziv"
 
                 HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
+                    icon_src: "assets/icons/cene.png"
                     tekst: "Cene / Tarife"
                     on_release: app.root.current = "cene"
 
                 HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
+                    icon_src: "assets/icons/google_api.png"
                     tekst: "Google API"
                     on_release: app.root.current = "google_api"
 
                 HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
+                    icon_src: "assets/icons/valuta.png"
                     tekst: "Valuta"
                     on_release: app.root.current = "valuta"
 
                 HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
+                    icon_src: "assets/icons/backup.png"
                     tekst: "Backup podataka"
                     on_release: app.root.current = "backup"
 
                 HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
+                    icon_src: "assets/icons/sigurnost.png"
                     tekst: "Sigurnost (otisak prsta)"
                     on_release: app.root.current = "sigurnost"
 
