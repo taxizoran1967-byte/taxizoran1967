@@ -167,11 +167,12 @@ def _nadji_ukupno(tekst):
 
 def _nadji_datum(tekst):
     """Trazi datum na racunu u raznim formatima i vraca ga normalizovanog
-    kao DD.MM.GGGG (format koji koristi ova aplikacija)."""
+    kao GGGG-MM-DD (format koji ova aplikacija koristi svuda za cuvanje
+    i sortiranje - isti kao u gorivo.json, servis.json, izvestajima)."""
     obrasci = [
-        (r"(\d{4})-(\d{2})-(\d{2})", lambda m: f"{m.group(3)}.{m.group(2)}.{m.group(1)}"),
-        (r"(\d{2})\.(\d{2})\.(\d{4})", lambda m: f"{m.group(1)}.{m.group(2)}.{m.group(3)}"),
-        (r"(\d{2})/(\d{2})/(\d{4})", lambda m: f"{m.group(1)}.{m.group(2)}.{m.group(3)}"),
+        (r"(\d{4})-(\d{2})-(\d{2})", lambda m: f"{m.group(1)}-{m.group(2)}-{m.group(3)}"),
+        (r"(\d{2})\.(\d{2})\.(\d{4})", lambda m: f"{m.group(3)}-{m.group(2)}-{m.group(1)}"),
+        (r"(\d{2})/(\d{2})/(\d{4})", lambda m: f"{m.group(3)}-{m.group(2)}-{m.group(1)}"),
     ]
     for obrazac, format_funkcija in obrasci:
         m = re.search(obrazac, tekst)

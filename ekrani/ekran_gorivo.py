@@ -47,6 +47,8 @@ class GorivoScreen(Screen):
     def on_pre_enter(self, *args):
         self.tekst_ocr_status = ""
         self.ucitaj_gorivo()
+        if self.izmena_id is None and not self.ids.input_datum_gorivo.text.strip():
+            self.ids.input_datum_gorivo.text = datetime.now().strftime("%Y-%m-%d")
 
     def skeniraj_racun(self):
         if not _API_REF.ocr_kljuc:
@@ -93,6 +95,10 @@ class GorivoScreen(Screen):
         ukupna_cena = podaci.get("ukupna_cena")
         pumpa = podaci.get("pumpa")
         grad = podaci.get("grad")
+        datum = podaci.get("datum")
+
+        if datum:
+            self.ids.input_datum_gorivo.text = datum
 
         if litara:
             self.ids.input_litara.text = f"{litara:g}"
@@ -168,6 +174,7 @@ class GorivoScreen(Screen):
         if not s:
             return
         self.izmena_id = stavka_id
+        self.ids.input_datum_gorivo.text = s.get("datum", "")
         self.ids.input_litara.text = f"{s.get('litara', 0):g}"
         self.ids.input_cena_goriva.text = f"{s.get('cena', 0):g}"
         self.ids.input_km_pumpe.text = f"{s.get('km_pumpe'):g}" if s.get("km_pumpe") else ""
@@ -194,9 +201,21 @@ class GorivoScreen(Screen):
                 self._poruka("Kilometraza na pumpi mora biti broj (ili ostavi prazno).")
                 return
 
+        datum_tekst = self.ids.input_datum_gorivo.text.strip()
+        if not datum_tekst:
+            datum_tekst = datetime.now().strftime("%Y-%m-%d")
+        else:
+            try:
+                datetime.strptime(datum_tekst, "%Y-%m-%d")
+            except ValueError:
+                self._poruka(
+                    "Datum mora biti u formatu GGGG-MM-DD, npr. 2026-09-14."
+                )
+                return
+
         app = App.get_running_app()
         stavka = {
-            "datum": datetime.now().strftime("%Y-%m-%d"),
+            "datum": datum_tekst,
             "tip": self.ids.spinner_tip_goriva.text,
             "litara": litara,
             "cena": cena,
@@ -213,6 +232,7 @@ class GorivoScreen(Screen):
             _GORIVO_REF.dodaj(app.user_data_dir, stavka)
             self._poruka("Unos sacuvan.")
 
+        self.ids.input_datum_gorivo.text = datetime.now().strftime("%Y-%m-%d")
         self.ids.input_litara.text = ""
         self.ids.input_cena_goriva.text = ""
         self.ids.input_km_pumpe.text = ""
@@ -311,6 +331,13 @@ GORIVO_KV = """
                     height: dp(48)
                     background_color: 0.78, 0.80, 0.90, 1
                     color: 0.12, 0.12, 0.24, 1
+
+                FieldLabel:
+                    text: "Datum (GGGG-MM-DD)"
+
+                PastelTextInput:
+                    id: input_datum_gorivo
+                    hint_text: "npr. 2026-09-14"
 
                 FieldLabel:
                     text: "Kolicina (litara)"
