@@ -126,5 +126,27 @@
     "ne": "NE",
     "kesirana_pronadjena": "Pronadjena kesirana lokacija - koristim je.",
     "kesirana_nema": "Nema kesirane lokacije, cekam zivi signal."
+  },
+  "evidencija": {
+    "naslov": "Evidencija voznji",
+    "pretraga_naslov": "Pretraga (adresa ili napomena)",
+    "pretraga_hint": "npr. bulevar, aerodrom...",
+    "datum_od_hint": "Datum od (GGGG-MM-DD)",
+    "datum_do_hint": "Datum do (GGGG-MM-DD)",
+    "cena_od_hint": "Cena od",
+    "cena_do_hint": "Cena do",
+    "pretrazi": "Pretrazi",
+    "resetuj": "Resetuj",
+    "nema_rezultata": "Nema voznji koje odgovaraju pretrazi.",
+    "nema_voznji": "Jos uvek nema evidentiranih voznji.",
+    "nadjeno": "Nadjeno: {broj} voznji   |   {km} km   |   {cena}",
+    "datum_od_naziv": "Datum od",
+    "datum_do_naziv": "Datum do",
+    "format_greska": "{naziv}: format mora biti GGGG-MM-DD (npr. 2026-09-05).",
+    "cena_mora_biti_broj": "Cena mora biti broj.",
+    "pocetak_kraj": "Pocetak {pocetak}  |  Kraj {kraj}",
+    "samo_kraj": "Kraj {kraj}",
+    "izmeni": "Izmeni",
+    "obrisi": "Obrisi"
   }
 }

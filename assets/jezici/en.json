@@ -126,5 +126,27 @@
     "ne": "NO",
     "kesirana_pronadjena": "Found cached location - using it.",
     "kesirana_nema": "No cached location, waiting for live signal."
+  },
+  "evidencija": {
+    "naslov": "Ride history",
+    "pretraga_naslov": "Search (address or note)",
+    "pretraga_hint": "e.g. boulevard, airport...",
+    "datum_od_hint": "Date from (YYYY-MM-DD)",
+    "datum_do_hint": "Date to (YYYY-MM-DD)",
+    "cena_od_hint": "Price from",
+    "cena_do_hint": "Price to",
+    "pretrazi": "Search",
+    "resetuj": "Reset",
+    "nema_rezultata": "No rides match the search.",
+    "nema_voznji": "No rides recorded yet.",
+    "nadjeno": "Found: {broj} rides   |   {km} km   |   {cena}",
+    "datum_od_naziv": "Date from",
+    "datum_do_naziv": "Date to",
+    "format_greska": "{naziv}: format must be YYYY-MM-DD (e.g. 2026-09-05).",
+    "cena_mora_biti_broj": "Price must be a number.",
+    "pocetak_kraj": "Start {pocetak}  |  End {kraj}",
+    "samo_kraj": "End {kraj}",
+    "izmeni": "Edit",
+    "obrisi": "Delete"
   }
 }
