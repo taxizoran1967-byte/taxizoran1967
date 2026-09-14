@@ -210,5 +210,11 @@ def _load_language_preference():
         print(f"⚠️  Greška pri učitavanju jezika: {e}")
 
 
+# Javni alias - main.py poziva ovo pri pokretanju aplikacije da vrati
+# prethodno izabran jezik (funkcija iznad je zadrzana zbog postojecih
+# poziva/dokumentacije unutar ovog fajla).
+load_language_preference = _load_language_preference
+
+
 # Inicijalizuj pri prvi import
 _init_languages()

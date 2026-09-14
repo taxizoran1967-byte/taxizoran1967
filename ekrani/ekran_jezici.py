@@ -111,7 +111,7 @@ JEZICI_KV = """
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
                     height: dp(52)
-                    on_release: root.promeni_jeziki("sr")
+                    on_release: root.promeni_jezici("sr")
 
                 RoundButton:
                     label_text: "English 🇬🇧"
@@ -119,7 +119,7 @@ JEZICI_KV = """
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
                     height: dp(52)
-                    on_release: root.promeni_jeziki("en")
+                    on_release: root.promeni_jezici("en")
 
                 Widget:
 """

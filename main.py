@@ -45,6 +45,7 @@ from datetime import datetime, timedelta, time as dt_time
 
 from servisi import database as db
 from servisi import grafik_zarade
+from servisi import jezici
 from ekrani import ekran_navigacija
 from ekrani import ekran_google_api
 from ekrani import ekran_profil
@@ -62,6 +63,7 @@ from ekrani import ekran_kalkulator
 from ekrani import ekran_evidencija
 from ekrani import ekran_izvestaj
 from ekrani import ekran_gps_voznja
+from ekrani import ekran_jezici
 
 try:
     from androidstorage4kivy import SharedStorage, ShareSheet
@@ -587,6 +589,7 @@ ScreenManager:
     SigurnostScreen:
     UputstvoScreen:
     DispeceriScreen:
+    JeziciScreen:
 
 # ============================================================
 # ZAJEDNICKI STIL - pastelne kartice, zaobljeni uglovi, tipografija
@@ -815,37 +818,37 @@ ScreenManager:
 
                 HomeMenuButton:
                     icon_src: "assets/icons/start_ride.png"
-                    tekst: "GPS voznja (auto)"
+                    tekst: root.tekst_gps_voznja
                     on_release: app.root.current = "gps_voznja"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/end_ride.png"
-                    tekst: "Pocetak voznje (rucno)"
+                    tekst: root.tekst_pocetak_rucno
                     on_release: app.root.current = "kalkulator"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/history.png"
-                    tekst: "Istorija voznji"
+                    tekst: root.tekst_istorija
                     on_release: app.root.current = "evidencija"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/daily_report.png"
-                    tekst: "Izvestaj"
+                    tekst: root.tekst_izvestaj
                     on_release: app.root.current = "izvestaj"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/profil.png"
-                    tekst: "Profil vozaca"
+                    tekst: root.tekst_profil
                     on_release: app.root.current = "profil"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/settings.png"
-                    tekst: "Podesavanja"
+                    tekst: root.tekst_podesavanja
                     on_release: app.root.current = "podesavanja"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/uputstvo.png"
-                    tekst: "Uputstvo za upotrebu"
+                    tekst: root.tekst_uputstvo
                     on_release: app.root.current = "uputstvo"
 
 # ============================================================
@@ -953,6 +956,11 @@ ScreenManager:
                     icon_src: "assets/icons/sigurnost.png"
                     tekst: "Sigurnost (otisak prsta)"
                     on_release: app.root.current = "sigurnost"
+
+                HomeMenuButton:
+                    icon_src: "assets/icons/language.png"
+                    tekst: "Jezik / Language"
+                    on_release: app.root.current = "jezici"
 
 # NavigacijaScreen, GoogleApiScreen, ProfilScreen, ValutaScreen su
 # izdvojeni u ekran_navigacija.py / ekran_google_api.py /
@@ -1069,7 +1077,22 @@ class ScreenRoot(BoxLayout):
 
 
 class HomeScreen(Screen):
-    pass
+    tekst_gps_voznja = StringProperty("GPS voznja (auto)")
+    tekst_pocetak_rucno = StringProperty("Pocetak voznje (rucno)")
+    tekst_istorija = StringProperty("Istorija voznji")
+    tekst_izvestaj = StringProperty("Izvestaj")
+    tekst_profil = StringProperty("Profil vozaca")
+    tekst_podesavanja = StringProperty("Podesavanja")
+    tekst_uputstvo = StringProperty("Uputstvo za upotrebu")
+
+    def on_pre_enter(self, *args):
+        self.tekst_gps_voznja = jezici._t("home.gps_voznja")
+        self.tekst_pocetak_rucno = jezici._t("home.pocetak_rucno")
+        self.tekst_istorija = jezici._t("home.istorija")
+        self.tekst_izvestaj = jezici._t("home.izvestaj")
+        self.tekst_profil = jezici._t("home.profil")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
+        self.tekst_uputstvo = jezici._t("home.uputstvo")
 
 
 
@@ -1199,6 +1222,7 @@ ekran_izvestaj.poveži(
     formatiraj_cenu, napravi_red_liste,
 )
 ekran_gps_voznja.poveži(CENE, API, formatiraj_cenu, _prikazi_popup_poruku)
+ekran_jezici.povezi(_prikazi_popup_poruku)
 
 
 def _prikazi_gresku_ekran(poruka):
@@ -1245,6 +1269,7 @@ class TaksiApp(App):
             ekran_sigurnost.SIGURNOST.ucitaj(self.user_data_dir)
             DISPECERI.ucitaj(self.user_data_dir)
             ekran_dispeceri.SMENE.ucitaj(self.user_data_dir)
+            jezici.load_language_preference()
             # Kurs se povlaci sa interneta u pozadini (posebna nit), da
             # app ne "visi" na pokretanju ako je internet spor ili ga
             # nema - u tom slucaju samo ostaje poslednji sacuvani kurs.
@@ -1272,6 +1297,7 @@ class TaksiApp(App):
                 + ekran_evidencija.EVIDENCIJA_KV
                 + ekran_izvestaj.IZVESTAJ_KV
                 + ekran_gps_voznja.GPS_VOZNJA_KV
+                + ekran_jezici.JEZICI_KV
             )
             # Provera zakljucavanja (otisak) se pokrece tek NAKON sto je
             # citav ScreenManager sagradjen (vidi napomenu u
