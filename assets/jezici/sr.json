@@ -71,5 +71,22 @@
     "evidencija": "Evidencija",
     "izvestaj": "Izvestaj",
     "info": "Info"
+  },
+  "podesavanja": {
+    "grafik_zarade": "Grafik zarade",
+    "navigacija": "Navigacija",
+    "nocna_tarifa": "Nocna tarifa",
+    "servis_vozila": "Servis vozila",
+    "gorivo": "Gorivo",
+    "ostali_troskovi": "Ostali troskovi",
+    "nedeljni_izvestaj": "Nedeljni izvestaj",
+    "mesecni_izvestaj": "Mesecni izvestaj",
+    "kalkulator_kratko": "Kalkulator",
+    "poziv_dispecer": "Poziv / Dispecer",
+    "cene_tarife": "Cene / Tarife",
+    "google_api": "Google API",
+    "valuta": "Valuta",
+    "backup_podataka": "Backup podataka",
+    "sigurnost": "Sigurnost (otisak prsta)"
   }
 }

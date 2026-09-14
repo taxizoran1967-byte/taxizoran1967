@@ -71,5 +71,22 @@
     "evidencija": "History",
     "izvestaj": "Report",
     "info": "Info"
+  },
+  "podesavanja": {
+    "grafik_zarade": "Earnings chart",
+    "navigacija": "Navigation",
+    "nocna_tarifa": "Night tariff",
+    "servis_vozila": "Vehicle service",
+    "gorivo": "Fuel",
+    "ostali_troskovi": "Other expenses",
+    "nedeljni_izvestaj": "Weekly report",
+    "mesecni_izvestaj": "Monthly report",
+    "kalkulator_kratko": "Calculator",
+    "poziv_dispecer": "Call / Dispatcher",
+    "cene_tarife": "Prices / Tariffs",
+    "google_api": "Google API",
+    "valuta": "Currency",
+    "backup_podataka": "Data backup",
+    "sigurnost": "Security (fingerprint)"
   }
 }

@@ -865,11 +865,11 @@ ScreenManager:
     ScreenRoot:
 
         TitleLabel:
-            text: "Podesavanja"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
 
@@ -884,82 +884,82 @@ ScreenManager:
 
                 HomeMenuButton:
                     icon_src: "assets/icons/earnings_chart.png"
-                    tekst: "Grafik zarade"
+                    tekst: root.tekst_grafik_zarade
                     on_release: app.root.current = "grafik"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/navigation.png"
-                    tekst: "Navigacija"
+                    tekst: root.tekst_navigacija
                     on_release: app.root.current = "navigacija"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/night_tariff.png"
-                    tekst: "Nocna tarifa"
+                    tekst: root.tekst_nocna_tarifa
                     on_release: app.root.current = "nocna_tarifa"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/service.png"
-                    tekst: "Servis vozila"
+                    tekst: root.tekst_servis_vozila
                     on_release: app.root.current = "servis"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/fuel.png"
-                    tekst: "Gorivo"
+                    tekst: root.tekst_gorivo
                     on_release: app.root.current = "gorivo"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/calculator.png"
-                    tekst: "Ostali troskovi"
+                    tekst: root.tekst_ostali_troskovi
                     on_release: app.root.current = "troskovi"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/weekly_report.png"
-                    tekst: "Nedeljni izvestaj"
+                    tekst: root.tekst_nedeljni_izvestaj
                     on_release: app.root.current = "izvestaj"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/monthly_report.png"
-                    tekst: "Mesecni izvestaj"
+                    tekst: root.tekst_mesecni_izvestaj
                     on_release: app.root.current = "izvestaj"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/calculator.png"
-                    tekst: "Kalkulator"
+                    tekst: root.tekst_kalkulator
                     on_release: app.root.current = "kalkulator"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/profil.png"
-                    tekst: "Profil vozaca"
+                    tekst: root.tekst_profil_vozaca
                     on_release: app.root.current = "profil"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/poziv.png"
-                    tekst: "Poziv / Dispecer"
+                    tekst: root.tekst_poziv_dispecer
                     on_release: app.root.current = "poziv"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/cene.png"
-                    tekst: "Cene / Tarife"
+                    tekst: root.tekst_cene_tarife
                     on_release: app.root.current = "cene"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/google_api.png"
-                    tekst: "Google API"
+                    tekst: root.tekst_google_api
                     on_release: app.root.current = "google_api"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/valuta.png"
-                    tekst: "Valuta"
+                    tekst: root.tekst_valuta
                     on_release: app.root.current = "valuta"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/backup.png"
-                    tekst: "Backup podataka"
+                    tekst: root.tekst_backup_podataka
                     on_release: app.root.current = "backup"
 
                 HomeMenuButton:
                     icon_src: "assets/icons/sigurnost.png"
-                    tekst: "Sigurnost (otisak prsta)"
+                    tekst: root.tekst_sigurnost
                     on_release: app.root.current = "sigurnost"
 
 # NavigacijaScreen, GoogleApiScreen, ProfilScreen, ValutaScreen su
@@ -1100,7 +1100,44 @@ class HomeScreen(Screen):
 
 
 class PodesavanjaScreen(Screen):
-    pass
+    tekst_naslov = StringProperty("Podesavanja")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_grafik_zarade = StringProperty("Grafik zarade")
+    tekst_navigacija = StringProperty("Navigacija")
+    tekst_nocna_tarifa = StringProperty("Nocna tarifa")
+    tekst_servis_vozila = StringProperty("Servis vozila")
+    tekst_gorivo = StringProperty("Gorivo")
+    tekst_ostali_troskovi = StringProperty("Ostali troskovi")
+    tekst_nedeljni_izvestaj = StringProperty("Nedeljni izvestaj")
+    tekst_mesecni_izvestaj = StringProperty("Mesecni izvestaj")
+    tekst_kalkulator = StringProperty("Kalkulator")
+    tekst_profil_vozaca = StringProperty("Profil vozaca")
+    tekst_poziv_dispecer = StringProperty("Poziv / Dispecer")
+    tekst_cene_tarife = StringProperty("Cene / Tarife")
+    tekst_google_api = StringProperty("Google API")
+    tekst_valuta = StringProperty("Valuta")
+    tekst_backup_podataka = StringProperty("Backup podataka")
+    tekst_sigurnost = StringProperty("Sigurnost (otisak prsta)")
+
+    def on_pre_enter(self, *args):
+        self.tekst_naslov = jezici._t("home.podesavanja")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_grafik_zarade = jezici._t("podesavanja.grafik_zarade")
+        self.tekst_navigacija = jezici._t("podesavanja.navigacija")
+        self.tekst_nocna_tarifa = jezici._t("podesavanja.nocna_tarifa")
+        self.tekst_servis_vozila = jezici._t("podesavanja.servis_vozila")
+        self.tekst_gorivo = jezici._t("podesavanja.gorivo")
+        self.tekst_ostali_troskovi = jezici._t("podesavanja.ostali_troskovi")
+        self.tekst_nedeljni_izvestaj = jezici._t("podesavanja.nedeljni_izvestaj")
+        self.tekst_mesecni_izvestaj = jezici._t("podesavanja.mesecni_izvestaj")
+        self.tekst_kalkulator = jezici._t("podesavanja.kalkulator_kratko")
+        self.tekst_profil_vozaca = jezici._t("profil.naslov")
+        self.tekst_poziv_dispecer = jezici._t("podesavanja.poziv_dispecer")
+        self.tekst_cene_tarife = jezici._t("podesavanja.cene_tarife")
+        self.tekst_google_api = jezici._t("podesavanja.google_api")
+        self.tekst_valuta = jezici._t("podesavanja.valuta")
+        self.tekst_backup_podataka = jezici._t("podesavanja.backup_podataka")
+        self.tekst_sigurnost = jezici._t("podesavanja.sigurnost")
 
 
 class PlaceholderScreen(Screen):
