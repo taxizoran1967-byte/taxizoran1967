@@ -22,6 +22,10 @@ android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,MANAG
 
 android.archs = arm64-v8a
 
+# (str) The format used to package the app for release mode (aab or apk)
+# Google Play zahteva .aab za release
+android.release_artifact = aab
+
 android.api = 33
 android.minapi = 21
 

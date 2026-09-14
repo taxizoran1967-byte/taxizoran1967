@@ -1,0 +1,77 @@
+name: Build Release AAB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git zip unzip openjdk-17-jdk python3-pip autoconf autoconf-archive libtool libltdl-dev \
+            pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
+            cmake libffi-dev libssl-dev build-essential
+
+      - name: Install buildozer and Cython
+        run: |
+          pip install --upgrade pip
+          pip install buildozer==1.5.0 cython==0.29.36
+
+      - name: Cache buildozer global directory
+        uses: actions/cache@v4
+        with:
+          path: |
+            .buildozer
+            ~/.buildozer
+          key: buildozer-release-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-release-${{ runner.os }}-
+
+      - name: Decode signing keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$HOME/taksiapp-release.keystore"
+
+      - name: Build release AAB with buildozer
+        env:
+          ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
+          P4A_RELEASE_KEYSTORE: /home/runner/taksiapp-release.keystore
+          P4A_RELEASE_KEYSTORE_PASSWD: ${{ secrets.KEYSTORE_PASSWORD }}
+          P4A_RELEASE_KEYALIAS: ${{ secrets.KEY_ALIAS }}
+          P4A_RELEASE_KEYALIAS_PASSWD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          yes | buildozer android release
+
+      - name: Remove local keystore copy
+        if: always()
+        run: rm -f "$HOME/taksiapp-release.keystore"
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: taksi-app-release-aab
+          path: bin/*.aab
+
+      - name: Commit AAB into repository
+        run: |
+          mkdir -p release
+          cp bin/*.aab release/taksiapp-release.aab
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add release/taksiapp-release.aab
+          git diff --cached --quiet && echo "Nema izmena" || git commit -m "Release AAB build [skip ci]"
+          git push
