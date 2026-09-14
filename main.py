@@ -620,43 +620,16 @@ ScreenManager:
 <TaxiZoranNaslov@FloatLayout>:
     size_hint_y: None
     height: dp(64)
-    # Naslov "TAXI ZORAN" na pocetnom ekranu - centriran, sa efektom
-    # dubine (3D): 3 sloja istog teksta, malo pomerena jedan od drugog,
-    # od najtamnijeg (senka, u dnu) do najsvetlijeg zlatnog (na vrhu) -
-    # to stvara utisak izdignutog/uklesanog zlatnog slova. Svaki sloj
-    # ima velicinu roditelja (root.size) i centrira tekst unutar sebe
-    # preko halign/valign - ovo je pouzdanije od rucnog pomeranja
-    # centra, jer se ne oslanja na sirinu samog teksta.
-    Label:
-        text: "TAXI ZORAN"
-        font_size: '28sp'
-        bold: True
-        size: root.size
-        pos: root.x + dp(2.5), root.y - dp(2.5)
-        halign: "center"
-        valign: "middle"
-        text_size: self.size
-        color: 0.08, 0.04, 0.01, 0.85
-    Label:
-        text: "TAXI ZORAN"
-        font_size: '28sp'
-        bold: True
-        size: root.size
-        pos: root.x + dp(1.2), root.y - dp(1.2)
-        halign: "center"
-        valign: "middle"
-        text_size: self.size
-        color: 0.55, 0.30, 0.08, 1
-    Label:
-        text: "TAXI ZORAN"
-        font_size: '28sp'
-        bold: True
+    # Logo "DOWNTOWN TAXI" na pocetnom ekranu i ekranu za zakljucavanje.
+    # Zamenio tekstualni "TAXI ZORAN" naslov PNG slikom (providna pozadina).
+    # Visina bloka je NAMERNO ostala ista (dp(64)) kao pre, da se ne
+    # pomeri raspored ostalih redova/widgeta na ekranima gde se koristi.
+    Image:
+        source: "assets/logo_naslov.png"
         size: root.size
         pos: root.pos
-        halign: "center"
-        valign: "middle"
-        text_size: self.size
-        color: 1, 0.83, 0.32, 1
+        allow_stretch: True
+        keep_ratio: True
 
 <FieldLabel@Label>:
     size_hint_y: None
