@@ -851,6 +851,11 @@ ScreenManager:
                     tekst: root.tekst_uputstvo
                     on_release: app.root.current = "uputstvo"
 
+                HomeMenuButton:
+                    icon_src: "assets/icons/language.png"
+                    tekst: "Language"
+                    on_release: app.root.current = "jezici"
+
 # ============================================================
 # PODESAVANJA
 # ============================================================
@@ -956,11 +961,6 @@ ScreenManager:
                     icon_src: "assets/icons/sigurnost.png"
                     tekst: "Sigurnost (otisak prsta)"
                     on_release: app.root.current = "sigurnost"
-
-                HomeMenuButton:
-                    icon_src: "assets/icons/language.png"
-                    tekst: "Jezik / Language"
-                    on_release: app.root.current = "jezici"
 
 # NavigacijaScreen, GoogleApiScreen, ProfilScreen, ValutaScreen su
 # izdvojeni u ekran_navigacija.py / ekran_google_api.py /
