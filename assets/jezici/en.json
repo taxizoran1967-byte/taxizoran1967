@@ -4,7 +4,6 @@
     "code": "en",
     "version": "0.1"
   },
-
   "home": {
     "naslov": "TAXI ZORAN",
     "gps_voznja": "GPS ride (auto)",
@@ -15,7 +14,6 @@
     "podesavanja": "Settings",
     "uputstvo": "Instructions"
   },
-
   "kalkulator": {
     "naslov": "Ride calculator",
     "unesi_km": "Enter kilometers to see price",
@@ -36,7 +34,6 @@
     "cena_prikaz": "Price: {cena}\n(start {start} + {km} km x {cena_km})",
     "nocna_tarifa": "Night (22-07h)"
   },
-
   "profil": {
     "naslov": "Driver profile",
     "ime": "Name and surname",
@@ -65,9 +62,10 @@
     "vozilo_hint": "e.g. Skoda Octavia",
     "registracija_hint": "e.g. 2026-12-31",
     "osiguranje_hint": "e.g. 2026-11-15",
-    "pdf_napomena": "These details appear in the header of monthly PDF reports (Report -> Export PDF)."
+    "pdf_napomena": "These details appear in the header of monthly PDF reports (Report -> Export PDF).",
+    "registracija_rec": "Registration",
+    "osiguranje_rec": "Insurance"
   },
-
   "buttons": {
     "pocetna": "Home",
     "evidencija": "History",
