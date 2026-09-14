@@ -1,5 +1,5 @@
 [app]
-title = Taksi App
+title = Downtown Taxi
 package.name = taksiapp
 package.domain = org.licno
 

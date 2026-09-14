@@ -83,15 +83,14 @@ PREDNOSTI
 
 ---
 
-## VAZNA NAPOMENA (za vlasnika aplikacije, ne za Google Play)
+## NAPOMENA (za vlasnika aplikacije, ne za Google Play)
 
-Naziv aplikacije koji Android prikazuje ispod ikonice na telefonu
-(`title` u buildozer.spec) je i dalje "Taksi App", dok je novi logo
-unutar aplikacije "DOWNTOWN TAXI". Ako zelite da se svuda zove isto
-(preporucljivo, radi doslednosti), treba promeniti:
+Reseno: naziv aplikacije je promenjen u buildozer.spec
+(`title = Downtown Taxi`) i napravljen je nov AAB build sa tim nazivom -
+sada se svuda zove isto: na Play Store stranici, ispod ikonice na
+telefonu i na logu unutar aplikacije.
 
-    title = Taksi App        ->  title = Downtown Taxi
-
-u buildozer.spec, i napraviti nov AAB build. Ovo NIJE uradjeno
-automatski jer menja identitet/naziv aplikacije, a trazeno je da se
-ne menjaju postojece stvari bez odobrenja.
+Napomena: `package.name` (taksiapp) i `package.domain` (org.licno) NISU
+menjani - to je tehnicki identitet aplikacije (applicationId), i ne
+sme da se menja jer bi to za Google Play bila "sasvim nova" aplikacija.
+Promenjen je samo naziv koji korisnik vidi.
