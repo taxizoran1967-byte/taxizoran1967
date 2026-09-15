@@ -245,5 +245,22 @@
     "unesi_cenu": "Enter a valid price.",
     "izmena_sacuvana": "Changes saved.",
     "trosak_sacuvan": "Expense saved."
+  },
+  "cenovnik": {
+    "naslov": "Prices / Tariffs",
+    "start_taksa": "Start fee (RSD)",
+    "osnovna_label": "Standard (07-22h) - price per km",
+    "nocna_label": "Night (22-07h) - price per km",
+    "vikend_label": "Weekend - price per km",
+    "aerodromski_label": "Airport transfer - price per km",
+    "sacuvaj_cene": "Save prices",
+    "unesi_ispravne_brojeve": "Enter valid numbers for all prices.",
+    "cene_sacuvane": "Prices saved.",
+    "nocna_naslov": "Night tariff",
+    "ukljucena": "Night tariff: ON",
+    "iskljucena": "Night tariff: OFF",
+    "iskljuci_dugme": "Turn off night tariff",
+    "ukljuci_dugme": "Turn on night tariff",
+    "napomena_nocna": "When enabled, the calculator will automatically suggest the night tariff when opened (you can still manually change the tariff for a specific ride)."
   }
 }

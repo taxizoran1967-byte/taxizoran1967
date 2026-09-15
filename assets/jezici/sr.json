@@ -245,5 +245,22 @@
     "unesi_cenu": "Unesi ispravan broj za cenu.",
     "izmena_sacuvana": "Izmena sacuvana.",
     "trosak_sacuvan": "Trosak sacuvan."
+  },
+  "cenovnik": {
+    "naslov": "Cene / Tarife",
+    "start_taksa": "Start taksa (RSD)",
+    "osnovna_label": "Osnovna (07-22h) - cena po km",
+    "nocna_label": "Nocna (22-07h) - cena po km",
+    "vikend_label": "Vikend - cena po km",
+    "aerodromski_label": "Aerodromski transfer - cena po km",
+    "sacuvaj_cene": "Sacuvaj cene",
+    "unesi_ispravne_brojeve": "Unesi ispravne brojeve za sve cene.",
+    "cene_sacuvane": "Cene su sacuvane.",
+    "nocna_naslov": "Nocna tarifa",
+    "ukljucena": "Nocna tarifa: UKLJUCENA",
+    "iskljucena": "Nocna tarifa: ISKLJUCENA",
+    "iskljuci_dugme": "Iskljuci nocnu tarifu",
+    "ukljuci_dugme": "Ukljuci nocnu tarifu",
+    "napomena_nocna": "Kada je ukljucena, kalkulator ce pri otvaranju automatski predloziti nocnu tarifu (i dalje mozes rucno da promenis tarifu za konkretnu voznju)."
   }
 }
