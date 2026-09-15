@@ -262,5 +262,18 @@
     "iskljuci_dugme": "Iskljuci nocnu tarifu",
     "ukljuci_dugme": "Ukljuci nocnu tarifu",
     "napomena_nocna": "Kada je ukljucena, kalkulator ce pri otvaranju automatski predloziti nocnu tarifu (i dalje mozes rucno da promenis tarifu za konkretnu voznju)."
+  },
+  "valuta": {
+    "naslov": "Valuta",
+    "napomena_gore": "Cene se u aplikaciji uvek racunaju i cuvaju u dinarima. Ovde bira se samo u kojoj valuti da se PRIKAZUJU.",
+    "kurs_format": "1 EUR = {kurs} RSD\n(kurs od {datum})",
+    "nepoznat_datum": "nepoznatog datuma",
+    "kurs_nije_povucen": "Kurs jos nije povucen sa interneta.",
+    "prikazuj_rsd": "Prikazuj u RSD",
+    "prikazuj_eur": "Prikazuj u EUR",
+    "osvezi_kurs": "Osvezi kurs sada",
+    "kurs_osvezen": "Kurs je osvezen.",
+    "kurs_neuspesno": "Nije uspelo povlacenje kursa:\n{greska}",
+    "napomena_dole": "Kurs se automatski osvezava jednom dnevno (kad prvi put otvoris app tog dana). Ovde mozes rucno da ga povuces ponovo, npr. ako juce nije bilo interneta."
   }
 }

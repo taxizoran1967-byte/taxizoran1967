@@ -262,5 +262,18 @@
     "iskljuci_dugme": "Turn off night tariff",
     "ukljuci_dugme": "Turn on night tariff",
     "napomena_nocna": "When enabled, the calculator will automatically suggest the night tariff when opened (you can still manually change the tariff for a specific ride)."
+  },
+  "valuta": {
+    "naslov": "Currency",
+    "napomena_gore": "Prices in the app are always calculated and stored in dinars. This only chooses which currency they are DISPLAYED in.",
+    "kurs_format": "1 EUR = {kurs} RSD\n(rate from {datum})",
+    "nepoznat_datum": "unknown date",
+    "kurs_nije_povucen": "The exchange rate hasn't been fetched from the internet yet.",
+    "prikazuj_rsd": "Display in RSD",
+    "prikazuj_eur": "Display in EUR",
+    "osvezi_kurs": "Refresh rate now",
+    "kurs_osvezen": "Exchange rate refreshed.",
+    "kurs_neuspesno": "Failed to fetch the exchange rate:\n{greska}",
+    "napomena_dole": "The rate refreshes automatically once a day (when you first open the app that day). Here you can manually fetch it again, e.g. if there was no internet yesterday."
   }
 }
