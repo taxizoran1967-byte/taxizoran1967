@@ -18,6 +18,7 @@ from kivy.app import App
 from kivy.clock import Clock
 
 from servisi import biometrics
+from servisi import jezici
 
 
 class SigurnostPodesavanja:
@@ -67,6 +68,8 @@ class LockScreen(Screen):
         (prvi) ekran JOS DOK se KV gradi, pre nego sto ekran 'home'
         uopste postoji, pa bi automatski prelazak na 'home' u tom
         trenutku pukao sa 'No Screen with name home'."""
+        self.tekst_status = jezici._t("sigurnost.proveravam")
+        self.tekst_dugme = jezici._t("sigurnost.pokusaj_ponovo")
         self.prikazi_dugme = False
 
         if not SIGURNOST.ukljucena:
@@ -85,7 +88,7 @@ class LockScreen(Screen):
         self.pokusaj_ponovo()
 
     def pokusaj_ponovo(self):
-        self.tekst_status = "Prislonite prst na senzor za otisak..."
+        self.tekst_status = jezici._t("sigurnost.prislonite_prst")
         self.prikazi_dugme = False
         biometrics.pokreni_autentifikaciju(
             on_uspeh=lambda: Clock.schedule_once(lambda dt: self._nastavi_dalje()),
@@ -93,13 +96,13 @@ class LockScreen(Screen):
                 lambda dt, p=poruka: self._neuspeh(p)
             ),
             on_neuspesno=lambda: Clock.schedule_once(
-                lambda dt: self._neuspeh("Otisak nije prepoznat.")
+                lambda dt: self._neuspeh(jezici._t("sigurnost.otisak_nije_prepoznat"))
             ),
         )
 
     def _neuspeh(self, poruka):
         self.tekst_status = poruka
-        self.tekst_dugme = "Pokusaj ponovo"
+        self.tekst_dugme = jezici._t("sigurnost.pokusaj_ponovo")
         self.prikazi_dugme = True
 
     def _nastavi_dalje(self):
@@ -112,32 +115,31 @@ class SigurnostScreen(Screen):
     tint_dugme = (0.7, 0.9, 0.72, 1)
     tekst_napomena = StringProperty("")
 
+    tekst_naslov = StringProperty("Sigurnost")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_podesavanja = StringProperty("Podesavanja")
+
     def on_pre_enter(self, *args):
+        self.tekst_naslov = jezici._t("sigurnost.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
         self._osvezi()
 
     def _osvezi(self):
         if SIGURNOST.ukljucena:
-            self.tekst_status = "Otkljucavanje otiskom: UKLJUCENO"
-            self.tekst_dugme = "Iskljuci otisak"
+            self.tekst_status = jezici._t("sigurnost.ukljuceno")
+            self.tekst_dugme = jezici._t("sigurnost.iskljuci_otisak")
             self.tint_dugme = (0.66, 0.30, 0.34, 1)
         else:
-            self.tekst_status = "Otkljucavanje otiskom: ISKLJUCENO"
-            self.tekst_dugme = "Ukljuci otisak"
+            self.tekst_status = jezici._t("sigurnost.iskljuceno")
+            self.tekst_dugme = jezici._t("sigurnost.ukljuci_otisak")
             self.tint_dugme = (0.30, 0.52, 0.36, 1)
 
         dostupno, poruka = biometrics.hardver_dostupan()
         if dostupno:
-            self.tekst_napomena = (
-                "Otisak je registrovan na ovom uredjaju - ekran za "
-                "otkljucavanje ce se prikazati svaki put kad pokrenes app."
-            )
+            self.tekst_napomena = jezici._t("sigurnost.napomena_registrovan")
         else:
-            self.tekst_napomena = (
-                f"Napomena: {poruka} Ako ukljucis ovu opciju bez "
-                "registrovanog otiska, app ce te automatski propustiti "
-                "dalje - iz bezbednosnih razloga se ne mozes zakljucati "
-                "van app-a bez registrovanog otiska."
-            )
+            self.tekst_napomena = jezici._t("sigurnost.napomena_nije_registrovan", poruka=poruka)
 
     def promeni(self):
         SIGURNOST.ukljucena = not SIGURNOST.ukljucena
@@ -196,15 +198,15 @@ SIGURNOST_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Sigurnost"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Podesavanja"
+                label_text: root.tekst_podesavanja
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 

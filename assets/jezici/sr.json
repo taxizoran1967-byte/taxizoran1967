@@ -327,5 +327,24 @@
     "napomena": "Google kljuc pravis na console.cloud.google.com -> APIs & Services -> Credentials (Geocoding API). OCR.space kljuc je besplatan na ocr.space/ocrapi (Free plan).",
     "google_hint": "npr. AIzaSy...",
     "ocr_hint": "npr. K81234567890"
+  },
+  "sigurnost": {
+    "naslov": "Sigurnost",
+    "proveravam": "Proveravam...",
+    "pokusaj_ponovo": "Pokusaj ponovo",
+    "prislonite_prst": "Prislonite prst na senzor za otisak...",
+    "otisak_nije_prepoznat": "Otisak nije prepoznat.",
+    "ukljuceno": "Otkljucavanje otiskom: UKLJUCENO",
+    "iskljuceno": "Otkljucavanje otiskom: ISKLJUCENO",
+    "iskljuci_otisak": "Iskljuci otisak",
+    "ukljuci_otisak": "Ukljuci otisak",
+    "napomena_registrovan": "Otisak je registrovan na ovom uredjaju - ekran za otkljucavanje ce se prikazati svaki put kad pokrenes app.",
+    "napomena_nije_registrovan": "Napomena: {poruka} Ako ukljucis ovu opciju bez registrovanog otiska, app ce te automatski propustiti dalje - iz bezbednosnih razloga se ne mozes zakljucati van app-a bez registrovanog otiska."
+  },
+  "biometrics": {
+    "samo_android": "Otisak prsta radi samo na Android uredjaju.",
+    "nema_citac": "Uredjaj nema citac otiska prsta.",
+    "nijedan_otisak": "Nijedan otisak nije registrovan na ovom telefonu (Podesavanja telefona -> Bezbednost -> Otisak prsta).",
+    "ne_mogu_da_proverim": "Ne mogu da proverim citac otiska: {greska}"
   }
 }

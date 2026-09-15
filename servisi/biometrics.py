@@ -43,8 +43,10 @@ def hardver_dostupan():
     """Proverava da li uredjaj ima citac otiska I da li je bar jedan
     otisak vec registrovan u sistemskim podesavanjima telefona.
     Vraca (dostupno: bool, poruka: str)."""
+    from servisi import jezici
+
     if not _na_androidu():
-        return False, "Otisak prsta radi samo na Android uredjaju."
+        return False, jezici._t("biometrics.samo_android")
 
     try:
         from jnius import autoclass
@@ -55,17 +57,14 @@ def hardver_dostupan():
 
         fm = activity.getSystemService(Context.FINGERPRINT_SERVICE)
         if fm is None:
-            return False, "Uredjaj nema citac otiska prsta."
+            return False, jezici._t("biometrics.nema_citac")
         if not fm.isHardwareDetected():
-            return False, "Uredjaj nema citac otiska prsta."
+            return False, jezici._t("biometrics.nema_citac")
         if not fm.hasEnrolledFingerprints():
-            return False, (
-                "Nijedan otisak nije registrovan na ovom telefonu "
-                "(Podesavanja telefona -> Bezbednost -> Otisak prsta)."
-            )
+            return False, jezici._t("biometrics.nijedan_otisak")
         return True, "OK"
     except Exception as e:
-        return False, f"Ne mogu da proverim citac otiska: {e}"
+        return False, jezici._t("biometrics.ne_mogu_da_proverim", greska=e)
 
 
 def pokreni_autentifikaciju(on_uspeh, on_greska, on_neuspesno=None):

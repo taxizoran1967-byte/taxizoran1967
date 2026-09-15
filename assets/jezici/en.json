@@ -327,5 +327,24 @@
     "napomena": "Get a Google key at console.cloud.google.com -> APIs & Services -> Credentials (Geocoding API). The OCR.space key is free at ocr.space/ocrapi (Free plan).",
     "google_hint": "e.g. AIzaSy...",
     "ocr_hint": "e.g. K81234567890"
+  },
+  "sigurnost": {
+    "naslov": "Security",
+    "proveravam": "Checking...",
+    "pokusaj_ponovo": "Try again",
+    "prislonite_prst": "Place your finger on the fingerprint sensor...",
+    "otisak_nije_prepoznat": "Fingerprint not recognized.",
+    "ukljuceno": "Fingerprint unlock: ON",
+    "iskljuceno": "Fingerprint unlock: OFF",
+    "iskljuci_otisak": "Turn off fingerprint",
+    "ukljuci_otisak": "Turn on fingerprint",
+    "napomena_registrovan": "A fingerprint is registered on this device - the unlock screen will appear every time you start the app.",
+    "napomena_nije_registrovan": "Note: {poruka} If you enable this option without a registered fingerprint, the app will automatically let you through - for security reasons you cannot be locked out of the app without a registered fingerprint."
+  },
+  "biometrics": {
+    "samo_android": "Fingerprint unlock only works on an Android device.",
+    "nema_citac": "This device has no fingerprint reader.",
+    "nijedan_otisak": "No fingerprint is registered on this phone (Phone Settings -> Security -> Fingerprint).",
+    "ne_mogu_da_proverim": "Can't check the fingerprint reader: {greska}"
   }
 }
