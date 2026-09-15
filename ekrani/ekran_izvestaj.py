@@ -13,6 +13,7 @@ from kivy.uix.label import Label
 from kivy.properties import StringProperty
 
 from servisi import database as db
+from servisi import jezici
 
 
 # ============================================================
@@ -47,8 +48,24 @@ class IzvestajScreen(Screen):
     tekst_nedelja = StringProperty("")
     tekst_mesec = StringProperty("")
 
+    tekst_naslov = StringProperty("Izvestaj zarade")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_kalkulator = StringProperty("Kalkulator")
+    tekst_evidencija = StringProperty("Evidencija")
+    tekst_izvoz_pdf = StringProperty("Izvoz PDF")
+    tekst_voznje_danas_naslov = StringProperty("Voznje danas (pocetak - kraj, cena):")
+
     def on_pre_enter(self, *args):
+        self._osvezi_prevod()
         self.osvezi()
+
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("izvestaj.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_kalkulator = jezici._t("podesavanja.kalkulator_kratko")
+        self.tekst_evidencija = jezici._t("buttons.evidencija")
+        self.tekst_izvoz_pdf = jezici._t("izvestaj.izvoz_pdf")
+        self.tekst_voznje_danas_naslov = jezici._t("izvestaj.voznje_danas_naslov")
 
     def _dodatne_linije_perioda(self, pocetak, kraj, prihod):
         """Vraca gotov tekst (gorivo, servisi, ostali troskovi,
@@ -70,17 +87,20 @@ class IzvestajScreen(Screen):
         if intervali:
             ukupno_km_pot = sum(i["km_predjeno"] for i in intervali)
             ukupno_l_pot = sum(i["litara"] for i in intervali)
-            potrosnja_txt = f"{(ukupno_l_pot / ukupno_km_pot * 100):.1f} l/100km" if ukupno_km_pot > 0 else "-"
+            potrosnja_txt = (
+                jezici._t("izvestaj.potrosnja_format", vrednost=f"{(ukupno_l_pot / ukupno_km_pot * 100):.1f}")
+                if ukupno_km_pot > 0 else "-"
+            )
         else:
-            potrosnja_txt = "nema dovoljno podataka"
+            potrosnja_txt = jezici._t("izvestaj.nema_dovoljno_podataka")
 
         neto = prihod - cena_gorivo - cena_servis - cena_troskovi
 
         return (
-            f"Gorivo: {_FORMATIRAJ_CENU(cena_gorivo)} ({litara_gorivo:g} l)\n"
-            f"Servisi: {_FORMATIRAJ_CENU(cena_servis)}   |   Ostali troskovi: {_FORMATIRAJ_CENU(cena_troskovi)}\n"
-            f"Potrosnja: {potrosnja_txt}\n"
-            f"Neto (zarada - gorivo - servisi - troskovi): {_FORMATIRAJ_CENU(neto)}"
+            jezici._t("izvestaj.gorivo_linija", cena=_FORMATIRAJ_CENU(cena_gorivo), litara=f"{litara_gorivo:g}") + "\n"
+            + jezici._t("izvestaj.servisi_troskovi_linija", servis=_FORMATIRAJ_CENU(cena_servis), troskovi=_FORMATIRAJ_CENU(cena_troskovi)) + "\n"
+            + jezici._t("izvestaj.potrosnja_linija", potrosnja=potrosnja_txt) + "\n"
+            + jezici._t("izvestaj.neto_linija", neto=_FORMATIRAJ_CENU(neto))
         )
 
     def osvezi(self):
@@ -93,10 +113,10 @@ class IzvestajScreen(Screen):
         voznje_danas = db.voznje_za_datum(danas)
         broj_d, prihod_d, km_d = db.zbir_voznji(voznje_danas)
         self.tekst_danas = (
-            f"DANAS ({danas})\n"
-            f"Broj voznji: {broj_d}\n"
-            f"Ukupno km: {km_d:.1f}\n"
-            f"Ukupna zarada: {_FORMATIRAJ_CENU(prihod_d)}\n\n"
+            jezici._t("izvestaj.danas_naslov", datum=danas) + "\n"
+            + jezici._t("izvestaj.broj_voznji", broj=broj_d) + "\n"
+            + jezici._t("izvestaj.ukupno_km", km=f"{km_d:.1f}") + "\n"
+            + jezici._t("izvestaj.ukupna_zarada", cena=_FORMATIRAJ_CENU(prihod_d)) + "\n\n"
             + self._dodatne_linije_perioda(danas, danas, prihod_d)
         )
         self._prikazi_voznje_danas(voznje_danas)
@@ -104,20 +124,20 @@ class IzvestajScreen(Screen):
         voznje_nedelje = db.voznje_izmedju(pocetak_nedelje, danas)
         broj_n, prihod_n, km_n = db.zbir_voznji(voznje_nedelje)
         self.tekst_nedelja = (
-            f"OVA NEDELJA ({pocetak_nedelje} - {danas})\n"
-            f"Broj voznji: {broj_n}\n"
-            f"Ukupno km: {km_n:.1f}\n"
-            f"Ukupna zarada: {_FORMATIRAJ_CENU(prihod_n)}\n\n"
+            jezici._t("izvestaj.nedelja_naslov", od=pocetak_nedelje, do=danas) + "\n"
+            + jezici._t("izvestaj.broj_voznji", broj=broj_n) + "\n"
+            + jezici._t("izvestaj.ukupno_km", km=f"{km_n:.1f}") + "\n"
+            + jezici._t("izvestaj.ukupna_zarada", cena=_FORMATIRAJ_CENU(prihod_n)) + "\n\n"
             + self._dodatne_linije_perioda(pocetak_nedelje, danas, prihod_n)
         )
 
         voznje_mesec = db.voznje_za_mesec(mesec)
         broj_m, prihod_m, km_m = db.zbir_voznji(voznje_mesec)
         self.tekst_mesec = (
-            f"OVAJ MESEC ({mesec})\n"
-            f"Broj voznji: {broj_m}\n"
-            f"Ukupno km: {km_m:.1f}\n"
-            f"Ukupna zarada: {_FORMATIRAJ_CENU(prihod_m)}\n\n"
+            jezici._t("izvestaj.mesec_naslov", mesec=mesec) + "\n"
+            + jezici._t("izvestaj.broj_voznji", broj=broj_m) + "\n"
+            + jezici._t("izvestaj.ukupno_km", km=f"{km_m:.1f}") + "\n"
+            + jezici._t("izvestaj.ukupna_zarada", cena=_FORMATIRAJ_CENU(prihod_m)) + "\n\n"
             + self._dodatne_linije_perioda(pocetak_meseca, danas, prihod_m)
         )
 
@@ -127,7 +147,7 @@ class IzvestajScreen(Screen):
 
         if not voznje:
             kontejner.add_widget(Label(
-                text="Jos uvek nema voznji danas.",
+                text=jezici._t("izvestaj.nema_voznji_danas"),
                 size_hint_y=None, height=32,
                 color=(1, 1, 1, 1),
             ))
@@ -135,7 +155,10 @@ class IzvestajScreen(Screen):
 
         for v in voznje:
             vreme_pocetka = v["vreme_pocetka"] if "vreme_pocetka" in v.keys() else None
-            vreme_txt = f"{vreme_pocetka} -> {v['vreme']}" if vreme_pocetka else f"Kraj {v['vreme']}"
+            vreme_txt = (
+                f"{vreme_pocetka} -> {v['vreme']}" if vreme_pocetka
+                else jezici._t("evidencija.samo_kraj", kraj=v['vreme'])
+            )
             opis = f"{vreme_txt}   |   [b]{_FORMATIRAJ_CENU(v['ukupna_cena'])}[/b]"
             kontejner.add_widget(_NAPRAVI_RED_LISTE(
                 opis,
@@ -154,26 +177,26 @@ IZVESTAJ_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Izvestaj zarade"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 font_size: '11sp'
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Kalkulator"
+                label_text: root.tekst_kalkulator
                 tint: 0.36, 0.46, 0.64, 1
                 font_size: '11sp'
                 on_release: root.manager.current = "kalkulator"
             RoundButton:
-                label_text: "Evidencija"
+                label_text: root.tekst_evidencija
                 tint: 0.36, 0.46, 0.64, 1
                 font_size: '11sp'
                 on_release: root.manager.current = "evidencija"
             RoundButton:
-                label_text: "Izvoz PDF"
+                label_text: root.tekst_izvoz_pdf
                 tint: 0.55, 0.38, 0.26, 1
                 font_size: '11sp'
                 on_release: root.manager.current = "izvoz_pdf"
@@ -205,7 +228,7 @@ IZVESTAJ_KV = """
                         color: 1, 0.90, 0.80, 1
 
                 FieldLabel:
-                    text: "Voznje danas (pocetak - kraj, cena):"
+                    text: root.tekst_voznje_danas_naslov
                     size_hint_y: None
                     height: dp(28)
 

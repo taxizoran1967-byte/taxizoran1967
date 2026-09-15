@@ -148,5 +148,23 @@
     "samo_kraj": "End {kraj}",
     "izmeni": "Edit",
     "obrisi": "Delete"
+  },
+  "izvestaj": {
+    "naslov": "Earnings report",
+    "izvoz_pdf": "Export PDF",
+    "danas_naslov": "TODAY ({datum})",
+    "nedelja_naslov": "THIS WEEK ({od} - {do})",
+    "mesec_naslov": "THIS MONTH ({mesec})",
+    "broj_voznji": "Number of rides: {broj}",
+    "ukupno_km": "Total km: {km}",
+    "ukupna_zarada": "Total earnings: {cena}",
+    "gorivo_linija": "Fuel: {cena} ({litara} l)",
+    "servisi_troskovi_linija": "Service: {servis}   |   Other expenses: {troskovi}",
+    "potrosnja_linija": "Consumption: {potrosnja}",
+    "potrosnja_format": "{vrednost} l/100km",
+    "nema_dovoljno_podataka": "not enough data",
+    "neto_linija": "Net (earnings - fuel - service - expenses): {neto}",
+    "voznje_danas_naslov": "Today's rides (start - end, price):",
+    "nema_voznji_danas": "No rides yet today."
   }
 }

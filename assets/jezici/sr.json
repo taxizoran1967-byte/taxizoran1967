@@ -148,5 +148,23 @@
     "samo_kraj": "Kraj {kraj}",
     "izmeni": "Izmeni",
     "obrisi": "Obrisi"
+  },
+  "izvestaj": {
+    "naslov": "Izvestaj zarade",
+    "izvoz_pdf": "Izvoz PDF",
+    "danas_naslov": "DANAS ({datum})",
+    "nedelja_naslov": "OVA NEDELJA ({od} - {do})",
+    "mesec_naslov": "OVAJ MESEC ({mesec})",
+    "broj_voznji": "Broj voznji: {broj}",
+    "ukupno_km": "Ukupno km: {km}",
+    "ukupna_zarada": "Ukupna zarada: {cena}",
+    "gorivo_linija": "Gorivo: {cena} ({litara} l)",
+    "servisi_troskovi_linija": "Servisi: {servis}   |   Ostali troskovi: {troskovi}",
+    "potrosnja_linija": "Potrosnja: {potrosnja}",
+    "potrosnja_format": "{vrednost} l/100km",
+    "nema_dovoljno_podataka": "nema dovoljno podataka",
+    "neto_linija": "Neto (zarada - gorivo - servisi - troskovi): {neto}",
+    "voznje_danas_naslov": "Voznje danas (pocetak - kraj, cena):",
+    "nema_voznji_danas": "Jos uvek nema voznji danas."
   }
 }
