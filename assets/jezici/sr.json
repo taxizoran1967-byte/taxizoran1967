@@ -230,5 +230,20 @@
     "interval_greska": "Unesi ispravan broj kilometara (vece od 0).",
     "interval_sacuvano_naslov": "Sacuvano",
     "interval_sacuvano_poruka": "Interval za podsetnik je sad {interval} km."
+  },
+  "troskovi": {
+    "naslov": "Ostali troskovi",
+    "ukupno_format": "Ukupno: {ukupno}\nParking: {parking}   |   Putarina: {putarina}",
+    "vrsta_troska": "Vrsta troska",
+    "cena_label": "Cena (RSD)",
+    "cena_hint": "npr. 150",
+    "napomena_label": "Napomena (opciono)",
+    "napomena_hint": "npr. parking centar grada",
+    "sacuvaj_trosak": "Sacuvaj trosak",
+    "sacuvaj_izmenu": "Sacuvaj izmenu",
+    "nema_unosa": "Jos uvek nema unetih troskova.",
+    "unesi_cenu": "Unesi ispravan broj za cenu.",
+    "izmena_sacuvana": "Izmena sacuvana.",
+    "trosak_sacuvan": "Trosak sacuvan."
   }
 }

@@ -230,5 +230,20 @@
     "interval_greska": "Enter a valid number of kilometers (greater than 0).",
     "interval_sacuvano_naslov": "Saved",
     "interval_sacuvano_poruka": "The reminder interval is now {interval} km."
+  },
+  "troskovi": {
+    "naslov": "Other expenses",
+    "ukupno_format": "Total: {ukupno}\nParking: {parking}   |   Tolls: {putarina}",
+    "vrsta_troska": "Expense type",
+    "cena_label": "Price (RSD)",
+    "cena_hint": "e.g. 150",
+    "napomena_label": "Note (optional)",
+    "napomena_hint": "e.g. downtown parking",
+    "sacuvaj_trosak": "Save expense",
+    "sacuvaj_izmenu": "Save changes",
+    "nema_unosa": "No expenses entered yet.",
+    "unesi_cenu": "Enter a valid price.",
+    "izmena_sacuvana": "Changes saved.",
+    "trosak_sacuvan": "Expense saved."
   }
 }

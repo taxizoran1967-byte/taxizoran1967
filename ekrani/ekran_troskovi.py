@@ -12,6 +12,8 @@ from kivy.uix.label import Label
 from kivy.properties import StringProperty
 from kivy.app import App
 
+from servisi import jezici
+
 
 # ============================================================
 # main.py ovo postavlja posle uvoza (izbegava kruzni import)
@@ -37,8 +39,32 @@ class TroskoviScreen(Screen):
     dugme_tekst = StringProperty("Sacuvaj trosak")
     izmena_id = None
 
+    tekst_naslov = StringProperty("Ostali troskovi")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_podesavanja = StringProperty("Podesavanja")
+    tekst_vrsta_troska = StringProperty("Vrsta troska")
+    tekst_cena_label = StringProperty("Cena (RSD)")
+    hint_cena = StringProperty("npr. 150")
+    tekst_napomena_label = StringProperty("Napomena (opciono)")
+    hint_napomena = StringProperty("npr. parking centar grada")
+
     def on_pre_enter(self, *args):
+        self._osvezi_prevod()
         self.ucitaj_troskove()
+
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("troskovi.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
+        self.tekst_vrsta_troska = jezici._t("troskovi.vrsta_troska")
+        self.tekst_cena_label = jezici._t("troskovi.cena_label")
+        self.hint_cena = jezici._t("troskovi.cena_hint")
+        self.tekst_napomena_label = jezici._t("troskovi.napomena_label")
+        self.hint_napomena = jezici._t("troskovi.napomena_hint")
+        self.dugme_tekst = (
+            jezici._t("troskovi.sacuvaj_izmenu") if self.izmena_id is not None
+            else jezici._t("troskovi.sacuvaj_trosak")
+        )
 
     def ucitaj_troskove(self):
         kontejner = self.ids.lista_troskovi
@@ -51,14 +77,16 @@ class TroskoviScreen(Screen):
         ukupno_putarina = sum(
             s.get("cena", 0) for s in _TROSKOVI_REF.stavke if s.get("vrsta") == "Putarina"
         )
-        self.tekst_ukupno = (
-            f"Ukupno: {_FORMATIRAJ_CENU(ukupno)}\n"
-            f"Parking: {_FORMATIRAJ_CENU(ukupno_parking)}   |   Putarina: {_FORMATIRAJ_CENU(ukupno_putarina)}"
+        self.tekst_ukupno = jezici._t(
+            "troskovi.ukupno_format",
+            ukupno=_FORMATIRAJ_CENU(ukupno),
+            parking=_FORMATIRAJ_CENU(ukupno_parking),
+            putarina=_FORMATIRAJ_CENU(ukupno_putarina),
         )
 
         if not _TROSKOVI_REF.stavke:
             kontejner.add_widget(Label(
-                text="Jos uvek nema unetih troskova.",
+                text=jezici._t("troskovi.nema_unosa"),
                 size_hint_y=None, height=40,
                 color=(1, 1, 1, 1),
             ))
@@ -80,9 +108,9 @@ class TroskoviScreen(Screen):
             tint=(0.55, 0.38, 0.26, 0.92),
             boja_teksta=(1, 0.92, 0.85, 1),
             dugmad=[
-                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
+                (jezici._t("evidencija.izmeni"), (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, sid=s["id"]: self._izmeni(sid)),
-                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
+                (jezici._t("evidencija.obrisi"), (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
                  lambda inst, sid=s["id"]: self._obrisi(sid)),
             ],
         )
@@ -97,13 +125,13 @@ class TroskoviScreen(Screen):
         vrsta = s.get("vrsta", "Parking")
         if vrsta in self.ids.spinner_vrsta_troska.values:
             self.ids.spinner_vrsta_troska.text = vrsta
-        self.dugme_tekst = "Sacuvaj izmenu"
+        self.dugme_tekst = jezici._t("troskovi.sacuvaj_izmenu")
 
     def sacuvaj_trosak(self):
         try:
             cena = float(self.ids.input_cena_troska.text.replace(",", "."))
         except (ValueError, AttributeError):
-            self._poruka("Unesi ispravan broj za cenu.")
+            self._poruka(jezici._t("troskovi.unesi_cenu"))
             return
 
         app = App.get_running_app()
@@ -117,11 +145,11 @@ class TroskoviScreen(Screen):
         if self.izmena_id is not None:
             _TROSKOVI_REF.azuriraj(app.user_data_dir, self.izmena_id, stavka)
             self.izmena_id = None
-            self.dugme_tekst = "Sacuvaj trosak"
-            self._poruka("Izmena sacuvana.")
+            self.dugme_tekst = jezici._t("troskovi.sacuvaj_trosak")
+            self._poruka(jezici._t("troskovi.izmena_sacuvana"))
         else:
             _TROSKOVI_REF.dodaj(app.user_data_dir, stavka)
-            self._poruka("Trosak sacuvan.")
+            self._poruka(jezici._t("troskovi.trosak_sacuvan"))
 
         self.ids.input_cena_troska.text = ""
         self.ids.input_napomena_troska.text = ""
@@ -134,11 +162,11 @@ class TroskoviScreen(Screen):
         _TROSKOVI_REF.obrisi(app.user_data_dir, stavka_id)
         if self.izmena_id == stavka_id:
             self.izmena_id = None
-            self.dugme_tekst = "Sacuvaj trosak"
+            self.dugme_tekst = jezici._t("troskovi.sacuvaj_trosak")
         self.ucitaj_troskove()
 
     def _poruka(self, tekst):
-        _PRIKAZI_POPUP("Info", tekst, size_hint=(0.8, 0.3))
+        _PRIKAZI_POPUP(jezici._t("buttons.info"), tekst, size_hint=(0.8, 0.3))
 
 TROSKOVI_KV = """
 # ============================================================
@@ -150,15 +178,15 @@ TROSKOVI_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Ostali troskovi"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Podesavanja"
+                label_text: root.tekst_podesavanja
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
@@ -189,7 +217,7 @@ TROSKOVI_KV = """
                         height: self.texture_size[1]
 
                 FieldLabel:
-                    text: "Vrsta troska"
+                    text: root.tekst_vrsta_troska
 
                 Spinner:
                     id: spinner_vrsta_troska
@@ -201,19 +229,19 @@ TROSKOVI_KV = """
                     color: 0.12, 0.12, 0.24, 1
 
                 FieldLabel:
-                    text: "Cena (RSD)"
+                    text: root.tekst_cena_label
 
                 PastelTextInput:
                     id: input_cena_troska
-                    hint_text: "npr. 150"
+                    hint_text: root.hint_cena
                     input_filter: "float"
 
                 FieldLabel:
-                    text: "Napomena (opciono)"
+                    text: root.tekst_napomena_label
 
                 PastelTextInput:
                     id: input_napomena_troska
-                    hint_text: "npr. parking centar grada"
+                    hint_text: root.hint_napomena
 
                 RoundButton:
                     label_text: root.dugme_tekst
