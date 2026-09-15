@@ -15,6 +15,7 @@ from kivy.app import App
 from kivy.clock import Clock
 
 from servisi import ocr_racun
+from servisi import jezici
 
 
 # ============================================================
@@ -44,28 +45,63 @@ class GorivoScreen(Screen):
     tekst_ocr_status = StringProperty("")
     izmena_id = None
 
+    tekst_naslov = StringProperty("Gorivo")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_podesavanja = StringProperty("Podesavanja")
+    tekst_vrsta_goriva = StringProperty("Vrsta goriva")
+    tekst_skeniraj_racun = StringProperty("Skeniraj racun (OCR)")
+    tekst_datum_label = StringProperty("Datum (GGGG-MM-DD)")
+    hint_datum = StringProperty("")
+    tekst_kolicina = StringProperty("Kolicina (litara)")
+    hint_kolicina = StringProperty("npr. 30")
+    tekst_cena_label = StringProperty("Cena (RSD)")
+    hint_cena = StringProperty("npr. 3200")
+    tekst_km_pumpe_label = StringProperty("Kilometraza na pumpi (opciono, za tacnu potrosnju)")
+    hint_km_pumpe = StringProperty("npr. 152340")
+    tekst_napomena_label = StringProperty("Napomena (opciono)")
+    hint_napomena = StringProperty("npr. NIS pumpa")
+
     def on_pre_enter(self, *args):
         self.tekst_ocr_status = ""
+        self._osvezi_prevod()
         self.ucitaj_gorivo()
+
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("gorivo.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
+        self.tekst_vrsta_goriva = jezici._t("gorivo.vrsta_goriva")
+        self.tekst_skeniraj_racun = jezici._t("gorivo.skeniraj_racun")
+        self.tekst_datum_label = jezici._t("gorivo.datum_label")
+        self.hint_datum = jezici._t("gorivo.datum_hint")
+        self.tekst_kolicina = jezici._t("gorivo.kolicina")
+        self.hint_kolicina = jezici._t("gorivo.kolicina_hint")
+        self.tekst_cena_label = jezici._t("gorivo.cena_label")
+        self.hint_cena = jezici._t("gorivo.cena_hint")
+        self.tekst_km_pumpe_label = jezici._t("gorivo.km_pumpe_label")
+        self.hint_km_pumpe = jezici._t("gorivo.km_pumpe_hint")
+        self.tekst_napomena_label = jezici._t("gorivo.napomena_label")
+        self.hint_napomena = jezici._t("gorivo.napomena_hint")
+        if self.izmena_id is None:
+            self.dugme_tekst = jezici._t("gorivo.sacuvaj_unos")
+        else:
+            self.dugme_tekst = jezici._t("gorivo.sacuvaj_izmenu")
 
     def skeniraj_racun(self):
         if not _API_REF.ocr_kljuc:
-            self._poruka(
-                "Prvo unesi OCR.space API kljuc u Podesavanja -> Google API "
-                "(besplatan je na ocr.space/ocrapi)."
-            )
+            self._poruka(jezici._t("gorivo.api_kljuc_greska"))
             return
 
         try:
             from plyer import filechooser
         except Exception:
-            self._poruka("Biranje slike nije dostupno na ovom uredjaju.")
+            self._poruka(jezici._t("gorivo.biranje_nedostupno"))
             return
 
         def na_izbor(fajlovi):
             if not fajlovi:
                 return
-            self.tekst_ocr_status = "Ucitavam racun, sacekaj..."
+            self.tekst_ocr_status = jezici._t("gorivo.ucitavam_racun")
             threading.Thread(
                 target=self._obradi_racun, args=(fajlovi[0],), daemon=True
             ).start()
@@ -73,7 +109,7 @@ class GorivoScreen(Screen):
         try:
             filechooser.open_file(on_selection=na_izbor, multiple=False)
         except Exception as e:
-            self._poruka(f"Ne mogu da otvorim galeriju:\n{e}")
+            self._poruka(jezici._t("gorivo.ne_mogu_galeriju", greska=e))
 
     def _obradi_racun(self, putanja_slike):
         try:
@@ -85,17 +121,14 @@ class GorivoScreen(Screen):
 
     def _ocr_greska(self, poruka):
         self.tekst_ocr_status = ""
-        self._poruka(f"OCR nije uspeo:\n{poruka}")
+        self._poruka(jezici._t("gorivo.ocr_neuspesan", poruka=poruka))
 
     def _primeni_ocr(self, podaci):
         try:
             self._primeni_ocr_podatke(podaci)
         except Exception as e:
             self.tekst_ocr_status = ""
-            self._poruka(
-                f"Racun je procitan, ali je doslo do greske pri popunjavanju "
-                f"polja - javi ovu poruku da se ispravi:\n{e}"
-            )
+            self._poruka(jezici._t("gorivo.racun_greska_polja", greska=e))
 
     def _primeni_ocr_podatke(self, podaci):
         litara = podaci.get("litara")
@@ -121,11 +154,9 @@ class GorivoScreen(Screen):
             self.ids.input_napomena_gorivo.text = ", ".join(napomena_delovi)
 
         if litara or ukupna_cena:
-            self.tekst_ocr_status = "Racun ucitan - proveri podatke pre cuvanja."
+            self.tekst_ocr_status = jezici._t("gorivo.racun_ucitan")
         else:
-            self.tekst_ocr_status = (
-                "OCR nije uspeo da prepozna kolicinu/cenu - unesi ih rucno."
-            )
+            self.tekst_ocr_status = jezici._t("gorivo.ocr_ne_prepoznaje")
 
     def ucitaj_gorivo(self):
         kontejner = self.ids.lista_gorivo
@@ -138,14 +169,16 @@ class GorivoScreen(Screen):
         ukupno_tng = sum(
             s.get("cena", 0) for s in _GORIVO_REF.stavke if s.get("tip") == "TNG"
         )
-        self.tekst_ukupno = (
-            f"Ukupno: {_FORMATIRAJ_CENU(ukupno)}\n"
-            f"Benzin: {_FORMATIRAJ_CENU(ukupno_benzin)}   |   TNG: {_FORMATIRAJ_CENU(ukupno_tng)}"
+        self.tekst_ukupno = jezici._t(
+            "gorivo.ukupno_format",
+            ukupno=_FORMATIRAJ_CENU(ukupno),
+            benzin=_FORMATIRAJ_CENU(ukupno_benzin),
+            tng=_FORMATIRAJ_CENU(ukupno_tng),
         )
 
         if not _GORIVO_REF.stavke:
             kontejner.add_widget(Label(
-                text="Jos uvek nema unosa goriva.",
+                text=jezici._t("gorivo.nema_unosa"),
                 size_hint_y=None, height=40,
                 color=(1, 1, 1, 1),
             ))
@@ -158,7 +191,7 @@ class GorivoScreen(Screen):
         napomena = s.get("napomena") or "-"
         tip = s.get("tip", "Benzin")
         km_pumpe = s.get("km_pumpe")
-        km_tekst = f"  |  {km_pumpe:g} km" if km_pumpe else ""
+        km_tekst = jezici._t("gorivo.km_sufiks", km=f"{km_pumpe:g}") if km_pumpe else ""
         opis = (
             f"[b]{s.get('datum', '-')}[/b]\n"
             f"{tip}  |  {s.get('litara', 0):g} l{km_tekst}\n"
@@ -170,9 +203,9 @@ class GorivoScreen(Screen):
             tint=(0.55, 0.38, 0.26, 0.92),
             boja_teksta=(1, 0.92, 0.85, 1),
             dugmad=[
-                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
+                (jezici._t("evidencija.izmeni"), (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, sid=s["id"]: self._izmeni(sid)),
-                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
+                (jezici._t("evidencija.obrisi"), (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
                  lambda inst, sid=s["id"]: self._obrisi(sid)),
             ],
         )
@@ -190,14 +223,14 @@ class GorivoScreen(Screen):
         tip = s.get("tip", "Benzin")
         if tip in self.ids.spinner_tip_goriva.values:
             self.ids.spinner_tip_goriva.text = tip
-        self.dugme_tekst = "Sacuvaj izmenu"
+        self.dugme_tekst = jezici._t("gorivo.sacuvaj_izmenu")
 
     def sacuvaj_gorivo(self):
         try:
             litara = float(self.ids.input_litara.text.replace(",", "."))
             cena = float(self.ids.input_cena_goriva.text.replace(",", "."))
         except (ValueError, AttributeError):
-            self._poruka("Unesi ispravne brojeve za kolicinu i cenu.")
+            self._poruka(jezici._t("gorivo.unesi_ispravne_brojeve"))
             return
 
         km_pumpe_tekst = self.ids.input_km_pumpe.text.strip()
@@ -206,7 +239,7 @@ class GorivoScreen(Screen):
             try:
                 km_pumpe = float(km_pumpe_tekst.replace(",", "."))
             except ValueError:
-                self._poruka("Kilometraza na pumpi mora biti broj (ili ostavi prazno).")
+                self._poruka(jezici._t("gorivo.km_pumpe_broj"))
                 return
 
         datum_tekst = self.ids.input_datum_gorivo.text.strip()
@@ -216,9 +249,7 @@ class GorivoScreen(Screen):
             try:
                 datetime.strptime(datum_tekst, "%Y-%m-%d")
             except ValueError:
-                self._poruka(
-                    "Datum mora biti u formatu GGGG-MM-DD, npr. 2026-09-14."
-                )
+                self._poruka(jezici._t("gorivo.datum_format_greska"))
                 return
 
         app = App.get_running_app()
@@ -234,11 +265,11 @@ class GorivoScreen(Screen):
         if self.izmena_id is not None:
             _GORIVO_REF.azuriraj(app.user_data_dir, self.izmena_id, stavka)
             self.izmena_id = None
-            self.dugme_tekst = "Sacuvaj unos"
-            self._poruka("Izmena sacuvana.")
+            self.dugme_tekst = jezici._t("gorivo.sacuvaj_unos")
+            self._poruka(jezici._t("gorivo.izmena_sacuvana"))
         else:
             _GORIVO_REF.dodaj(app.user_data_dir, stavka)
-            self._poruka("Unos sacuvan.")
+            self._poruka(jezici._t("gorivo.unos_sacuvan"))
 
         self.ids.input_datum_gorivo.text = ""
         self.ids.input_litara.text = ""
@@ -255,11 +286,11 @@ class GorivoScreen(Screen):
         _GORIVO_REF.obrisi(app.user_data_dir, stavka_id)
         if self.izmena_id == stavka_id:
             self.izmena_id = None
-            self.dugme_tekst = "Sacuvaj unos"
+            self.dugme_tekst = jezici._t("gorivo.sacuvaj_unos")
         self.ucitaj_gorivo()
 
     def _poruka(self, tekst):
-        _PRIKAZI_POPUP("Info", tekst, size_hint=(0.8, 0.3))
+        _PRIKAZI_POPUP(jezici._t("buttons.info"), tekst, size_hint=(0.8, 0.3))
 
 
 GORIVO_KV = """
@@ -272,15 +303,15 @@ GORIVO_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Gorivo"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Podesavanja"
+                label_text: root.tekst_podesavanja
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
@@ -311,10 +342,10 @@ GORIVO_KV = """
                         height: self.texture_size[1]
 
                 FieldLabel:
-                    text: "Vrsta goriva"
+                    text: root.tekst_vrsta_goriva
 
                 RoundButton:
-                    label_text: "Skeniraj racun (OCR)"
+                    label_text: root.tekst_skeniraj_racun
                     tint: 0.36, 0.46, 0.64, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
@@ -341,42 +372,42 @@ GORIVO_KV = """
                     color: 0.12, 0.12, 0.24, 1
 
                 FieldLabel:
-                    text: "Datum (GGGG-MM-DD)"
+                    text: root.tekst_datum_label
 
                 PastelTextInput:
                     id: input_datum_gorivo
-                    hint_text: "prazno = danasnji datum, ili upisi GGGG-MM-DD"
+                    hint_text: root.hint_datum
 
                 FieldLabel:
-                    text: "Kolicina (litara)"
+                    text: root.tekst_kolicina
 
                 PastelTextInput:
                     id: input_litara
-                    hint_text: "npr. 30"
+                    hint_text: root.hint_kolicina
                     input_filter: "float"
 
                 FieldLabel:
-                    text: "Cena (RSD)"
+                    text: root.tekst_cena_label
 
                 PastelTextInput:
                     id: input_cena_goriva
-                    hint_text: "npr. 3200"
+                    hint_text: root.hint_cena
                     input_filter: "float"
 
                 FieldLabel:
-                    text: "Kilometraza na pumpi (opciono, za tacnu potrosnju)"
+                    text: root.tekst_km_pumpe_label
 
                 PastelTextInput:
                     id: input_km_pumpe
-                    hint_text: "npr. 152340"
+                    hint_text: root.hint_km_pumpe
                     input_filter: "float"
 
                 FieldLabel:
-                    text: "Napomena (opciono)"
+                    text: root.tekst_napomena_label
 
                 PastelTextInput:
                     id: input_napomena_gorivo
-                    hint_text: "npr. NIS pumpa"
+                    hint_text: root.hint_napomena
 
                 RoundButton:
                     label_text: root.dugme_tekst
