@@ -19,6 +19,7 @@ from kivy.app import App
 from kivy.clock import Clock
 
 from servisi import database as db
+from servisi import jezici
 
 try:
     from androidstorage4kivy import SharedStorage, ShareSheet
@@ -171,42 +172,60 @@ def _auto_backup_ako_treba(*_args):
 class BackupScreen(Screen):
     tekst_status = StringProperty("")
 
+    tekst_naslov = StringProperty("Backup podataka")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_podesavanja = StringProperty("Podesavanja")
+    tekst_napomena_gore = StringProperty("")
+    tekst_odobri_pristup = StringProperty("Odobri pristup fajlovima")
+    tekst_napomena_auto = StringProperty("")
+    tekst_sacuvaj_backup = StringProperty("Sacuvaj backup sada")
+    tekst_vrati_podatke = StringProperty("Vrati podatke iz backupa")
+    tekst_podeli_backup = StringProperty("Podeli backup (Drive, WhatsApp...)")
+    tekst_napomena_dole = StringProperty("")
+
     def on_pre_enter(self, *args):
+        self._osvezi_prevod()
         self._osvezi_status()
+
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("backup.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
+        self.tekst_napomena_gore = jezici._t("backup.napomena_gore")
+        self.tekst_odobri_pristup = jezici._t("backup.odobri_pristup")
+        self.tekst_napomena_auto = jezici._t("backup.napomena_auto")
+        self.tekst_sacuvaj_backup = jezici._t("backup.sacuvaj_backup_sada")
+        self.tekst_vrati_podatke = jezici._t("backup.vrati_podatke")
+        self.tekst_podeli_backup = jezici._t("backup.podeli_backup")
+        self.tekst_napomena_dole = jezici._t("backup.napomena_dole")
 
     def _osvezi_status(self):
         folder = _PUTANJA_BACKUP_FOLDERA()
         if _IMA_DOZVOLU_SVI_FAJLOVI():
-            dozvola_txt = "Dozvola za fajlove: DA"
+            dozvola_txt = jezici._t("backup.dozvola_da")
         else:
-            dozvola_txt = "Dozvola za fajlove: NE (klikni dugme ispod)"
+            dozvola_txt = jezici._t("backup.dozvola_ne")
 
         try:
             broj = db.broj_voznji()
         except Exception:
             broj = "?"
 
-        vozac_txt = "popunjeni" if _VOZAC_REF.ime_prezime else "nisu popunjeni"
+        vozac_txt = jezici._t("backup.popunjeni") if _VOZAC_REF.ime_prezime else jezici._t("backup.nisu_popunjeni")
 
         svi_backupi = _svi_backup_fajlovi(folder)
         if svi_backupi:
-            backup_txt = (
-                f"Sacuvanih backupa: {len(svi_backupi)} "
-                f"(najnoviji: {os.path.basename(svi_backupi[0])})"
+            backup_txt = jezici._t(
+                "backup.backup_broj_format", broj=len(svi_backupi), naziv=os.path.basename(svi_backupi[0])
             )
         else:
-            backup_txt = "Jos uvek nema nijednog backupa."
+            backup_txt = jezici._t("backup.nema_backupa")
 
-        self.tekst_status = (
-            f"{dozvola_txt}\n\n"
-            f"Backup fajlovi se cuvaju ovde:\n{folder}\n"
-            f"{backup_txt}\n"
-            f"(svaki backup je poseban fajl sa datumom - stari se ne brisu)\n\n"
-            f"Voznji trenutno u bazi: {broj}\n"
-            f"Unosa goriva: {len(_GORIVO_REF.stavke)}\n"
-            f"Unosa servisa: {len(_SERVIS_REF.stavke)}\n"
-            f"Ostalih troskova: {len(_TROSKOVI_REF.stavke)}\n"
-            f"Podaci o vozacu: {vozac_txt}"
+        self.tekst_status = jezici._t(
+            "backup.status_format",
+            dozvola=dozvola_txt, folder=folder, backup_info=backup_txt,
+            broj=broj, gorivo=len(_GORIVO_REF.stavke), servis=len(_SERVIS_REF.stavke),
+            troskovi=len(_TROSKOVI_REF.stavke), vozac=vozac_txt,
         )
 
     def zatrazi_dozvolu(self):
@@ -216,37 +235,34 @@ class BackupScreen(Screen):
     def sacuvaj_backup(self):
         if not _IMA_DOZVOLU_SVI_FAJLOVI():
             _PRIKAZI_POPUP(
-                "Nedostaje dozvola",
-                "Prvo klikni 'Odobri pristup fajlovima', potvrdi na sledecem "
-                "ekranu, pa se vrati ovde i probaj ponovo.",
+                jezici._t("backup.nedostaje_dozvola_naslov"),
+                jezici._t("backup.nedostaje_dozvola_poruka"),
                 size_hint=(0.88, 0.4),
             )
             return
         try:
             putanja, podaci_voznje = _sacuvaj_backup_fajl()
             _PRIKAZI_POPUP(
-                "Sacuvano",
-                f"Sacuvano u backup:\n"
-                f"- {len(podaci_voznje)} voznji\n"
-                f"- {len(_GORIVO_REF.stavke)} unosa goriva\n"
-                f"- {len(_SERVIS_REF.stavke)} unosa servisa\n"
-                f"- {len(_TROSKOVI_REF.stavke)} ostalih troskova\n"
-                f"- podaci o vozacu\n\n"
-                f"Fajl:\n{putanja}",
+                jezici._t("backup.sacuvano_naslov"),
+                jezici._t(
+                    "backup.sacuvano_poruka",
+                    broj_voznji=len(podaci_voznje), gorivo=len(_GORIVO_REF.stavke),
+                    servis=len(_SERVIS_REF.stavke), troskovi=len(_TROSKOVI_REF.stavke),
+                    putanja=putanja,
+                ),
                 size_hint=(0.88, 0.55),
             )
         except Exception as e:
             _PRIKAZI_POPUP(
-                "Greska", f"Backup nije uspeo:\n{e}", size_hint=(0.88, 0.4)
+                jezici._t("profil.greska"), jezici._t("backup.backup_neuspeo_poruka", greska=e), size_hint=(0.88, 0.4)
             )
         self._osvezi_status()
 
     def ucitaj_backup(self):
         if not _IMA_DOZVOLU_SVI_FAJLOVI():
             _PRIKAZI_POPUP(
-                "Nedostaje dozvola",
-                "Prvo klikni 'Odobri pristup fajlovima', potvrdi na sledecem "
-                "ekranu, pa se vrati ovde i probaj ponovo.",
+                jezici._t("backup.nedostaje_dozvola_naslov"),
+                jezici._t("backup.nedostaje_dozvola_poruka"),
                 size_hint=(0.88, 0.4),
             )
             return
@@ -255,10 +271,8 @@ class BackupScreen(Screen):
         putanja = _najnoviji_backup_fajl(folder)
         if putanja is None:
             _PRIKAZI_POPUP(
-                "Nema backup fajla",
-                f"Nije pronadjen nijedan backup fajl u:\n{folder}\n\n"
-                f"Prvo napravi backup na starom telefonu, pa taj fajl "
-                f"prebaci u isti folder na ovom telefonu.",
+                jezici._t("backup.nema_backup_fajla_naslov"),
+                jezici._t("backup.nema_backup_fajla_poruka", folder=folder),
                 size_hint=(0.88, 0.5),
             )
             return
@@ -267,7 +281,7 @@ class BackupScreen(Screen):
                 podaci = json.load(f)
         except Exception as e:
             _PRIKAZI_POPUP(
-                "Greska", f"Ne mogu da procitam backup:\n{e}", size_hint=(0.88, 0.4)
+                jezici._t("profil.greska"), jezici._t("backup.citanje_neuspesno", greska=e), size_hint=(0.88, 0.4)
             )
             return
 
@@ -314,13 +328,13 @@ class BackupScreen(Screen):
         dodato_troskovi = _dodaj_stavke_bez_duplikata(_TROSKOVI_REF, app.user_data_dir, troskovi_podaci)
 
         _PRIKAZI_POPUP(
-            "Vraceno iz backupa",
-            f"Ucitan fajl: {os.path.basename(putanja)}\n\n"
-            f"Voznje - dodato: {dodato}, preskoceno (vec postoje): {preskoceno}\n"
-            f"Gorivo - dodato novih unosa: {dodato_gorivo}\n"
-            f"Servisi - dodato novih unosa: {dodato_servisi}\n"
-            f"Ostali troskovi - dodato novih unosa: {dodato_troskovi}\n"
-            f"Podaci o vozacu: {'azurirani' if vozac_podaci else 'nije bilo u ovom backupu'}",
+            jezici._t("backup.vraceno_naslov"),
+            jezici._t(
+                "backup.vraceno_poruka",
+                naziv=os.path.basename(putanja), dodato=dodato, preskoceno=preskoceno,
+                gorivo=dodato_gorivo, servisi=dodato_servisi, troskovi=dodato_troskovi,
+                vozac_status=jezici._t("backup.azurirani") if vozac_podaci else jezici._t("backup.nije_bilo_backupu"),
+            ),
             size_hint=(0.88, 0.6),
         )
         self._osvezi_status()
@@ -332,8 +346,8 @@ class BackupScreen(Screen):
         jedan nalog unutar ove aplikacije."""
         if not _DELJENJE_DOSTUPNO:
             _PRIKAZI_POPUP(
-                "Nije dostupno",
-                "Deljenje fajlova radi samo na Android telefonu.",
+                jezici._t("backup.deljenje_nedostupno_naslov"),
+                jezici._t("backup.deljenje_nedostupno_poruka"),
                 size_hint=(0.85, 0.35),
             )
             return
@@ -342,8 +356,8 @@ class BackupScreen(Screen):
         putanja = _najnoviji_backup_fajl(folder)
         if putanja is None:
             _PRIKAZI_POPUP(
-                "Nema backup fajla",
-                "Prvo napravi backup klikom na 'Sacuvaj backup sada', pa onda podeli.",
+                jezici._t("backup.nema_backup_fajla_naslov"),
+                jezici._t("backup.nema_backupa_deljenje_poruka"),
                 size_hint=(0.85, 0.4),
             )
             return
@@ -360,7 +374,7 @@ class BackupScreen(Screen):
             deljeni_fajl = skladiste.copy_to_shared(privatna_kopija, collection="Documents")
             if deljeni_fajl is None:
                 _PRIKAZI_POPUP(
-                    "Greska", "Deljenje nije uspelo - probaj ponovo.", size_hint=(0.85, 0.35)
+                    jezici._t("profil.greska"), jezici._t("backup.deljenje_neuspelo"), size_hint=(0.85, 0.35)
                 )
                 return
 
@@ -369,7 +383,7 @@ class BackupScreen(Screen):
             self._share_sheet.share_file(deljeni_fajl)
         except Exception as e:
             _PRIKAZI_POPUP(
-                "Greska", f"Deljenje nije uspelo:\n{e}", size_hint=(0.88, 0.4)
+                jezici._t("profil.greska"), jezici._t("backup.deljenje_neuspelo_greska", greska=e), size_hint=(0.88, 0.4)
             )
 
 
@@ -385,15 +399,15 @@ BACKUP_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Backup podataka"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Podesavanja"
+                label_text: root.tekst_podesavanja
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
@@ -407,7 +421,7 @@ BACKUP_KV = """
                 padding: dp(2), dp(4)
 
                 FieldLabel:
-                    text: "Cuva sve voznje (km, cene, adrese) u jedan fajl van aplikacije, da ne nestanu ako obrises app ili promenis telefon."
+                    text: root.tekst_napomena_gore
 
                 PastelCard:
                     orientation: "vertical"
@@ -425,7 +439,7 @@ BACKUP_KV = """
                         height: self.texture_size[1]
 
                 RoundButton:
-                    label_text: "Odobri pristup fajlovima"
+                    label_text: root.tekst_odobri_pristup
                     tint: 0.36, 0.46, 0.64, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
@@ -433,13 +447,13 @@ BACKUP_KV = """
                     on_release: root.zatrazi_dozvolu()
 
                 FieldLabel:
-                    text: "Automatski backup: app sam napravi svez backup jednom dnevno pri pokretanju (tiho, bez poruke) - dugme ispod je za rucni backup kad god zelis."
+                    text: root.tekst_napomena_auto
                     size_hint_y: None
                     height: dp(70)
                     text_size: self.width, None
 
                 RoundButton:
-                    label_text: "Sacuvaj backup sada"
+                    label_text: root.tekst_sacuvaj_backup
                     tint: 0.30, 0.52, 0.36, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
@@ -447,7 +461,7 @@ BACKUP_KV = """
                     on_release: root.sacuvaj_backup()
 
                 RoundButton:
-                    label_text: "Vrati podatke iz backupa"
+                    label_text: root.tekst_vrati_podatke
                     tint: 0.55, 0.38, 0.26, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
@@ -455,7 +469,7 @@ BACKUP_KV = """
                     on_release: root.ucitaj_backup()
 
                 RoundButton:
-                    label_text: "Podeli backup (Drive, WhatsApp...)"
+                    label_text: root.tekst_podeli_backup
                     tint: 0.30, 0.40, 0.58, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
@@ -463,7 +477,7 @@ BACKUP_KV = """
                     on_release: root.podeli_backup()
 
                 FieldLabel:
-                    text: "Ako menjas telefon: napravi backup na starom, prebaci fajl (WhatsApp/Drive/USB) u isti folder na novom, instaliraj app, pa klikni 'Vrati podatke'."
+                    text: root.tekst_napomena_dole
                     size_hint_y: None
                     height: dp(90)
                     text_size: self.width, None
