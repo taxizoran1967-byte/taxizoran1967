@@ -309,5 +309,14 @@
     "nema_backupa_deljenje_poruka": "First make a backup by tapping 'Save backup now', then share it.",
     "deljenje_neuspelo": "Sharing failed - try again.",
     "deljenje_neuspelo_greska": "Sharing failed:\n{greska}"
+  },
+  "navigacija": {
+    "naslov": "Navigation",
+    "odrediste_label": "Destination (address or place name)",
+    "odrediste_hint": "e.g. Main Street 5, Belgrade",
+    "otvori_navigaciju": "Open navigation",
+    "unesi_odrediste": "Enter a destination before opening navigation.",
+    "ne_mogu_navigaciju": "Can't open navigation on this device.",
+    "napomena": "Google Maps will open and navigation will automatically start turn-by-turn to the entered address (no need to manually tap 'Start'). The starting point is always the phone's current GPS position at that moment."
   }
 }

@@ -309,5 +309,14 @@
     "nema_backupa_deljenje_poruka": "Prvo napravi backup klikom na 'Sacuvaj backup sada', pa onda podeli.",
     "deljenje_neuspelo": "Deljenje nije uspelo - probaj ponovo.",
     "deljenje_neuspelo_greska": "Deljenje nije uspelo:\n{greska}"
+  },
+  "navigacija": {
+    "naslov": "Navigacija",
+    "odrediste_label": "Odrediste (adresa ili naziv mesta)",
+    "odrediste_hint": "npr. Terazije 5, Beograd",
+    "otvori_navigaciju": "Otvori navigaciju",
+    "unesi_odrediste": "Unesi odrediste pre otvaranja navigacije.",
+    "ne_mogu_navigaciju": "Ne mogu da otvorim navigaciju na ovom uredjaju.",
+    "napomena": "Otvorice se Google Maps i navigacija ce automatski krenuti korak-po-korak ka unetoj adresi (nije potrebno rucno kliktati 'Kreni'). Polazna tacka je uvek trenutna GPS pozicija telefona u tom trenutku."
   }
 }

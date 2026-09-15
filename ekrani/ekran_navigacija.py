@@ -11,6 +11,9 @@ import webbrowser
 import urllib.parse
 
 from kivy.uix.screenmanager import Screen
+from kivy.properties import StringProperty
+
+from servisi import jezici
 
 
 # ============================================================
@@ -28,10 +31,27 @@ def poveži_popup(prikazi_popup_fn):
 
 
 class NavigacijaScreen(Screen):
+    tekst_naslov = StringProperty("Navigacija")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_podesavanja = StringProperty("Podesavanja")
+    tekst_odrediste_label = StringProperty("Odrediste (adresa ili naziv mesta)")
+    hint_odrediste = StringProperty("npr. Terazije 5, Beograd")
+    tekst_otvori_navigaciju = StringProperty("Otvori navigaciju")
+    tekst_napomena = StringProperty("")
+
+    def on_pre_enter(self, *args):
+        self.tekst_naslov = jezici._t("navigacija.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
+        self.tekst_odrediste_label = jezici._t("navigacija.odrediste_label")
+        self.hint_odrediste = jezici._t("navigacija.odrediste_hint")
+        self.tekst_otvori_navigaciju = jezici._t("navigacija.otvori_navigaciju")
+        self.tekst_napomena = jezici._t("navigacija.napomena")
+
     def otvori_navigaciju(self):
         odrediste = self.ids.input_odrediste.text.strip()
         if not odrediste:
-            _PRIKAZI_POPUP("Info", "Unesi odrediste pre otvaranja navigacije.", size_hint=(0.8, 0.3))
+            _PRIKAZI_POPUP(jezici._t("buttons.info"), jezici._t("navigacija.unesi_odrediste"), size_hint=(0.8, 0.3))
             return
 
         destinacija = urllib.parse.quote(odrediste)
@@ -55,7 +75,7 @@ class NavigacijaScreen(Screen):
             try:
                 webbrowser.open(url_rezervni)
             except Exception:
-                _PRIKAZI_POPUP("Greska", "Ne mogu da otvorim navigaciju na ovom uredjaju.", size_hint=(0.8, 0.3))
+                _PRIKAZI_POPUP(jezici._t("profil.greska"), jezici._t("navigacija.ne_mogu_navigaciju"), size_hint=(0.8, 0.3))
 
 
 NAVIGACIJA_KV = """
@@ -68,27 +88,27 @@ NAVIGACIJA_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Navigacija"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Podesavanja"
+                label_text: root.tekst_podesavanja
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
         FieldLabel:
-            text: "Odrediste (adresa ili naziv mesta)"
+            text: root.tekst_odrediste_label
 
         PastelTextInput:
             id: input_odrediste
-            hint_text: "npr. Terazije 5, Beograd"
+            hint_text: root.hint_odrediste
 
         RoundButton:
-            label_text: "Otvori navigaciju"
+            label_text: root.tekst_otvori_navigaciju
             tint: 0.36, 0.46, 0.64, 1
             text_color: 0.95, 0.96, 1, 1
             size_hint_y: None
@@ -96,7 +116,7 @@ NAVIGACIJA_KV = """
             on_release: root.otvori_navigaciju()
 
         FieldLabel:
-            text: "Otvorice se Google Maps i navigacija ce automatski krenuti korak-po-korak ka unetoj adresi (nije potrebno rucno kliktati 'Kreni'). Polazna tacka je uvek trenutna GPS pozicija telefona u tom trenutku."
+            text: root.tekst_napomena
             size_hint_y: None
             height: dp(60)
             text_size: self.width, None
