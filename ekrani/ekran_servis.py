@@ -15,6 +15,8 @@ from kivy.uix.label import Label
 from kivy.properties import StringProperty, ListProperty
 from kivy.app import App
 
+from servisi import jezici
+
 
 # ============================================================
 # main.py ovo postavlja posle uvoza (izbegava kruzni import)
@@ -105,20 +107,52 @@ class ServisScreen(Screen):
     boja_podsetnik = ListProperty([0.35, 0.35, 0.45, 0.92])
     izmena_id = None
 
+    tekst_naslov = StringProperty("Servis vozila")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_podesavanja = StringProperty("Podesavanja")
+    tekst_interval_label = StringProperty("Interval za podsetnik (km izmedju servisa)")
+    hint_interval = StringProperty("npr. 10000")
+    tekst_sacuvaj = StringProperty("Sacuvaj")
+    tekst_vrsta_servisa = StringProperty("Vrsta servisa")
+    hint_vrsta = StringProperty("npr. zamena ulja")
+    tekst_cena_label = StringProperty("Cena (RSD)")
+    hint_cena = StringProperty("npr. 4500")
+    tekst_km_label = StringProperty("Kilometraza (opciono)")
+    hint_km = StringProperty("npr. 152340")
+    tekst_napomena_label = StringProperty("Napomena (opciono)")
+    hint_napomena = StringProperty("npr. ime servisa")
+
     def on_pre_enter(self, *args):
+        self._osvezi_prevod()
         self.ucitaj_servis()
         self._osvezi_podsetnik()
         self.ids.input_interval_servis.text = f"{SERVIS_PODSETNIK.interval_km:g}"
+
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("servis.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
+        self.tekst_interval_label = jezici._t("servis.interval_label")
+        self.hint_interval = jezici._t("servis.interval_hint")
+        self.tekst_sacuvaj = jezici._t("servis.sacuvaj")
+        self.tekst_vrsta_servisa = jezici._t("servis.vrsta_servisa")
+        self.hint_vrsta = jezici._t("servis.vrsta_hint")
+        self.tekst_cena_label = jezici._t("servis.cena_label")
+        self.hint_cena = jezici._t("servis.cena_hint")
+        self.tekst_km_label = jezici._t("servis.km_label")
+        self.hint_km = jezici._t("servis.km_hint")
+        self.tekst_napomena_label = jezici._t("servis.napomena_label")
+        self.hint_napomena = jezici._t("servis.napomena_hint")
+        self.dugme_tekst = (
+            jezici._t("servis.sacuvaj_izmenu") if self.izmena_id is not None
+            else jezici._t("servis.sacuvaj_servis")
+        )
 
     def _osvezi_podsetnik(self):
         stanje = _izracunaj_stanje_servisa()
 
         if stanje is None:
-            self.tekst_podsetnik = (
-                "Podsetnik za servis: nema jos dovoljno podataka.\n"
-                "Potreban je bar jedan uneti servis SA kilometrazom, i "
-                "bar jedno sipanje goriva sa upisanom kilometrazom sa pumpe."
-            )
+            self.tekst_podsetnik = jezici._t("servis.podsetnik_nema_podataka")
             self.boja_podsetnik = [0.35, 0.35, 0.45, 0.92]
             return
 
@@ -127,21 +161,21 @@ class ServisScreen(Screen):
         preostalo = stanje["preostalo"]
         interval = stanje["interval"]
 
-        osnova = (
-            f"Poslednji servis: {poslednji.get('vrsta', '-')} na {poslednji['km']:g} km"
-            f" ({poslednji.get('datum', '-')})\n"
-            f"Trenutna kilometraza (iz goriva): {stanje['trenutna_km']:g} km\n"
-            f"Predjeno od servisa: {predjeno:g} km (interval: {interval:g} km)\n"
+        osnova = jezici._t(
+            "servis.podsetnik_osnova",
+            vrsta=poslednji.get('vrsta', '-'), km=f"{poslednji['km']:g}",
+            datum=poslednji.get('datum', '-'), trenutna=f"{stanje['trenutna_km']:g}",
+            predjeno=f"{predjeno:g}", interval=f"{interval:g}",
         )
 
         if preostalo <= 0:
-            self.tekst_podsetnik = osnova + f"VREME JE ZA _SERVIS_REF! Predjeno {abs(preostalo):g} km preko intervala."
+            self.tekst_podsetnik = osnova + jezici._t("servis.podsetnik_vreme_je", preko=f"{abs(preostalo):g}")
             self.boja_podsetnik = [0.62, 0.24, 0.24, 0.95]
         elif interval > 0 and preostalo <= interval * 0.2:
-            self.tekst_podsetnik = osnova + f"Uskoro treba servis - jos {preostalo:g} km."
+            self.tekst_podsetnik = osnova + jezici._t("servis.podsetnik_uskoro", preostalo=f"{preostalo:g}")
             self.boja_podsetnik = [0.60, 0.48, 0.16, 0.95]
         else:
-            self.tekst_podsetnik = osnova + f"Sve OK - jos {preostalo:g} km do sledeceg servisa."
+            self.tekst_podsetnik = osnova + jezici._t("servis.podsetnik_ok", preostalo=f"{preostalo:g}")
             self.boja_podsetnik = [0.24, 0.46, 0.30, 0.95]
 
     def sacuvaj_interval(self):
@@ -151,7 +185,7 @@ class ServisScreen(Screen):
                 raise ValueError
         except (ValueError, AttributeError):
             _PRIKAZI_POPUP(
-                "Greska", "Unesi ispravan broj kilometara (vece od 0).", size_hint=(0.85, 0.35)
+                jezici._t("profil.greska"), jezici._t("servis.interval_greska"), size_hint=(0.85, 0.35)
             )
             return
 
@@ -160,7 +194,9 @@ class ServisScreen(Screen):
         SERVIS_PODSETNIK.sacuvaj(app.user_data_dir)
         self._osvezi_podsetnik()
         _PRIKAZI_POPUP(
-            "Sacuvano", f"Interval za podsetnik je sad {novi_interval:g} km.", size_hint=(0.85, 0.3)
+            jezici._t("servis.interval_sacuvano_naslov"),
+            jezici._t("servis.interval_sacuvano_poruka", interval=f"{novi_interval:g}"),
+            size_hint=(0.85, 0.3),
         )
 
     def ucitaj_servis(self):
@@ -168,11 +204,11 @@ class ServisScreen(Screen):
         kontejner.clear_widgets()
 
         ukupno = sum(s.get("cena", 0) for s in _SERVIS_REF.stavke)
-        self.tekst_ukupno = f"Ukupno na servisima: {_FORMATIRAJ_CENU(ukupno)}"
+        self.tekst_ukupno = jezici._t("servis.ukupno_format", ukupno=_FORMATIRAJ_CENU(ukupno))
 
         if not _SERVIS_REF.stavke:
             kontejner.add_widget(Label(
-                text="Jos uvek nema unosa servisa.",
+                text=jezici._t("servis.nema_unosa"),
                 size_hint_y=None, height=40,
                 color=(1, 1, 1, 1),
             ))
@@ -183,7 +219,7 @@ class ServisScreen(Screen):
 
     def _napravi_red(self, s):
         km = s.get("km")
-        km_deo = f"  |  {km:g} km" if km else ""
+        km_deo = jezici._t("gorivo.km_sufiks", km=f"{km:g}") if km else ""
         napomena = s.get("napomena") or "-"
         opis = (
             f"[b]{s.get('datum', '-')}[/b]\n"
@@ -196,9 +232,9 @@ class ServisScreen(Screen):
             tint=(0.38, 0.32, 0.52, 0.92),
             boja_teksta=(0.93, 0.90, 1, 1),
             dugmad=[
-                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
+                (jezici._t("evidencija.izmeni"), (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, sid=s["id"]: self._izmeni(sid)),
-                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
+                (jezici._t("evidencija.obrisi"), (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
                  lambda inst, sid=s["id"]: self._obrisi(sid)),
             ],
         )
@@ -213,17 +249,17 @@ class ServisScreen(Screen):
         km = s.get("km")
         self.ids.input_km_servis.text = f"{km:g}" if km else ""
         self.ids.input_napomena_servis.text = s.get("napomena") or ""
-        self.dugme_tekst = "Sacuvaj izmenu"
+        self.dugme_tekst = jezici._t("servis.sacuvaj_izmenu")
 
     def sacuvaj_servis(self):
         vrsta = self.ids.input_vrsta.text.strip()
         if not vrsta:
-            self._poruka("Unesi vrstu servisa.")
+            self._poruka(jezici._t("servis.unesi_vrstu"))
             return
         try:
             cena = float(self.ids.input_cena_servisa.text.replace(",", "."))
         except (ValueError, AttributeError):
-            self._poruka("Unesi ispravnu cenu servisa.")
+            self._poruka(jezici._t("servis.unesi_cenu"))
             return
 
         km_tekst = self.ids.input_km_servis.text.strip()
@@ -232,7 +268,7 @@ class ServisScreen(Screen):
             try:
                 km = float(km_tekst.replace(",", "."))
             except ValueError:
-                self._poruka("Kilometraza mora biti broj (ili ostavi prazno).")
+                self._poruka(jezici._t("servis.km_broj"))
                 return
 
         app = App.get_running_app()
@@ -247,11 +283,11 @@ class ServisScreen(Screen):
         if self.izmena_id is not None:
             _SERVIS_REF.azuriraj(app.user_data_dir, self.izmena_id, stavka)
             self.izmena_id = None
-            self.dugme_tekst = "Sacuvaj servis"
-            self._poruka("Izmena sacuvana.")
+            self.dugme_tekst = jezici._t("servis.sacuvaj_servis")
+            self._poruka(jezici._t("servis.izmena_sacuvana"))
         else:
             _SERVIS_REF.dodaj(app.user_data_dir, stavka)
-            self._poruka("Servis sacuvan.")
+            self._poruka(jezici._t("servis.servis_sacuvan"))
 
         self.ids.input_vrsta.text = ""
         self.ids.input_cena_servisa.text = ""
@@ -266,12 +302,12 @@ class ServisScreen(Screen):
         _SERVIS_REF.obrisi(app.user_data_dir, stavka_id)
         if self.izmena_id == stavka_id:
             self.izmena_id = None
-            self.dugme_tekst = "Sacuvaj servis"
+            self.dugme_tekst = jezici._t("servis.sacuvaj_servis")
         self.ucitaj_servis()
         self._osvezi_podsetnik()
 
     def _poruka(self, tekst):
-        _PRIKAZI_POPUP("Info", tekst, size_hint=(0.8, 0.3))
+        _PRIKAZI_POPUP(jezici._t("buttons.info"), tekst, size_hint=(0.8, 0.3))
 
 SERVIS_KV = """
 # ============================================================
@@ -283,15 +319,15 @@ SERVIS_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Servis vozila"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Podesavanja"
+                label_text: root.tekst_podesavanja
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
@@ -322,7 +358,7 @@ SERVIS_KV = """
                         height: self.texture_size[1]
 
                 FieldLabel:
-                    text: "Interval za podsetnik (km izmedju servisa)"
+                    text: root.tekst_interval_label
 
                 BoxLayout:
                     size_hint_y: None
@@ -330,10 +366,10 @@ SERVIS_KV = """
                     spacing: dp(8)
                     PastelTextInput:
                         id: input_interval_servis
-                        hint_text: "npr. 10000"
+                        hint_text: root.hint_interval
                         input_filter: "float"
                     RoundButton:
-                        label_text: "Sacuvaj"
+                        label_text: root.tekst_sacuvaj
                         tint: 0.36, 0.46, 0.64, 1
                         text_color: 1, 1, 1, 1
                         size_hint_x: None
@@ -358,34 +394,34 @@ SERVIS_KV = """
                         height: self.texture_size[1]
 
                 FieldLabel:
-                    text: "Vrsta servisa"
+                    text: root.tekst_vrsta_servisa
 
                 PastelTextInput:
                     id: input_vrsta
-                    hint_text: "npr. zamena ulja"
+                    hint_text: root.hint_vrsta
 
                 FieldLabel:
-                    text: "Cena (RSD)"
+                    text: root.tekst_cena_label
 
                 PastelTextInput:
                     id: input_cena_servisa
-                    hint_text: "npr. 4500"
+                    hint_text: root.hint_cena
                     input_filter: "float"
 
                 FieldLabel:
-                    text: "Kilometraza (opciono)"
+                    text: root.tekst_km_label
 
                 PastelTextInput:
                     id: input_km_servis
-                    hint_text: "npr. 152340"
+                    hint_text: root.hint_km
                     input_filter: "float"
 
                 FieldLabel:
-                    text: "Napomena (opciono)"
+                    text: root.tekst_napomena_label
 
                 PastelTextInput:
                     id: input_napomena_servis
-                    hint_text: "npr. ime servisa"
+                    hint_text: root.hint_napomena
 
                 RoundButton:
                     label_text: root.dugme_tekst
