@@ -318,5 +318,14 @@
     "unesi_odrediste": "Unesi odrediste pre otvaranja navigacije.",
     "ne_mogu_navigaciju": "Ne mogu da otvorim navigaciju na ovom uredjaju.",
     "napomena": "Otvorice se Google Maps i navigacija ce automatski krenuti korak-po-korak ka unetoj adresi (nije potrebno rucno kliktati 'Kreni'). Polazna tacka je uvek trenutna GPS pozicija telefona u tom trenutku."
+  },
+  "google_api": {
+    "google_kljuc_label": "Google Geocoding API kljuc (opciono - ako je prazno, koristi se besplatan OpenStreetMap)",
+    "ocr_kljuc_label": "OCR.space API kljuc (opciono - potreban samo za skeniranje racuna za gorivo)",
+    "sacuvaj_kljuceve": "Sacuvaj kljuceve",
+    "kljucevi_sacuvani": "API kljucevi sacuvani.",
+    "napomena": "Google kljuc pravis na console.cloud.google.com -> APIs & Services -> Credentials (Geocoding API). OCR.space kljuc je besplatan na ocr.space/ocrapi (Free plan).",
+    "google_hint": "npr. AIzaSy...",
+    "ocr_hint": "npr. K81234567890"
   }
 }

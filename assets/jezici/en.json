@@ -318,5 +318,14 @@
     "unesi_odrediste": "Enter a destination before opening navigation.",
     "ne_mogu_navigaciju": "Can't open navigation on this device.",
     "napomena": "Google Maps will open and navigation will automatically start turn-by-turn to the entered address (no need to manually tap 'Start'). The starting point is always the phone's current GPS position at that moment."
+  },
+  "google_api": {
+    "google_kljuc_label": "Google Geocoding API key (optional - if empty, free OpenStreetMap is used)",
+    "ocr_kljuc_label": "OCR.space API key (optional - only needed for scanning fuel receipts)",
+    "sacuvaj_kljuceve": "Save keys",
+    "kljucevi_sacuvani": "API keys saved.",
+    "napomena": "Get a Google key at console.cloud.google.com -> APIs & Services -> Credentials (Geocoding API). The OCR.space key is free at ocr.space/ocrapi (Free plan).",
+    "google_hint": "e.g. AIzaSy...",
+    "ocr_hint": "e.g. K81234567890"
   }
 }
