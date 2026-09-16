@@ -451,5 +451,11 @@
     "greska_format_polug": "Enter it in YYYY-H format where H is 1 or 2, e.g. 2026-1",
     "greska_format_god": "Enter a year in YYYY format, e.g. 2026",
     "greska_nepoznat_tip": "Unknown period type."
+  },
+  "uputstvo": {
+    "naslov": "Instructions",
+    "tekst_status": "Every option in the app, explained one by one.",
+    "izvezi_pdf_dugme": "Export to PDF",
+    "sacuvano_poruka": "Instructions saved as PDF to:\n{putanja}"
   }
 }

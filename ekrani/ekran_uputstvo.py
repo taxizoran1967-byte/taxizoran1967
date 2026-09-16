@@ -13,6 +13,8 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.properties import StringProperty
 
+from servisi import jezici
+
 
 # ============================================================
 # main.py ovo postavlja posle uvoza (izbegava kruzni import)
@@ -42,7 +44,7 @@ def poveži(registruj_font_fn, ima_dozvolu_fn, putanja_backup_fn, prikazi_popup_
 # Svaka stavka je (naslov_sekcije, [lista pasusa/tacaka teksta]).
 # ============================================================
 
-UPUTSTVO_SADRZAJ = [
+SR_SADRZAJ = [
     ("Prvo pokretanje i zakljucavanje otiskom prsta", [
         "Kad prvi put otvoris app, pojavice se Pocetni ekran direktno - "
         "zakljucavanje otiskom je iskljuceno po difoltu.",
@@ -269,6 +271,246 @@ UPUTSTVO_SADRZAJ = [
     ]),
 ]
 
+EN_SADRZAJ = [
+    ("First launch and fingerprint lock", [
+        "The first time you open the app, the Home screen appears "
+        "directly - fingerprint lock is off by default.",
+        "If you turn on Security (fingerprint) in Settings, the next "
+        "time you launch the app you'll first see a screen asking "
+        "you to place your finger on the sensor. You can't continue "
+        "without a successful fingerprint.",
+        "If the phone has no fingerprint reader, or no fingerprint is "
+        "registered in the phone's system settings, the app "
+        "automatically lets you through and just tells you why - "
+        "there's no risk of being permanently locked out of the app.",
+        "The lock is only checked when the app starts (a cold start), "
+        "not every time you return from the background - so it "
+        "won't interrupt you mid-ride (e.g. if you get a call).",
+        "Turned on/off in Settings -> Security (fingerprint).",
+    ]),
+    ("Home screen", [
+        "GPS ride (auto) - opens automatic ride tracking via GPS.",
+        "Start ride (manual) - opens the Calculator for manual ride "
+        "entry.",
+        "Ride history - opens Ride history, a searchable list of all "
+        "rides.",
+        "Report - daily/weekly/monthly earnings overview.",
+        "Driver profile - personal and vehicle details.",
+        "Settings - all other menus of the app.",
+        "Instructions - the screen you're reading now.",
+    ]),
+    ("GPS ride (automatic entry) - the most common option", [
+        "1. Optionally, before tapping 'Start ride' you can enter a "
+        "destination address - if you do, as soon as the ride "
+        "starts Google navigation opens turn-by-turn to that "
+        "address.",
+        "2. Tap START RIDE. The app asks for location permission the "
+        "first time, then starts measuring distance live.",
+        "3. The screen during the ride shows the pickup address, "
+        "distance driven, duration and the current price.",
+        "4. When you arrive, tap END RIDE - the app finds the "
+        "current address itself and saves the ride to Ride history.",
+        "GPS ride only uses the Standard or Night tariff, depending "
+        "on the switch in Settings -> Night tariff (it does not "
+        "switch automatically by the clock). For Weekend or Airport "
+        "transfer, use manual entry (Calculator).",
+        "The app filters out poor GPS accuracy - it ignores points "
+        "worse than 50m accuracy, micro-jumps under 10m, and "
+        "unrealistic speed jumps over 180 km/h, so the distance "
+        "isn't falsely inflated.",
+        "If GPS fails to measure the distance, the ride-end screen "
+        "has a manual km entry field as a backup.",
+    ]),
+    ("Calculator (manual ride entry)", [
+        "For rides you don't track live via GPS, or when you need a "
+        "tariff GPS ride doesn't support (Weekend, Airport "
+        "transfer).",
+        "1. Choose a tariff from the dropdown.",
+        "2. Enter the distance - the price updates instantly below.",
+        "3. Pickup address, destination address and note are "
+        "optional.",
+        "4. Tap Save ride.",
+        "If Night tariff is turned on, the screen automatically "
+        "suggests the Night tariff when opened - you can still "
+        "manually change it for that specific ride.",
+    ]),
+    ("Ride history", [
+        "Shows all saved rides, newest first - date, start/end time, "
+        "distance, tariff, addresses and price.",
+        "Search can be combined: text (addresses and note), period "
+        "(date from / date to, YYYY-MM-DD format) and price range "
+        "(price from / price to). Tapping Search also shows a total "
+        "for the results. Reset restores the full list.",
+        "Each ride has two buttons: Edit (opens the Calculator "
+        "filled in with that data) and Delete (permanently deletes "
+        "the ride, no confirmation - be careful).",
+    ]),
+    ("Earnings report", [
+        "Three cards with totals: Today (list of today's rides + "
+        "total), This week (total earnings for the current week), "
+        "This month (total earnings for the current month).",
+        "From here, the Export PDF button leads to the report export "
+        "screen.",
+    ]),
+    ("Earnings chart", [
+        "A visual view over time. Period: Daily / Weekly / Monthly. "
+        "View: Earnings or Kilometers.",
+        "The < and > arrows move through previous/next periods. "
+        "Tapping a point on the chart shows the exact amount for "
+        "that day/week/month.",
+        "Below the chart: extra stats and, when data is available, "
+        "an overview of fuel and service spending for that period.",
+        "Accessed via Settings -> Earnings chart.",
+    ]),
+    ("Report export (PDF / CSV for Excel)", [
+        "Report screen -> Export PDF. Choose the period type (Daily, "
+        "Weekly, Monthly, Half-year, Yearly) and enter the period in "
+        "the requested format.",
+        "Export PDF - creates a PDF for printing/review with driver "
+        "details, service, other expenses, fuel consumption, all "
+        "rides and a summary row at the end (number of rides, total "
+        "km, gross earnings and NET = earnings - fuel - service - "
+        "other expenses).",
+        "Export CSV (Excel) - creates a single CSV file where rides, "
+        "fuel, service and expenses are combined into ONE table "
+        "(Date, Type, Description, Income, Expense, Note), sorted by "
+        "date - easier for an accountant to open in Excel and total/"
+        "filter themselves.",
+        "Both files are saved to Downloads/TaksiApp on the phone "
+        "(same folder as the backup) - the 'access all files' "
+        "permission is required (Settings -> Data backup).",
+    ]),
+    ("Prices / Tariffs", [
+        "Changes the price per kilometer for all four tariffs "
+        "(Standard, Night, Weekend, Airport transfer) plus the start "
+        "fee.",
+        "Tapping Save prices applies them to ALL future rides - it "
+        "does not retroactively change rides already saved.",
+    ]),
+    ("Night tariff (switch)", [
+        "A single switch: when on, both the Calculator and GPS ride "
+        "automatically use the Night tariff (you can still manually "
+        "change the tariff for an individual ride in the "
+        "Calculator).",
+        "It does not turn on by the clock automatically - you turn "
+        "it on and off manually when your night shift starts/ends.",
+    ]),
+    ("Fuel", [
+        "Fuel entry log: type (Gasoline/LPG), quantity (liters), "
+        "price, mileage at the pump (optional but IMPORTANT - "
+        "without it, consumption can't be calculated and the service "
+        "reminder won't work), note.",
+        "At the top of the screen you see total fuel spending "
+        "(gasoline and LPG separately). Consumption in l/100km is "
+        "calculated automatically from the mileage difference "
+        "between two consecutive fill-ups that have mileage entered.",
+    ]),
+    ("Vehicle service", [
+        "Service log (oil change, brakes, etc.) - type, price, "
+        "mileage, note.",
+        "Service reminder: you set an interval (e.g. every 10000 "
+        "km), and the app tracks how far you've driven since the "
+        "last service by itself - comparing the last service's "
+        "mileage with the most recent mileage entered under Fuel "
+        "(not the total km from rides). The card changes color: "
+        "green (all OK), yellow (less than 20% of the interval "
+        "left), red (time for service).",
+        "If there isn't enough data yet (at least one service WITH "
+        "mileage and at least one fuel entry WITH pump mileage), the "
+        "card just says there isn't enough data.",
+    ]),
+    ("Other expenses", [
+        "For anything that isn't fuel/service: Parking, Tolls, "
+        "Washing, Other - price and note. These expenses are "
+        "included in the NET calculation in the PDF report.",
+    ]),
+    ("Driver profile", [
+        "Personal details (name, phone, license, plates, vehicle) "
+        "shown in the header of the PDF report, plus registration "
+        "expiry date and insurance expiry date.",
+        "The card at the bottom tracks both dates: gray (not "
+        "entered), green (more than 30 days to expiry), yellow (30 "
+        "days or less), red (already expired - shows how many days "
+        "overdue).",
+    ]),
+    ("Navigation", [
+        "A standalone screen for quickly opening Google navigation "
+        "to any address - enter the address and tap 'Open "
+        "navigation'. It automatically starts turn-by-turn from your "
+        "current GPS position.",
+    ]),
+    ("Google API", [
+        "An optional field for a Google Geocoding API key. If you "
+        "don't enter one, the app still works normally - it uses the "
+        "free OpenStreetMap service to find addresses. Google's "
+        "service is only more accurate in some cases. The key is "
+        "created at console.cloud.google.com (Geocoding API).",
+    ]),
+    ("Currency", [
+        "This only chooses how prices are DISPLAYED in the app - in "
+        "the background, everything is always calculated and stored "
+        "in RSD (dinars), regardless of this choice. Buttons: "
+        "Display in RSD or Display in EUR.",
+        "The exchange rate refreshes automatically once a day (the "
+        "first time you open the app that day). The Refresh rate now "
+        "button is for manually refreshing it, e.g. if there was no "
+        "internet yesterday.",
+    ]),
+    ("Data backup", [
+        "Saves ALL data (rides, fuel, service, expenses, driver "
+        "profile) into a single file outside the app itself, in "
+        "Downloads/TaksiApp - it stays on the phone even after the "
+        "app is deleted/reinstalled.",
+        "Grant file access - gives the app Android permission to "
+        "write to that public folder (asked once).",
+        "The app makes a fresh backup by itself once a day on "
+        "startup, silently, with no message. Save backup now is for "
+        "a manual backup whenever you want.",
+        "Restore data from backup - loads all data from the backup "
+        "file (used when switching phones or after reinstalling).",
+        "Share backup (Drive, WhatsApp...) - opens the system share "
+        "menu to send the backup file to yourself by email, Google "
+        "Drive, WhatsApp, etc.",
+        "When switching phones: make a backup on the old one -> "
+        "transfer the file (WhatsApp/Drive/USB) into the same folder "
+        "on the new one -> install the app -> tap 'Restore data'.",
+    ]),
+    ("Security (fingerprint)", [
+        "Turns the app's fingerprint lock on startup on/off - "
+        "explained in detail at the start of these instructions. "
+        "The screen also tells you whether your phone has a "
+        "registered fingerprint at all.",
+    ]),
+    ("Call / Dispatcher", [
+        "Keep a list of dispatchers with their shift times, call "
+        "them with one tap, and see at a glance whose shift is "
+        "active right now.",
+    ]),
+    ("Common problems", [
+        "GPS doesn't show distance -> check the location permission "
+        "(Phone Settings -> Apps -> Downtown Taxi -> Permissions -> "
+        "Location -> Allow) and whether GPS is turned on on the "
+        "phone.",
+        "Can't export PDF/CSV -> Settings -> Data backup -> 'Grant "
+        "file access'.",
+        "Fingerprint doesn't work -> check whether the phone even has "
+        "a fingerprint reader and whether a fingerprint is "
+        "registered in the phone's system settings - without that, "
+        "the app automatically lets you through.",
+        "The service reminder says 'not enough data' -> at least one "
+        "service WITH mileage entered and at least one fuel entry "
+        "WITH pump mileage entered are needed.",
+        "Prices don't match the new tariffs -> new prices only apply "
+        "to rides ENTERED AFTER the change, they don't retroactively "
+        "change rides already saved.",
+    ]),
+]
+
+
+def _sadrzaj():
+    """Vraca sadrzaj uputstva na trenutno izabranom jeziku."""
+    return EN_SADRZAJ if jezici.get_current_language() == "en" else SR_SADRZAJ
+
 
 def generisi_uputstvo_pdf(putanja_fajla):
     """Pravi PDF verziju uputstva za upotrebu, sa jasno odvojenim
@@ -316,7 +558,7 @@ def generisi_uputstvo_pdf(putanja_fajla):
         Spacer(1, 8 * mm),
     ]
 
-    for naslov_sekcije, pasusi in UPUTSTVO_SADRZAJ:
+    for naslov_sekcije, pasusi in _sadrzaj():
         elementi.append(Paragraph(naslov_sekcije, stil_sekcija))
         elementi.append(Spacer(1, 2 * mm))
         for pasus in pasusi:
@@ -335,27 +577,40 @@ class SekcijaUputstva(BoxLayout):
 
 
 class UputstvoScreen(Screen):
-    tekst_status = StringProperty(
-        "Sve opcije aplikacije, objasnjene jedna po jedna."
-    )
+    tekst_status = StringProperty("")
+    tekst_naslov = StringProperty("Uputstvo za upotrebu")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_izvezi_pdf_dugme = StringProperty("Izvezi u PDF")
+
+    _poslednji_jezik = None
 
     def on_pre_enter(self, *args):
         from kivy.factory import Factory
+        self.tekst_naslov = jezici._t("uputstvo.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_izvezi_pdf_dugme = jezici._t("uputstvo.izvezi_pdf_dugme")
+        self.tekst_status = jezici._t("uputstvo.tekst_status")
+
         kontejner = self.ids.lista_uputstvo
-        if not kontejner.children:
-            for naslov_sekcije, pasusi in UPUTSTVO_SADRZAJ:
+        trenutni_jezik = jezici.get_current_language()
+        # Ponovo napravi kartice ako jos nisu napravljene ILI ako se
+        # jezik promenio od poslednjeg ulaska na ovaj ekran (inace bi
+        # sadrzaj ostao na starom jeziku posle promene).
+        if not kontejner.children or self._poslednji_jezik != trenutni_jezik:
+            kontejner.clear_widgets()
+            for naslov_sekcije, pasusi in _sadrzaj():
                 sekcija = Factory.SekcijaUputstva(
                     naslov=naslov_sekcije,
                     tekst="\n\n".join(pasusi),
                 )
                 kontejner.add_widget(sekcija)
+            self._poslednji_jezik = trenutni_jezik
 
     def izvezi_pdf(self):
         if not _IMA_DOZVOLU_SVI_FAJLOVI():
             _PRIKAZI_POPUP(
-                "Nedostaje dozvola",
-                "Idi u Podesavanja -> Backup podataka i klikni "
-                "'Odobri pristup fajlovima', pa se vrati ovde.",
+                jezici._t("backup.nedostaje_dozvola_naslov"),
+                jezici._t("izvoz.nedostaje_dozvola_poruka"),
                 size_hint=(0.88, 0.4),
             )
             return
@@ -365,13 +620,13 @@ class UputstvoScreen(Screen):
             putanja = os.path.join(folder, "uputstvo_za_upotrebu.pdf")
             generisi_uputstvo_pdf(putanja)
             _PRIKAZI_POPUP(
-                "Sacuvano",
-                f"Uputstvo sacuvano kao PDF u:\n{putanja}",
+                jezici._t("backup.sacuvano_naslov"),
+                jezici._t("uputstvo.sacuvano_poruka", putanja=putanja),
                 size_hint=(0.85, 0.4),
             )
         except Exception as e:
             _PRIKAZI_POPUP(
-                "Greska", f"Pravljenje PDF-a nije uspelo:\n{e}", size_hint=(0.88, 0.45)
+                jezici._t("profil.greska"), jezici._t("izvoz.pdf_neuspeo", greska=e), size_hint=(0.88, 0.45)
             )
 
 
@@ -419,11 +674,11 @@ UPUTSTVO_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Uputstvo za upotrebu"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
 
@@ -443,7 +698,7 @@ UPUTSTVO_KV = """
                 height: self.texture_size[1]
 
         RoundButton:
-            label_text: "Izvezi u PDF"
+            label_text: root.tekst_izvezi_pdf_dugme
             tint: 0.30, 0.52, 0.36, 1
             text_color: 1, 1, 1, 1
             size_hint_y: None

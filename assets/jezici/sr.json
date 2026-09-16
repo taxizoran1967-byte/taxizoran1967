@@ -451,5 +451,11 @@
     "greska_format_polug": "Unesi u formatu GGGG-P gde je P 1 ili 2, npr. 2026-1",
     "greska_format_god": "Unesi godinu u formatu GGGG, npr. 2026",
     "greska_nepoznat_tip": "Nepoznat tip perioda."
+  },
+  "uputstvo": {
+    "naslov": "Uputstvo za upotrebu",
+    "tekst_status": "Sve opcije aplikacije, objasnjene jedna po jedna.",
+    "izvezi_pdf_dugme": "Izvezi u PDF",
+    "sacuvano_poruka": "Uputstvo sacuvano kao PDF u:\n{putanja}"
   }
 }
