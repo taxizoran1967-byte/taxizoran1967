@@ -15,6 +15,7 @@ from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
 
 from servisi import database as db
+from servisi import jezici
 
 
 # ============================================================
@@ -634,18 +635,18 @@ def _izracunaj_period(tip, unos):
 
     if tip == "Dnevno":
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", unos):
-            raise ValueError("Unesi datum u formatu GGGG-MM-DD, npr. 2026-09-05")
+            raise ValueError(jezici._t("izvoz.greska_format_dan"))
         pocetak = kraj = unos
         naslov = f"Dnevni izvestaj - {unos}"
         return pocetak, kraj, naslov
 
     if tip == "Nedeljno":
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", unos):
-            raise ValueError("Unesi datum u formatu GGGG-MM-DD, npr. 2026-09-05")
+            raise ValueError(jezici._t("izvoz.greska_format_dan"))
         try:
             dan = datetime.strptime(unos, "%Y-%m-%d")
         except ValueError:
-            raise ValueError("Datum ne postoji - proveri dan i mesec.")
+            raise ValueError(jezici._t("izvoz.greska_datum_ne_postoji"))
         pocetak_dt = dan - timedelta(days=dan.weekday())
         kraj_dt = pocetak_dt + timedelta(days=6)
         pocetak = pocetak_dt.strftime("%Y-%m-%d")
@@ -655,11 +656,11 @@ def _izracunaj_period(tip, unos):
 
     if tip == "Mesecno":
         if not re.match(r"^\d{4}-\d{2}$", unos):
-            raise ValueError("Unesi mesec u formatu GGGG-MM, npr. 2026-09")
+            raise ValueError(jezici._t("izvoz.greska_format_mesec"))
         godina_str, mesec_str = unos.split("-")
         godina_i, mesec_i = int(godina_str), int(mesec_str)
         if not (1 <= mesec_i <= 12):
-            raise ValueError("Mesec mora biti izmedju 01 i 12.")
+            raise ValueError(jezici._t("izvoz.greska_mesec_opseg"))
         pocetak = f"{godina_str}-{mesec_str}-01"
         poslednji_dan = calendar.monthrange(godina_i, mesec_i)[1]
         kraj = f"{godina_str}-{mesec_str}-{poslednji_dan:02d}"
@@ -668,7 +669,7 @@ def _izracunaj_period(tip, unos):
 
     if tip == "Polugodisnje":
         if not re.match(r"^\d{4}-[12]$", unos):
-            raise ValueError("Unesi u formatu GGGG-P gde je P 1 ili 2, npr. 2026-1")
+            raise ValueError(jezici._t("izvoz.greska_format_polug"))
         godina_str, pol_str = unos.split("-")
         if pol_str == "1":
             pocetak = f"{godina_str}-01-01"
@@ -682,13 +683,13 @@ def _izracunaj_period(tip, unos):
 
     if tip == "Godisnje":
         if not re.match(r"^\d{4}$", unos):
-            raise ValueError("Unesi godinu u formatu GGGG, npr. 2026")
+            raise ValueError(jezici._t("izvoz.greska_format_god"))
         pocetak = f"{unos}-01-01"
         kraj = f"{unos}-12-31"
         naslov = f"Godisnji izvestaj - {unos}"
         return pocetak, kraj, naslov
 
-    raise ValueError("Nepoznat tip perioda.")
+    raise ValueError(jezici._t("izvoz.greska_nepoznat_tip"))
 
 
 class IzvozPdfScreen(Screen):
@@ -696,70 +697,106 @@ class IzvozPdfScreen(Screen):
     tekst_format_perioda = StringProperty("Mesec (format GGGG-MM):")
     hint_perioda = StringProperty("npr. 2026-09")
 
+    _KODOVI = ["Dnevno", "Nedeljno", "Mesecno", "Polugodisnje", "Godisnje"]
+    _period_kod = "Mesecno"
+
+    tekst_naslov = StringProperty("Izvoz PDF izvestaja")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_izvestaj_nav = StringProperty("Izvestaj")
+    tekst_napomena_gore = StringProperty("")
+    tekst_vrsta_perioda = StringProperty("Vrsta perioda:")
+    tekst_izvezi_pdf_dugme = StringProperty("Izvezi PDF")
+    tekst_izvezi_excel_dugme = StringProperty("Izvezi Excel")
+    tekst_napomena_dole = StringProperty("")
+
+    def _prikaz_za_kod(self, kod):
+        return jezici._t(f"izvoz.{kod.lower()}")
+
+    def _kod_za_prikaz(self, prikaz):
+        for kod in self._KODOVI:
+            if self._prikaz_za_kod(kod) == prikaz:
+                return kod
+        return self._period_kod
+
     def on_pre_enter(self, *args):
+        self._osvezi_prevod()
         if not self.ids.input_period.text:
             self._popuni_podrazumevano()
         self._osvezi_status()
 
-    def promeni_period(self, tip):
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("izvoz.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_izvestaj_nav = jezici._t("buttons.izvestaj")
+        self.tekst_napomena_gore = jezici._t("izvoz.napomena_gore")
+        self.tekst_vrsta_perioda = jezici._t("izvoz.vrsta_perioda")
+        self.tekst_izvezi_pdf_dugme = jezici._t("izvoz.izvezi_pdf_dugme")
+        self.tekst_izvezi_excel_dugme = jezici._t("izvoz.izvezi_excel_dugme")
+        self.tekst_napomena_dole = jezici._t("izvoz.napomena_dole")
+
+        self.ids.spinner_period.values = [self._prikaz_za_kod(k) for k in self._KODOVI]
+        self.ids.spinner_period.text = self._prikaz_za_kod(self._period_kod)
+        self._primeni_format_labele()
+
+    def promeni_period(self, prikaz_tekst):
         """Poziva se iz KV-a kad korisnik promeni izbor u spinneru za
         tip perioda - menja natpis/hint iznad polja i upisuje
         podrazumevanu vrednost (danas/ovaj mesec/ova godina...)."""
-        if tip == "Dnevno":
-            self.tekst_format_perioda = "Datum (format GGGG-MM-DD):"
-            self.hint_perioda = "npr. 2026-09-05"
-        elif tip == "Nedeljno":
-            self.tekst_format_perioda = "Bilo koji datum iz te nedelje (format GGGG-MM-DD):"
-            self.hint_perioda = "npr. 2026-09-05"
-        elif tip == "Mesecno":
-            self.tekst_format_perioda = "Mesec (format GGGG-MM):"
-            self.hint_perioda = "npr. 2026-09"
-        elif tip == "Polugodisnje":
-            self.tekst_format_perioda = "Godina i polugodiste, P je 1 ili 2 (format GGGG-P):"
-            self.hint_perioda = "2026-1 = jan-jun, 2026-2 = jul-dec"
-        elif tip == "Godisnje":
-            self.tekst_format_perioda = "Godina (format GGGG):"
-            self.hint_perioda = "npr. 2026"
+        self._period_kod = self._kod_za_prikaz(prikaz_tekst)
+        self._primeni_format_labele()
         self._popuni_podrazumevano()
 
+    def _primeni_format_labele(self):
+        kod = self._period_kod
+        if kod == "Dnevno":
+            self.tekst_format_perioda = jezici._t("izvoz.format_dnevno")
+            self.hint_perioda = jezici._t("izvoz.hint_dan")
+        elif kod == "Nedeljno":
+            self.tekst_format_perioda = jezici._t("izvoz.format_nedeljno")
+            self.hint_perioda = jezici._t("izvoz.hint_dan")
+        elif kod == "Mesecno":
+            self.tekst_format_perioda = jezici._t("izvoz.format_mesecno")
+            self.hint_perioda = jezici._t("izvoz.hint_mesec")
+        elif kod == "Polugodisnje":
+            self.tekst_format_perioda = jezici._t("izvoz.format_polugodisnje")
+            self.hint_perioda = jezici._t("izvoz.hint_polug")
+        elif kod == "Godisnje":
+            self.tekst_format_perioda = jezici._t("izvoz.format_godisnje")
+            self.hint_perioda = jezici._t("izvoz.hint_god")
+
     def _popuni_podrazumevano(self):
-        tip = self.ids.spinner_period.text
+        kod = self._period_kod
         danas = datetime.now()
-        if tip in ("Dnevno", "Nedeljno"):
+        if kod in ("Dnevno", "Nedeljno"):
             self.ids.input_period.text = danas.strftime("%Y-%m-%d")
-        elif tip == "Mesecno":
+        elif kod == "Mesecno":
             self.ids.input_period.text = danas.strftime("%Y-%m")
-        elif tip == "Polugodisnje":
+        elif kod == "Polugodisnje":
             polugodiste = 1 if danas.month <= 6 else 2
             self.ids.input_period.text = f"{danas.year}-{polugodiste}"
-        elif tip == "Godisnje":
+        elif kod == "Godisnje":
             self.ids.input_period.text = danas.strftime("%Y")
 
     def _osvezi_status(self):
         if _IMA_DOZVOLU_SVI_FAJLOVI():
-            self.tekst_status = "Dozvola za fajlove: DA"
+            self.tekst_status = jezici._t("backup.dozvola_da")
         else:
-            self.tekst_status = (
-                "Dozvola za fajlove: NE\n"
-                "Idi u Podesavanja -> Backup podataka i klikni "
-                "'Odobri pristup fajlovima', pa se vrati ovde."
-            )
+            self.tekst_status = jezici._t("izvoz.dozvola_ne_puna")
 
     def izvezi_pdf(self):
-        tip = self.ids.spinner_period.text
+        tip = self._period_kod
         unos = self.ids.input_period.text.strip()
 
         try:
             pocetak, kraj, naslov = _izracunaj_period(tip, unos)
         except ValueError as e:
-            _PRIKAZI_POPUP("Greska", str(e), size_hint=(0.85, 0.4))
+            _PRIKAZI_POPUP(jezici._t("profil.greska"), str(e), size_hint=(0.85, 0.4))
             return
 
         if not _IMA_DOZVOLU_SVI_FAJLOVI():
             _PRIKAZI_POPUP(
-                "Nedostaje dozvola",
-                "Idi u Podesavanja -> Backup podataka i klikni "
-                "'Odobri pristup fajlovima', pa se vrati ovde.",
+                jezici._t("backup.nedostaje_dozvola_naslov"),
+                jezici._t("izvoz.nedostaje_dozvola_poruka"),
                 size_hint=(0.88, 0.4),
             )
             return
@@ -767,7 +804,7 @@ class IzvozPdfScreen(Screen):
         try:
             voznje = db.voznje_izmedju(pocetak, kraj)
         except Exception as e:
-            _PRIKAZI_POPUP("Greska", f"Ne mogu da procitam bazu:\n{e}", size_hint=(0.88, 0.4))
+            _PRIKAZI_POPUP(jezici._t("profil.greska"), jezici._t("izvoz.ne_mogu_procitati_bazu", greska=e), size_hint=(0.88, 0.4))
             return
 
         gorivo_period = _STAVKE_IZMEDJU(_GORIVO_REF.stavke, pocetak, kraj)
@@ -775,9 +812,8 @@ class IzvozPdfScreen(Screen):
 
         if not voznje and not gorivo_period and not servisi_period:
             _PRIKAZI_POPUP(
-                "Nema podataka",
-                f"Nema nijedne voznje, unosa goriva ni servisa za period "
-                f"{pocetak} do {kraj} - PDF nije napravljen.",
+                jezici._t("izvoz.nema_podataka_naslov"),
+                jezici._t("izvoz.nema_podataka_pdf", pocetak=pocetak, kraj=kraj),
                 size_hint=(0.88, 0.45),
             )
             return
@@ -788,32 +824,32 @@ class IzvozPdfScreen(Screen):
             putanja = os.path.join(folder, f"izvestaj_{pocetak}_do_{kraj}.pdf")
             generisi_izvestaj_pdf(naslov, pocetak, kraj, putanja)
             _PRIKAZI_POPUP(
-                "Sacuvano",
-                f"PDF izvestaj sacuvan u:\n{putanja}\n\n"
-                f"Voznji: {len(voznje)}   Gorivo: {len(gorivo_period)}   "
-                f"Servisi: {len(servisi_period)}",
+                jezici._t("backup.sacuvano_naslov"),
+                jezici._t(
+                    "izvoz.pdf_sacuvan_poruka", putanja=putanja,
+                    voznje=len(voznje), gorivo=len(gorivo_period), servisi=len(servisi_period),
+                ),
                 size_hint=(0.88, 0.5),
             )
         except Exception as e:
             _PRIKAZI_POPUP(
-                "Greska", f"Pravljenje PDF-a nije uspelo:\n{e}", size_hint=(0.88, 0.45)
+                jezici._t("profil.greska"), jezici._t("izvoz.pdf_neuspeo", greska=e), size_hint=(0.88, 0.45)
             )
 
     def izvezi_excel(self):
-        tip = self.ids.spinner_period.text
+        tip = self._period_kod
         unos = self.ids.input_period.text.strip()
 
         try:
             pocetak, kraj, naslov = _izracunaj_period(tip, unos)
         except ValueError as e:
-            _PRIKAZI_POPUP("Greska", str(e), size_hint=(0.85, 0.4))
+            _PRIKAZI_POPUP(jezici._t("profil.greska"), str(e), size_hint=(0.85, 0.4))
             return
 
         if not _IMA_DOZVOLU_SVI_FAJLOVI():
             _PRIKAZI_POPUP(
-                "Nedostaje dozvola",
-                "Idi u Podesavanja -> Backup podataka i klikni "
-                "'Odobri pristup fajlovima', pa se vrati ovde.",
+                jezici._t("backup.nedostaje_dozvola_naslov"),
+                jezici._t("izvoz.nedostaje_dozvola_poruka"),
                 size_hint=(0.88, 0.4),
             )
             return
@@ -821,7 +857,7 @@ class IzvozPdfScreen(Screen):
         try:
             voznje = db.voznje_izmedju(pocetak, kraj)
         except Exception as e:
-            _PRIKAZI_POPUP("Greska", f"Ne mogu da procitam bazu:\n{e}", size_hint=(0.88, 0.4))
+            _PRIKAZI_POPUP(jezici._t("profil.greska"), jezici._t("izvoz.ne_mogu_procitati_bazu", greska=e), size_hint=(0.88, 0.4))
             return
 
         gorivo_period = _STAVKE_IZMEDJU(_GORIVO_REF.stavke, pocetak, kraj)
@@ -830,9 +866,8 @@ class IzvozPdfScreen(Screen):
 
         if not voznje and not gorivo_period and not servisi_period and not troskovi_period:
             _PRIKAZI_POPUP(
-                "Nema podataka",
-                f"Nema nijedne voznje, unosa goriva, servisa ni troskova za period "
-                f"{pocetak} do {kraj} - Excel nije napravljen.",
+                jezici._t("izvoz.nema_podataka_naslov"),
+                jezici._t("izvoz.nema_podataka_excel", pocetak=pocetak, kraj=kraj),
                 size_hint=(0.88, 0.45),
             )
             return
@@ -843,14 +878,13 @@ class IzvozPdfScreen(Screen):
             putanja = os.path.join(folder, f"izvestaj_{pocetak}_do_{kraj}.xlsx")
             broj_redova = generisi_izvestaj_excel(naslov, pocetak, kraj, putanja)
             _PRIKAZI_POPUP(
-                "Sacuvano",
-                f"Excel izvestaj ({broj_redova} redova, 5 listova) sacuvan u:\n{putanja}\n\n"
-                f"Otvori ga u Excel-u ili prosledi knjigovodji.",
+                jezici._t("backup.sacuvano_naslov"),
+                jezici._t("izvoz.excel_sacuvan_poruka", redova=broj_redova, putanja=putanja),
                 size_hint=(0.88, 0.5),
             )
         except Exception as e:
             _PRIKAZI_POPUP(
-                "Greska", f"Pravljenje Excel fajla nije uspelo:\n{e}", size_hint=(0.88, 0.45)
+                jezici._t("profil.greska"), jezici._t("izvoz.excel_neuspeo", greska=e), size_hint=(0.88, 0.45)
             )
 
 IZVOZ_KV = """
@@ -863,15 +897,15 @@ IZVOZ_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Izvoz PDF izvestaja"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Izvestaj"
+                label_text: root.tekst_izvestaj_nav
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "izvestaj"
 
@@ -885,10 +919,10 @@ IZVOZ_KV = """
                 padding: dp(2), dp(4)
 
                 FieldLabel:
-                    text: "Pravi PDF sa svim voznjama, gorivom, servisima i potrosnjom za izabrani period, sa ukupnim zbirom na kraju."
+                    text: root.tekst_napomena_gore
 
                 FieldLabel:
-                    text: "Vrsta perioda:"
+                    text: root.tekst_vrsta_perioda
 
                 Spinner:
                     id: spinner_period
@@ -923,7 +957,7 @@ IZVOZ_KV = """
                         height: self.texture_size[1]
 
                 RoundButton:
-                    label_text: "Izvezi PDF"
+                    label_text: root.tekst_izvezi_pdf_dugme
                     tint: 0.30, 0.52, 0.36, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
@@ -931,7 +965,7 @@ IZVOZ_KV = """
                     on_release: root.izvezi_pdf()
 
                 RoundButton:
-                    label_text: "Izvezi Excel"
+                    label_text: root.tekst_izvezi_excel_dugme
                     tint: 0.30, 0.46, 0.56, 1
                     text_color: 1, 1, 1, 1
                     size_hint_y: None
@@ -939,7 +973,7 @@ IZVOZ_KV = """
                     on_release: root.izvezi_excel()
 
                 FieldLabel:
-                    text: "PDF je za stampu, Excel (sa 5 listova i formulama) je za knjigovodju - oba se cuvaju u isti folder kao i backup: Preuzimanja/TaksiApp."
+                    text: root.tekst_napomena_dole
                     size_hint_y: None
                     height: dp(60)
                     text_size: self.width, None
