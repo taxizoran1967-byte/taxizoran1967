@@ -17,6 +17,8 @@ from kivy.properties import StringProperty
 from kivy.app import App
 from kivy.clock import Clock
 
+from servisi import jezici
+
 
 # ============================================================
 # main.py ovo postavlja posle uvoza (izbegava kruzni import)
@@ -115,13 +117,52 @@ class DispeceriScreen(Screen):
     smena3_od = StringProperty("22:00")
     smena3_do = StringProperty("06:00")
 
+    tekst_naslov = StringProperty("Poziv / Dispecer")
+    tekst_pocetna = StringProperty("Pocetna")
+    tekst_podesavanja = StringProperty("Podesavanja")
+    tekst_vreme_smena = StringProperty("Vreme smena")
+    tekst_smena1_lbl = StringProperty("Smena 1")
+    tekst_smena2_lbl = StringProperty("Smena 2")
+    tekst_smena3_lbl = StringProperty("Smena 3")
+    tekst_sacuvaj_vreme_smena = StringProperty("Sacuvaj vreme smena")
+    tekst_ime_prezime_dispecera = StringProperty("Ime i prezime dispecera")
+    hint_ime = StringProperty("npr. Marko Markovic")
+    tekst_broj_telefona = StringProperty("Broj telefona")
+    hint_telefon = StringProperty("npr. 0611234567")
+    tekst_smena_label = StringProperty("Smena")
+
     _tajmer_osvezavanja = None
 
     def on_pre_enter(self, *args):
+        self._osvezi_prevod()
         self.smena1_od, self.smena1_do = SMENE.smena1_od, SMENE.smena1_do
         self.smena2_od, self.smena2_do = SMENE.smena2_od, SMENE.smena2_do
         self.smena3_od, self.smena3_do = SMENE.smena3_od, SMENE.smena3_do
         self.ucitaj_dispecere()
+
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("dispeceri.naslov")
+        self.tekst_pocetna = jezici._t("buttons.pocetna")
+        self.tekst_podesavanja = jezici._t("home.podesavanja")
+        self.tekst_vreme_smena = jezici._t("dispeceri.vreme_smena")
+        self.tekst_smena1_lbl = jezici._t("dispeceri.smena_format", broj=1)
+        self.tekst_smena2_lbl = jezici._t("dispeceri.smena_format", broj=2)
+        self.tekst_smena3_lbl = jezici._t("dispeceri.smena_format", broj=3)
+        self.tekst_sacuvaj_vreme_smena = jezici._t("dispeceri.sacuvaj_vreme_smena")
+        self.tekst_ime_prezime_dispecera = jezici._t("dispeceri.ime_prezime_dispecera")
+        self.hint_ime = jezici._t("dispeceri.ime_hint")
+        self.tekst_broj_telefona = jezici._t("dispeceri.broj_telefona")
+        self.hint_telefon = jezici._t("dispeceri.telefon_hint")
+        self.tekst_smena_label = jezici._t("dispeceri.smena_label")
+        self.dugme_tekst = (
+            jezici._t("dispeceri.sacuvaj_izmenu") if self.izmena_id is not None
+            else jezici._t("dispeceri.dodaj_dispecera")
+        )
+        spinner = self.ids.get("spinner_smena_dispecera")
+        if spinner is not None:
+            spinner.values = [jezici._t("dispeceri.smena_format", broj=n) for n in (1, 2, 3)]
+            if not spinner.text or spinner.text not in spinner.values:
+                spinner.text = spinner.values[0]
 
     def on_enter(self, *args):
         # osvezi zelenu/sivu tacku svakih 60s dok je ekran otvoren,
@@ -156,7 +197,7 @@ class DispeceriScreen(Screen):
 
         if not _DISPECERI_REF.stavke:
             kontejner.add_widget(Label(
-                text="Jos uvek nema dodatih dispecera.",
+                text=jezici._t("dispeceri.nema_dispecera"),
                 size_hint_y=None, height=40,
                 color=(1, 1, 1, 1),
             ))
@@ -170,24 +211,24 @@ class DispeceriScreen(Screen):
         od_str, do_str = SMENE.opseg(smena)
         aktivna = _smena_aktivna_sada(od_str, do_str)
         tacka = "[color=39d353][b]*[/b][/color]" if aktivna else "[color=888888]*[/color]"
-        status = "aktivna sada" if aktivna else "nije aktivna"
+        status = jezici._t("dispeceri.aktivna_sada") if aktivna else jezici._t("dispeceri.nije_aktivna")
         opis = (
             f"{tacka} [b]{s.get('ime', '-')}[/b]\n"
             f"{s.get('telefon', '-')}\n"
-            f"Smena {smena} ({od_str}-{do_str}) - {status}"
+            f"{jezici._t('dispeceri.red_opis', smena=smena, od=od_str, do=do_str, status=status)}"
         )
         return _NAPRAVI_RED_LISTE(
             opis,
             tint=(0.30, 0.29, 0.42, 0.92),
             boja_teksta=(0.95, 0.95, 1, 1),
             dugmad=[
-                ("Pozovi", (0.30, 0.52, 0.36, 1), (0.92, 1, 0.94, 1),
+                (jezici._t("dispeceri.pozovi"), (0.30, 0.52, 0.36, 1), (0.92, 1, 0.94, 1),
                  lambda inst, sid=s["id"]: self._pozovi(sid)),
-                ("Sledeca smena", (0.55, 0.45, 0.20, 1), (1, 0.97, 0.90, 1),
+                (jezici._t("dispeceri.sledeca_smena"), (0.55, 0.45, 0.20, 1), (1, 0.97, 0.90, 1),
                  lambda inst, sid=s["id"]: self._promeni_smenu(sid)),
-                ("Izmeni", (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
+                (jezici._t("evidencija.izmeni"), (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, sid=s["id"]: self._izmeni(sid)),
-                ("Obrisi", (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
+                (jezici._t("evidencija.obrisi"), (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
                  lambda inst, sid=s["id"]: self._obrisi(sid)),
             ],
         )
@@ -199,7 +240,7 @@ class DispeceriScreen(Screen):
         try:
             webbrowser.open(f"tel:{s['telefon']}")
         except Exception as e:
-            _PRIKAZI_POPUP("Greska", f"Ne mogu da pokrenem poziv:\n{e}")
+            _PRIKAZI_POPUP(jezici._t("profil.greska"), jezici._t("dispeceri.ne_mogu_poziv", greska=e))
 
     def _promeni_smenu(self, stavka_id):
         s = _DISPECERI_REF.nadji(stavka_id)
@@ -218,8 +259,8 @@ class DispeceriScreen(Screen):
         self.izmena_id = stavka_id
         self.ids.input_ime_dispecera.text = s.get("ime", "")
         self.ids.input_telefon_dispecera.text = s.get("telefon", "")
-        self.ids.spinner_smena_dispecera.text = f"Smena {s.get('smena', 1)}"
-        self.dugme_tekst = "Sacuvaj izmenu"
+        self.ids.spinner_smena_dispecera.text = jezici._t("dispeceri.smena_format", broj=s.get('smena', 1))
+        self.dugme_tekst = jezici._t("dispeceri.sacuvaj_izmenu")
 
     def _obrisi(self, stavka_id):
         app = App.get_running_app()
@@ -232,12 +273,18 @@ class DispeceriScreen(Screen):
 
         if not ime or not telefon:
             _PRIKAZI_POPUP(
-                "Nedostaju podaci", "Unesi ime i broj telefona dispecera."
+                jezici._t("dispeceri.nedostaju_podaci_naslov"),
+                jezici._t("dispeceri.nedostaju_podaci_poruka"),
             )
             return
 
         smena_tekst = self.ids.spinner_smena_dispecera.text
-        smena = int(smena_tekst.replace("Smena ", "").strip() or 1)
+        # Izdvoji broj smene bez oslanjanja na rec ispred njega
+        # (prevedena je - "Smena 1" / "Shift 1" - broj je uvek poslednji).
+        try:
+            smena = int(smena_tekst.strip().split()[-1])
+        except (ValueError, IndexError):
+            smena = 1
 
         stavka = {"ime": ime, "telefon": telefon, "smena": smena}
         app = App.get_running_app()
@@ -245,13 +292,13 @@ class DispeceriScreen(Screen):
         if self.izmena_id is not None:
             _DISPECERI_REF.azuriraj(app.user_data_dir, self.izmena_id, stavka)
             self.izmena_id = None
-            self.dugme_tekst = "Dodaj dispecera"
+            self.dugme_tekst = jezici._t("dispeceri.dodaj_dispecera")
         else:
             _DISPECERI_REF.dodaj(app.user_data_dir, stavka)
 
         self.ids.input_ime_dispecera.text = ""
         self.ids.input_telefon_dispecera.text = ""
-        self.ids.spinner_smena_dispecera.text = "Smena 1"
+        self.ids.spinner_smena_dispecera.text = jezici._t("dispeceri.smena_format", broj=1)
         self.ucitaj_dispecere()
 
 
@@ -266,15 +313,15 @@ DISPECERI_KV = """
     ScreenRoot:
 
         TitleLabel:
-            text: "Poziv / Dispecer"
+            text: root.tekst_naslov
 
         NavBar:
             RoundButton:
-                label_text: "Pocetna"
+                label_text: root.tekst_pocetna
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "home"
             RoundButton:
-                label_text: "Podesavanja"
+                label_text: root.tekst_podesavanja
                 tint: 0.36, 0.46, 0.64, 1
                 on_release: root.manager.current = "podesavanja"
 
@@ -296,7 +343,7 @@ DISPECERI_KV = """
                     spacing: dp(8)
 
                     Label:
-                        text: "Vreme smena"
+                        text: root.tekst_vreme_smena
                         bold: True
                         font_size: '15sp'
                         color: 1, 1, 1, 1
@@ -310,7 +357,7 @@ DISPECERI_KV = """
                         height: dp(48)
                         spacing: dp(6)
                         Label:
-                            text: "Smena 1"
+                            text: root.tekst_smena1_lbl
                             size_hint_x: 0.4
                             color: 1, 1, 1, 1
                         PastelTextInput:
@@ -327,7 +374,7 @@ DISPECERI_KV = """
                         height: dp(48)
                         spacing: dp(6)
                         Label:
-                            text: "Smena 2"
+                            text: root.tekst_smena2_lbl
                             size_hint_x: 0.4
                             color: 1, 1, 1, 1
                         PastelTextInput:
@@ -344,7 +391,7 @@ DISPECERI_KV = """
                         height: dp(48)
                         spacing: dp(6)
                         Label:
-                            text: "Smena 3"
+                            text: root.tekst_smena3_lbl
                             size_hint_x: 0.4
                             color: 1, 1, 1, 1
                         PastelTextInput:
@@ -357,29 +404,29 @@ DISPECERI_KV = """
                             hint_text: "06:00"
 
                     RoundButton:
-                        label_text: "Sacuvaj vreme smena"
+                        label_text: root.tekst_sacuvaj_vreme_smena
                         tint: 0.36, 0.46, 0.64, 1
                         size_hint_y: None
                         height: dp(46)
                         on_release: root.sacuvaj_smene()
 
                 FieldLabel:
-                    text: "Ime i prezime dispecera"
+                    text: root.tekst_ime_prezime_dispecera
 
                 PastelTextInput:
                     id: input_ime_dispecera
-                    hint_text: "npr. Marko Markovic"
+                    hint_text: root.hint_ime
 
                 FieldLabel:
-                    text: "Broj telefona"
+                    text: root.tekst_broj_telefona
 
                 PastelTextInput:
                     id: input_telefon_dispecera
-                    hint_text: "npr. 0611234567"
+                    hint_text: root.hint_telefon
                     input_type: "number"
 
                 FieldLabel:
-                    text: "Smena"
+                    text: root.tekst_smena_label
 
                 Spinner:
                     id: spinner_smena_dispecera

@@ -390,5 +390,27 @@
       "NOVEMBAR",
       "DECEMBAR"
     ]
+  },
+  "dispeceri": {
+    "naslov": "Poziv / Dispecer",
+    "vreme_smena": "Vreme smena",
+    "smena_format": "Smena {broj}",
+    "sacuvaj_vreme_smena": "Sacuvaj vreme smena",
+    "ime_prezime_dispecera": "Ime i prezime dispecera",
+    "ime_hint": "npr. Marko Markovic",
+    "broj_telefona": "Broj telefona",
+    "telefon_hint": "npr. 0611234567",
+    "smena_label": "Smena",
+    "dodaj_dispecera": "Dodaj dispecera",
+    "sacuvaj_izmenu": "Sacuvaj izmenu",
+    "nema_dispecera": "Jos uvek nema dodatih dispecera.",
+    "aktivna_sada": "aktivna sada",
+    "nije_aktivna": "nije aktivna",
+    "red_opis": "Smena {smena} ({od}-{do}) - {status}",
+    "pozovi": "Pozovi",
+    "sledeca_smena": "Sledeca smena",
+    "ne_mogu_poziv": "Ne mogu da pokrenem poziv:\n{greska}",
+    "nedostaju_podaci_naslov": "Nedostaju podaci",
+    "nedostaju_podaci_poruka": "Unesi ime i broj telefona dispecera."
   }
 }

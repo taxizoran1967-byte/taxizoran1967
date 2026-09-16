@@ -390,5 +390,27 @@
       "NOVEMBER",
       "DECEMBER"
     ]
+  },
+  "dispeceri": {
+    "naslov": "Call / Dispatcher",
+    "vreme_smena": "Shift times",
+    "smena_format": "Shift {broj}",
+    "sacuvaj_vreme_smena": "Save shift times",
+    "ime_prezime_dispecera": "Dispatcher name",
+    "ime_hint": "e.g. John Smith",
+    "broj_telefona": "Phone number",
+    "telefon_hint": "e.g. 0611234567",
+    "smena_label": "Shift",
+    "dodaj_dispecera": "Add dispatcher",
+    "sacuvaj_izmenu": "Save changes",
+    "nema_dispecera": "No dispatchers added yet.",
+    "aktivna_sada": "active now",
+    "nije_aktivna": "not active",
+    "red_opis": "Shift {smena} ({od}-{do}) - {status}",
+    "pozovi": "Call",
+    "sledeca_smena": "Next shift",
+    "ne_mogu_poziv": "Can't start the call:\n{greska}",
+    "nedostaju_podaci_naslov": "Missing information",
+    "nedostaju_podaci_poruka": "Enter the dispatcher's name and phone number."
   }
 }
