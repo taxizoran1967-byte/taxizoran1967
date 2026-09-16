@@ -785,7 +785,7 @@ ScreenManager:
         valign: "top"
         text_size: self.width, None
         size_hint_y: None
-        height: self.texture_size[1] + dp(4)
+        height: dp(42)
 
 <PastelTextInput@TextInput>:
     background_color: 0.80, 0.79, 0.88, 0.95
@@ -801,60 +801,70 @@ ScreenManager:
 # POCETNI EKRAN
 # ============================================================
 
+<GlobusDugme@ButtonBehavior+Image>:
+    allow_stretch: True
+    keep_ratio: True
+
 <HomeScreen>:
     name: "home"
-    ScreenRoot:
+    FloatLayout:
 
-        TaxiZoranNaslov:
+        ScreenRoot:
+            size_hint: 1, 1
+            pos_hint: {"x": 0, "y": 0}
 
-        ScrollView:
-            do_scroll_x: False
-            GridLayout:
-                cols: 2
-                size_hint_y: None
-                height: self.minimum_height
-                spacing: dp(14)
-                padding: dp(2), dp(4)
+            TaxiZoranNaslov:
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/start_ride.png"
-                    tekst: root.tekst_gps_voznja
-                    on_release: app.root.current = "gps_voznja"
+            ScrollView:
+                do_scroll_x: False
+                GridLayout:
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(14)
+                    padding: dp(2), dp(4)
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/end_ride.png"
-                    tekst: root.tekst_pocetak_rucno
-                    on_release: app.root.current = "kalkulator"
+                    HomeMenuButton:
+                        icon_src: "assets/icons/start_ride.png"
+                        tekst: root.tekst_gps_voznja
+                        on_release: app.root.current = "gps_voznja"
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/history.png"
-                    tekst: root.tekst_istorija
-                    on_release: app.root.current = "evidencija"
+                    HomeMenuButton:
+                        icon_src: "assets/icons/end_ride.png"
+                        tekst: root.tekst_pocetak_rucno
+                        on_release: app.root.current = "kalkulator"
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/daily_report.png"
-                    tekst: root.tekst_izvestaj
-                    on_release: app.root.current = "izvestaj"
+                    HomeMenuButton:
+                        icon_src: "assets/icons/history.png"
+                        tekst: root.tekst_istorija
+                        on_release: app.root.current = "evidencija"
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/profil.png"
-                    tekst: root.tekst_profil
-                    on_release: app.root.current = "profil"
+                    HomeMenuButton:
+                        icon_src: "assets/icons/daily_report.png"
+                        tekst: root.tekst_izvestaj
+                        on_release: app.root.current = "izvestaj"
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/settings.png"
-                    tekst: root.tekst_podesavanja
-                    on_release: app.root.current = "podesavanja"
+                    HomeMenuButton:
+                        icon_src: "assets/icons/profil.png"
+                        tekst: root.tekst_profil
+                        on_release: app.root.current = "profil"
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/uputstvo.png"
-                    tekst: root.tekst_uputstvo
-                    on_release: app.root.current = "uputstvo"
+                    HomeMenuButton:
+                        icon_src: "assets/icons/settings.png"
+                        tekst: root.tekst_podesavanja
+                        on_release: app.root.current = "podesavanja"
 
-                HomeMenuButton:
-                    icon_src: "assets/icons/language.png"
-                    tekst: "Language"
-                    on_release: app.root.current = "jezici"
+                    HomeMenuButton:
+                        icon_src: "assets/icons/uputstvo.png"
+                        tekst: root.tekst_uputstvo
+                        on_release: app.root.current = "uputstvo"
+
+        GlobusDugme:
+            source: "assets/icons/language_globus.png"
+            size_hint: None, None
+            size: dp(25), dp(25)
+            pos_hint: {"right": 0.96, "y": 0.02}
+            on_release: app.root.current = "jezici"
 
 # ============================================================
 # PODESAVANJA
