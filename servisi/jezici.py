@@ -20,7 +20,7 @@ import os
 from pathlib import Path
 
 # Globalne varijable
-_CURRENT_LANG = "sr"  # Podrazumevani jezik
+_CURRENT_LANG = "en"  # Podrazumevani jezik (glavni, prikazuje se pri prvoj instalaciji)
 _TRANSLATIONS = {}    # Učitani tekstovi { "sr": {...}, "en": {...} }
 _AVAILABLE_LANGS = {} # Dostupni jezici
 
@@ -71,8 +71,8 @@ def set_language(lang_code):
     global _CURRENT_LANG
     
     if lang_code not in _TRANSLATIONS:
-        print(f"⚠️  Jezik '{lang_code}' ne postoji. Korišćenje srpskog.")
-        _CURRENT_LANG = "sr"
+        print(f"⚠️  Jezik '{lang_code}' ne postoji. Korišćenje engleskog.")
+        _CURRENT_LANG = "en"
     else:
         _CURRENT_LANG = lang_code
         print(f"✅ Jezik promenjen na: {lang_code}")
@@ -203,7 +203,7 @@ def _load_language_preference():
         if os.path.exists(pref_file):
             with open(pref_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                lang = data.get("language", "sr")
+                lang = data.get("language", "en")
                 if lang in _TRANSLATIONS:
                     _CURRENT_LANG = lang
                     print(f"✅ Učitan sačuvan jezik: {lang}")
