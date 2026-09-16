@@ -346,5 +346,49 @@
     "nema_citac": "This device has no fingerprint reader.",
     "nijedan_otisak": "No fingerprint is registered on this phone (Phone Settings -> Security -> Fingerprint).",
     "ne_mogu_da_proverim": "Can't check the fingerprint reader: {greska}"
+  },
+  "grafik": {
+    "naslov": "Earnings chart",
+    "ukupna_zarada": "Total earnings",
+    "ukupno_km": "Total kilometers",
+    "prosek": "Average",
+    "dnevni": "Daily",
+    "nedeljni": "Weekly",
+    "mesecni": "Monthly",
+    "zarada": "Earnings",
+    "kilometri": "Kilometers",
+    "prazno_stanje": "No data for this period\n\nAdd a few rides for the\nearnings stats to show here.",
+    "najbolja_voznja": "Best ride",
+    "najduza_voznja": "Longest ride",
+    "broj_voznji": "Number of rides",
+    "prosecna_dnevna": "Average daily earnings",
+    "najbolji_dan": "Best day",
+    "najslabiji_dan": "Weakest day",
+    "najvise_km": "Most kilometers",
+    "gorivo_servis_linija": "Fuel: {gorivo} ({litara} l)   |   Service: {servis}\nOther expenses: {troskovi}   |   Consumption: {potrosnja}\nNet earnings: {neto}",
+    "nema_podataka_kratko": "no data",
+    "dani_kratki": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ],
+    "meseci": [
+      "JANUARY",
+      "FEBRUARY",
+      "MARCH",
+      "APRIL",
+      "MAY",
+      "JUNE",
+      "JULY",
+      "AUGUST",
+      "SEPTEMBER",
+      "OCTOBER",
+      "NOVEMBER",
+      "DECEMBER"
+    ]
   }
 }

@@ -154,14 +154,15 @@ def _get_nested(d, keys):
         keys (list): Lista ključeva za prolazak kroz nivo po nivo
     
     Returns:
-        str or None: Vrednost ako je string, inače None
+        str or list or None: Vrednost ako je string ili lista (npr.
+        nazivi dana/meseci), inače None
     """
     for key in keys:
         if isinstance(d, dict):
             d = d.get(key)
         else:
             return None
-    return d if isinstance(d, str) else None
+    return d if isinstance(d, (str, list)) else None
 
 
 def _save_language_preference(lang_code):

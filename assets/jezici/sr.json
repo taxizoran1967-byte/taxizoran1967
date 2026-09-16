@@ -346,5 +346,49 @@
     "nema_citac": "Uredjaj nema citac otiska prsta.",
     "nijedan_otisak": "Nijedan otisak nije registrovan na ovom telefonu (Podesavanja telefona -> Bezbednost -> Otisak prsta).",
     "ne_mogu_da_proverim": "Ne mogu da proverim citac otiska: {greska}"
+  },
+  "grafik": {
+    "naslov": "Grafikon zarade",
+    "ukupna_zarada": "Ukupna zarada",
+    "ukupno_km": "Ukupno kilometara",
+    "prosek": "Prosek",
+    "dnevni": "Dnevni",
+    "nedeljni": "Nedeljni",
+    "mesecni": "Mesecni",
+    "zarada": "Zarada",
+    "kilometri": "Kilometri",
+    "prazno_stanje": "Nema podataka za ovaj period\n\nDodaj nekoliko voznji da bi se ovde\nprikazala statistika zarade.",
+    "najbolja_voznja": "Najbolja voznja",
+    "najduza_voznja": "Najduza voznja",
+    "broj_voznji": "Broj voznji",
+    "prosecna_dnevna": "Prosecna dnevna zarada",
+    "najbolji_dan": "Najbolji dan",
+    "najslabiji_dan": "Najslabiji dan",
+    "najvise_km": "Najvise kilometara",
+    "gorivo_servis_linija": "Gorivo: {gorivo} ({litara} l)   |   Servisi: {servis}\nOstali troskovi: {troskovi}   |   Potrosnja: {potrosnja}\nNeto zarada: {neto}",
+    "nema_podataka_kratko": "nema podataka",
+    "dani_kratki": [
+      "Pon",
+      "Uto",
+      "Sre",
+      "Čet",
+      "Pet",
+      "Sub",
+      "Ned"
+    ],
+    "meseci": [
+      "JANUAR",
+      "FEBRUAR",
+      "MART",
+      "APRIL",
+      "MAJ",
+      "JUN",
+      "JUL",
+      "AVGUST",
+      "SEPTEMBAR",
+      "OKTOBAR",
+      "NOVEMBAR",
+      "DECEMBAR"
+    ]
   }
 }

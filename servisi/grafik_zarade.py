@@ -35,6 +35,7 @@ from kivy.metrics import dp
 from kivy.clock import Clock
 
 from servisi import database as db
+from servisi import jezici
 
 # ============================================================
 # VALUTA - main.py ovo postavlja posle uvoza (izbegava kruzni import)
@@ -150,9 +151,17 @@ def _prosek_km_tekst(ukupna_zarada_rsd, ukupno_km):
 # DATUMI
 # ============================================================
 
-DANI_KRATKI = ["Pon", "Uto", "Sre", "Čet", "Pet", "Sub", "Ned"]
+DANI_KRATKI = ["Pon", "Uto", "Sre", "Čet", "Pet", "Sub", "Ned"]  # fallback, videti _dani_kratki()
 MESECI = ["JANUAR", "FEBRUAR", "MART", "APRIL", "MAJ", "JUN", "JUL",
-          "AVGUST", "SEPTEMBAR", "OKTOBAR", "NOVEMBAR", "DECEMBAR"]
+          "AVGUST", "SEPTEMBAR", "OKTOBAR", "NOVEMBAR", "DECEMBAR"]  # fallback, videti _meseci()
+
+
+def _dani_kratki():
+    return jezici._t("grafik.dani_kratki")
+
+
+def _meseci():
+    return jezici._t("grafik.meseci")
 
 
 def _pocetak_nedelje(d):
@@ -201,6 +210,7 @@ def izracunaj_dan(datum):
 
 
 def izracunaj_nedelju(pocetak):
+    dani_kratki = _dani_kratki()
     kraj = pocetak + timedelta(days=6)
     rows = db.voznje_izmedju(pocetak.strftime("%Y-%m-%d"), kraj.strftime("%Y-%m-%d"))
     broj, prihod, km = db.zbir_voznji(rows)
@@ -220,14 +230,14 @@ def izracunaj_nedelju(pocetak):
     for i in range(7):
         d = pocetak + timedelta(days=i)
         p = po_danu[d.strftime("%Y-%m-%d")]
-        graf_zarada.append((DANI_KRATKI[i], p["prihod"]))
-        graf_km.append((DANI_KRATKI[i], p["km"]))
+        graf_zarada.append((dani_kratki[i], p["prihod"]))
+        graf_km.append((dani_kratki[i], p["km"]))
         if p["prihod"] > najbolji_iznos:
             najbolji_iznos = p["prihod"]
-            najbolji_dan = (DANI_KRATKI[i], p["prihod"])
+            najbolji_dan = (dani_kratki[i], p["prihod"])
         if p["km"] > najkm_vrednost:
             najkm_vrednost = p["km"]
-            najkm_dan = (DANI_KRATKI[i], p["km"])
+            najkm_dan = (dani_kratki[i], p["km"])
 
     return {
         "prazno": broj == 0,
@@ -277,7 +287,7 @@ def izracunaj_mesec(godina, mesec):
 
     return {
         "prazno": broj == 0,
-        "naslov": f"{MESECI[mesec - 1]} {godina}",
+        "naslov": f"{_meseci()[mesec - 1]} {godina}",
         "ukupno_broj": broj,
         "ukupno_prihod": prihod,
         "ukupno_km": km,
@@ -457,13 +467,37 @@ class GrafikZaradeScreen(Screen):
 
     tekst_gorivo_servis = StringProperty("")
 
+    tekst_naslov = StringProperty("Grafikon zarade")
+    tekst_ukupna_zarada = StringProperty("Ukupna zarada")
+    tekst_ukupno_km = StringProperty("Ukupno kilometara")
+    tekst_prosek = StringProperty("Prosek")
+    tekst_dnevni = StringProperty("Dnevni")
+    tekst_nedeljni = StringProperty("Nedeljni")
+    tekst_mesecni = StringProperty("Mesecni")
+    tekst_zarada_dugme = StringProperty("Zarada")
+    tekst_kilometri_dugme = StringProperty("Kilometri")
+    tekst_prazno_stanje = StringProperty("")
+
     def on_pre_enter(self, *args):
+        self._osvezi_prevod()
         danas = date.today()
         self._dnevni_datum = danas
         self._nedeljni_pocetak = _pocetak_nedelje(danas)
         self._mesecni_godina = danas.year
         self._mesecni_mesec = danas.month
         self._ucitaj()
+
+    def _osvezi_prevod(self):
+        self.tekst_naslov = jezici._t("grafik.naslov")
+        self.tekst_ukupna_zarada = jezici._t("grafik.ukupna_zarada")
+        self.tekst_ukupno_km = jezici._t("grafik.ukupno_km")
+        self.tekst_prosek = jezici._t("grafik.prosek")
+        self.tekst_dnevni = jezici._t("grafik.dnevni")
+        self.tekst_nedeljni = jezici._t("grafik.nedeljni")
+        self.tekst_mesecni = jezici._t("grafik.mesecni")
+        self.tekst_zarada_dugme = jezici._t("grafik.zarada")
+        self.tekst_kilometri_dugme = jezici._t("grafik.kilometri")
+        self.tekst_prazno_stanje = jezici._t("grafik.prazno_stanje")
 
     # ---------- period / prikaz ----------
 
@@ -583,46 +617,47 @@ class GrafikZaradeScreen(Screen):
             ukupno_l_pot = sum(i["litara"] for i in intervali)
             potrosnja_txt = f"{(ukupno_l_pot / ukupno_km_pot * 100):.1f} l/100km" if ukupno_km_pot > 0 else "-"
         else:
-            potrosnja_txt = "nema podataka"
+            potrosnja_txt = jezici._t("grafik.nema_podataka_kratko")
 
         neto = ukupan_prihod - cena_gorivo - cena_servis - cena_troskovi
 
-        self.tekst_gorivo_servis = (
-            f"Gorivo: {_novac_puno(cena_gorivo)} ({litara_gorivo:g} l)   |   Servisi: {_novac_puno(cena_servis)}\n"
-            f"Ostali troskovi: {_novac_puno(cena_troskovi)}   |   Potrosnja: {potrosnja_txt}\n"
-            f"Neto zarada: {_novac_puno(neto)}"
+        self.tekst_gorivo_servis = jezici._t(
+            "grafik.gorivo_servis_linija",
+            gorivo=_novac_puno(cena_gorivo), litara=f"{litara_gorivo:g}",
+            servis=_novac_puno(cena_servis), troskovi=_novac_puno(cena_troskovi),
+            potrosnja=potrosnja_txt, neto=_novac_puno(neto),
         )
 
     def _popuni_extra(self, podaci):
         if self.period == "dan":
             nb = podaci.get("najbolja_voznja")
             nd = podaci.get("najduza_voznja")
-            self.tekst_extra_1 = (f"Najbolja voznja\n{_novac_puno(nb['ukupna_cena'])}"
-                                   if nb else "Najbolja voznja\n-")
-            self.tekst_extra_2 = (f"Najduza voznja\n{_km_tekst(nd['km'])}"
-                                   if nd else "Najduza voznja\n-")
-            self.tekst_extra_3 = f"Broj voznji\n{podaci['ukupno_broj']}"
+            self.tekst_extra_1 = (f"{jezici._t('grafik.najbolja_voznja')}\n{_novac_puno(nb['ukupna_cena'])}"
+                                   if nb else f"{jezici._t('grafik.najbolja_voznja')}\n-")
+            self.tekst_extra_2 = (f"{jezici._t('grafik.najduza_voznja')}\n{_km_tekst(nd['km'])}"
+                                   if nd else f"{jezici._t('grafik.najduza_voznja')}\n-")
+            self.tekst_extra_3 = f"{jezici._t('grafik.broj_voznji')}\n{podaci['ukupno_broj']}"
             self.tekst_extra_4 = ""
         elif self.period == "nedelja":
             nb = podaci.get("najbolji_dan")
             nk = podaci.get("najkm_dan")
-            self.tekst_extra_1 = f"Prosecna dnevna zarada\n{_novac_puno(podaci['prosecna_dnevna'])}"
-            self.tekst_extra_2 = (f"Najbolji dan\n{nb[0]} - {_novac_puno(nb[1])}"
-                                   if nb else "Najbolji dan\n-")
-            self.tekst_extra_3 = (f"Najvise kilometara\n{nk[0]} - {_km_tekst(nk[1])}"
-                                   if nk else "Najvise kilometara\n-")
+            self.tekst_extra_1 = f"{jezici._t('grafik.prosecna_dnevna')}\n{_novac_puno(podaci['prosecna_dnevna'])}"
+            self.tekst_extra_2 = (f"{jezici._t('grafik.najbolji_dan')}\n{nb[0]} - {_novac_puno(nb[1])}"
+                                   if nb else f"{jezici._t('grafik.najbolji_dan')}\n-")
+            self.tekst_extra_3 = (f"{jezici._t('grafik.najvise_km')}\n{nk[0]} - {_km_tekst(nk[1])}"
+                                   if nk else f"{jezici._t('grafik.najvise_km')}\n-")
             self.tekst_extra_4 = ""
         else:
             nb = podaci.get("najbolji_dan")
             ns = podaci.get("najslabiji_dan")
             nk = podaci.get("najkm_dan")
-            self.tekst_extra_1 = (f"Najbolji dan\n{nb[0]}. - {_novac_puno(nb[1])}"
-                                   if nb else "Najbolji dan\n-")
-            self.tekst_extra_2 = (f"Najslabiji dan\n{ns[0]}. - {_novac_puno(ns[1])}"
-                                   if ns else "Najslabiji dan\n-")
-            self.tekst_extra_3 = (f"Najvise kilometara\n{nk[0]}. - {_km_tekst(nk[1])}"
-                                   if nk else "Najvise kilometara\n-")
-            self.tekst_extra_4 = f"Prosecna dnevna zarada\n{_novac_puno(podaci['prosecna_dnevna'])}"
+            self.tekst_extra_1 = (f"{jezici._t('grafik.najbolji_dan')}\n{nb[0]}. - {_novac_puno(nb[1])}"
+                                   if nb else f"{jezici._t('grafik.najbolji_dan')}\n-")
+            self.tekst_extra_2 = (f"{jezici._t('grafik.najslabiji_dan')}\n{ns[0]}. - {_novac_puno(ns[1])}"
+                                   if ns else f"{jezici._t('grafik.najslabiji_dan')}\n-")
+            self.tekst_extra_3 = (f"{jezici._t('grafik.najvise_km')}\n{nk[0]}. - {_km_tekst(nk[1])}"
+                                   if nk else f"{jezici._t('grafik.najvise_km')}\n-")
+            self.tekst_extra_4 = f"{jezici._t('grafik.prosecna_dnevna')}\n{_novac_puno(podaci['prosecna_dnevna'])}"
 
     # ---------- tooltip ----------
 
@@ -739,7 +774,7 @@ GRAFIK_KV = """
                 tint: 0.30, 0.34, 0.48, 1
                 on_release: root.manager.current = "podesavanja"
             TitleLabel:
-                text: "Grafikon zarade"
+                text: root.tekst_naslov
 
         ScrollView:
             do_scroll_x: False
@@ -756,15 +791,15 @@ GRAFIK_KV = """
                     spacing: dp(8)
                     StatCard:
                         vrednost: root.tekst_zarada_karta
-                        opis: "Ukupna zarada"
+                        opis: root.tekst_ukupna_zarada
                         tint: 0.26, 0.42, 0.30, 0.9
                     StatCard:
                         vrednost: root.tekst_km_karta
-                        opis: "Ukupno kilometara"
+                        opis: root.tekst_ukupno_km
                         tint: 0.24, 0.34, 0.52, 0.9
                     StatCard:
                         vrednost: root.tekst_prosek_karta
-                        opis: "Prosek"
+                        opis: root.tekst_prosek
                         tint: 0.40, 0.30, 0.48, 0.9
 
                 BoxLayout:
@@ -772,15 +807,15 @@ GRAFIK_KV = """
                     height: dp(40)
                     spacing: dp(6)
                     SegmentDugme:
-                        label_text: "Dnevni"
+                        label_text: root.tekst_dnevni
                         aktivno: root.period == "dan"
                         on_release: root.izaberi_period("dan")
                     SegmentDugme:
-                        label_text: "Nedeljni"
+                        label_text: root.tekst_nedeljni
                         aktivno: root.period == "nedelja"
                         on_release: root.izaberi_period("nedelja")
                     SegmentDugme:
-                        label_text: "Mesecni"
+                        label_text: root.tekst_mesecni
                         aktivno: root.period == "mesec"
                         on_release: root.izaberi_period("mesec")
 
@@ -789,11 +824,11 @@ GRAFIK_KV = """
                     height: dp(36)
                     spacing: dp(6)
                     SegmentDugme:
-                        label_text: "Zarada"
+                        label_text: root.tekst_zarada_dugme
                         aktivno: root.prikaz == "zarada"
                         on_release: root.izaberi_prikaz("zarada")
                     SegmentDugme:
-                        label_text: "Kilometri"
+                        label_text: root.tekst_kilometri_dugme
                         aktivno: root.prikaz == "km"
                         on_release: root.izaberi_prikaz("km")
 
@@ -810,11 +845,13 @@ GRAFIK_KV = """
                     Label:
                         text: root.naslov_perioda
                         bold: True
-                        font_size: '15sp'
+                        font_size: '14sp' if len(root.naslov_perioda) < 14 else '11sp'
                         color: 1, 1, 1, 1
                         halign: "center"
                         valign: "middle"
-                        text_size: self.size
+                        text_size: self.width, None
+                        shorten: True
+                        shorten_from: "right"
                     RoundButton:
                         size_hint_x: None
                         width: dp(48)
@@ -832,7 +869,7 @@ GRAFIK_KV = """
                     FloatLayout:
                         id: float_grafikon
                         Label:
-                            text: "Nema podataka za ovaj period\\n\\nDodaj nekoliko voznji da bi se ovde\\nprikazala statistika zarade."
+                            text: root.tekst_prazno_stanje
                             opacity: 1 if root.prazno_stanje else 0
                             pos: float_grafikon.pos
                             size: float_grafikon.size
