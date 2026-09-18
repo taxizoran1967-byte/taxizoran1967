@@ -46,6 +46,8 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Izabrani jezik: Srpski 🇷🇸"
         elif lang == "en":
             self.tekst_trenutni = "Selected language: English 🇬🇧"
+        elif lang == "fr":
+            self.tekst_trenutni = "Langue sélectionnée : Français 🇫🇷"
         else:
             self.tekst_trenutni = f"Current language: {lang.upper()}"
 
@@ -62,6 +64,10 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Selected language: English 🇬🇧"
             poruka_naslov = "Info"
             poruka_tekst = "Language changed to English!"
+        elif lang_code == "fr":
+            self.tekst_trenutni = "Langue sélectionnée : Français 🇫🇷"
+            poruka_naslov = "Info"
+            poruka_tekst = "Langue changée en Français !"
         else:
             self.tekst_trenutni = f"Current language: {lang_code.upper()}"
             poruka_naslov = "Info"
@@ -157,11 +163,11 @@ JEZICI_KV = """
 
                 RoundButton:
                     label_text: "Français 🇫🇷"
-                    tint: 0.50, 0.46, 0.40, 1
+                    tint: 0.36, 0.46, 0.64, 1
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
                     height: dp(52)
-                    on_release: root.jezik_u_izradi("fr")
+                    on_release: root.promeni_jezici("fr")
 
                 RoundButton:
                     label_text: "Deutsch 🇩🇪"
