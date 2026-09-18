@@ -1,6 +1,8 @@
 """
 ekran_jezici.py
-Ekran za izbor jezika - korisnik bira između srpskog i engleskog
+Ekran za izbor jezika - korisnik bira između srpskog, engleskog i
+jos 4 jezika koji su trenutno u izradi (italijanski, francuski,
+nemacki, ruski).
 
 Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
 """
@@ -18,6 +20,15 @@ from servisi import jezici
 
 _PRIKAZI_POPUP = None  # main._prikazi_popup_poruku
 
+# Jezici koji su vidljivi u dugmetu ali JOS NISU prevedeni - klik na
+# njih samo prikazuje poruku "U izradi", ne menja stvarni jezik app-a.
+JEZICI_U_IZRADI = {
+    "it": "Italiano 🇮🇹",
+    "fr": "Français 🇫🇷",
+    "de": "Deutsch 🇩🇪",
+    "ru": "Русский 🇷🇺",
+}
+
 
 def povezi(prikazi_popup_fn):
     """main.py poziva ovo jednom, odmah posle 'import ekran_jezici'."""
@@ -27,7 +38,7 @@ def povezi(prikazi_popup_fn):
 
 class JeziciScreen(Screen):
     tekst_trenutni = StringProperty("Izabrani jezik: Srpski")
-    
+
     def on_pre_enter(self, *args):
         """Osvezi prikaz trenutnog jezika pri ulasku na ekran"""
         lang = jezici.get_current_language()
@@ -37,11 +48,11 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Selected language: English 🇬🇧"
         else:
             self.tekst_trenutni = f"Current language: {lang.upper()}"
-    
+
     def promeni_jezici(self, lang_code):
         """Promeni jezik i osvezi ekran"""
         jezici.set_language(lang_code)
-        
+
         # Osvezi prikaz
         if lang_code == "sr":
             self.tekst_trenutni = "Izabrani jezik: Srpski 🇷🇸"
@@ -55,9 +66,21 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = f"Current language: {lang_code.upper()}"
             poruka_naslov = "Info"
             poruka_tekst = f"Language changed to {lang_code.upper()}!"
-        
+
         if _PRIKAZI_POPUP:
             _PRIKAZI_POPUP(poruka_naslov, poruka_tekst, size_hint=(0.8, 0.3))
+
+    def jezik_u_izradi(self, lang_code):
+        """Poziva se za jezike koji su samo najavljeni u listi, ali
+        prevod za njih jos nije ubacen u app. Ne menja stvarni jezik,
+        samo prikazuje poruku da je u izradi."""
+        naziv = JEZICI_U_IZRADI.get(lang_code, lang_code.upper())
+        if _PRIKAZI_POPUP:
+            _PRIKAZI_POPUP(
+                "U izradi",
+                f"{naziv}\n\nOvaj jezik je u izradi i uskoro ce biti dostupan.",
+                size_hint=(0.8, 0.35),
+            )
 
 
 JEZICI_KV = """
@@ -120,6 +143,41 @@ JEZICI_KV = """
                     size_hint_y: None
                     height: dp(52)
                     on_release: root.promeni_jezici("en")
+
+                FieldLabel:
+                    text: "U izradi / Coming soon:"
+
+                RoundButton:
+                    label_text: "Italiano 🇮🇹"
+                    tint: 0.50, 0.46, 0.40, 1
+                    text_color: 0.95, 0.96, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.jezik_u_izradi("it")
+
+                RoundButton:
+                    label_text: "Français 🇫🇷"
+                    tint: 0.50, 0.46, 0.40, 1
+                    text_color: 0.95, 0.96, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.jezik_u_izradi("fr")
+
+                RoundButton:
+                    label_text: "Deutsch 🇩🇪"
+                    tint: 0.50, 0.46, 0.40, 1
+                    text_color: 0.95, 0.96, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.jezik_u_izradi("de")
+
+                RoundButton:
+                    label_text: "Русский 🇷🇺"
+                    tint: 0.50, 0.46, 0.40, 1
+                    text_color: 0.95, 0.96, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.jezik_u_izradi("ru")
 
                 Widget:
 """
