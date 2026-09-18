@@ -1,8 +1,7 @@
 """
 ekran_jezici.py
-Ekran za izbor jezika - korisnik bira između srpskog, engleskog i
-jos 4 jezika koji su trenutno u izradi (italijanski, francuski,
-nemacki, ruski).
+Ekran za izbor jezika - korisnik bira izmedju srpskog, engleskog,
+italijanskog, francuskog, nemackog i ruskog jezika.
 
 Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
 """
@@ -22,12 +21,10 @@ _PRIKAZI_POPUP = None  # main._prikazi_popup_poruku
 
 # Jezici koji su vidljivi u dugmetu ali JOS NISU prevedeni - klik na
 # njih samo prikazuje poruku "U izradi", ne menja stvarni jezik app-a.
-JEZICI_U_IZRADI = {
-    "it": "Italiano 🇮🇹",
-    "fr": "Français 🇫🇷",
-    "de": "Deutsch 🇩🇪",
-    "ru": "Русский 🇷🇺",
-}
+# Trenutno su svi jezici prevedeni, pa je lista prazna. Ako se u
+# buduce doda novi jezik pre nego sto bude preveden, upisi ga ovde
+# (npr. "es": "Español 🇪🇸") i u dugmetu pozovi root.jezik_u_izradi("es").
+JEZICI_U_IZRADI = {}
 
 
 def povezi(prikazi_popup_fn):
@@ -46,10 +43,14 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Izabrani jezik: Srpski 🇷🇸"
         elif lang == "en":
             self.tekst_trenutni = "Selected language: English 🇬🇧"
+        elif lang == "it":
+            self.tekst_trenutni = "Lingua selezionata: Italiano 🇮🇹"
         elif lang == "fr":
             self.tekst_trenutni = "Langue sélectionnée : Français 🇫🇷"
         elif lang == "de":
             self.tekst_trenutni = "Ausgewählte Sprache: Deutsch 🇩🇪"
+        elif lang == "ru":
+            self.tekst_trenutni = "Выбранный язык: Русский 🇷🇺"
         else:
             self.tekst_trenutni = f"Current language: {lang.upper()}"
 
@@ -66,6 +67,10 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Selected language: English 🇬🇧"
             poruka_naslov = "Info"
             poruka_tekst = "Language changed to English!"
+        elif lang_code == "it":
+            self.tekst_trenutni = "Lingua selezionata: Italiano 🇮🇹"
+            poruka_naslov = "Info"
+            poruka_tekst = "Lingua cambiata in Italiano!"
         elif lang_code == "fr":
             self.tekst_trenutni = "Langue sélectionnée : Français 🇫🇷"
             poruka_naslov = "Info"
@@ -74,6 +79,10 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Ausgewählte Sprache: Deutsch 🇩🇪"
             poruka_naslov = "Info"
             poruka_tekst = "Sprache auf Deutsch geändert!"
+        elif lang_code == "ru":
+            self.tekst_trenutni = "Выбранный язык: Русский 🇷🇺"
+            poruka_naslov = "Инфо"
+            poruka_tekst = "Язык изменён на русский!"
         else:
             self.tekst_trenutni = f"Current language: {lang_code.upper()}"
             poruka_naslov = "Info"
@@ -156,9 +165,6 @@ JEZICI_KV = """
                     height: dp(52)
                     on_release: root.promeni_jezici("en")
 
-                FieldLabel:
-                    text: "U izradi / Coming soon:"
-
                 RoundButton:
                     label_text: "Italiano 🇮🇹"
                     tint: 0.36, 0.46, 0.64, 1
@@ -185,11 +191,11 @@ JEZICI_KV = """
 
                 RoundButton:
                     label_text: "Русский 🇷🇺"
-                    tint: 0.50, 0.46, 0.40, 1
+                    tint: 0.36, 0.46, 0.64, 1
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
                     height: dp(52)
-                    on_release: root.jezik_u_izradi("ru")
+                    on_release: root.promeni_jezici("ru")
 
                 Widget:
 """
