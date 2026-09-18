@@ -149,11 +149,11 @@ JEZICI_KV = """
 
                 RoundButton:
                     label_text: "Italiano 🇮🇹"
-                    tint: 0.50, 0.46, 0.40, 1
+                    tint: 0.36, 0.46, 0.64, 1
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
                     height: dp(52)
-                    on_release: root.jezik_u_izradi("it")
+                    on_release: root.promeni_jezici("it")
 
                 RoundButton:
                     label_text: "Français 🇫🇷"
