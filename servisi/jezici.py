@@ -211,6 +211,56 @@ def _load_language_preference():
         print(f"⚠️  Greška pri učitavanju jezika: {e}")
 
 
+# ============================================================
+# PREVOD NAZIVA TARIFA (Spinner u kalkulatoru i prikaz u
+# evidenciji). Interni (srpski) naziv se i dalje koristi za
+# racunanje cene i cuvanje u bazi - ovo je samo za prikaz.
+# ============================================================
+
+_TARIFA_NAZIVI = {
+    "Osnovna (07-22h)": {
+        "sr": "Osnovna (07-22h)",
+        "en": "Standard (07-22h)",
+        "it": "Standard (07-22h)",
+    },
+    "Nocna (22-07h)": {
+        "sr": "Nocna (22-07h)",
+        "en": "Night (22-07h)",
+        "it": "Notturna (22-07h)",
+    },
+    "Vikend": {
+        "sr": "Vikend",
+        "en": "Weekend",
+        "it": "Weekend",
+    },
+    "Aerodromski transfer": {
+        "sr": "Aerodromski transfer",
+        "en": "Airport transfer",
+        "it": "Transfer aeroporto",
+    },
+}
+
+
+def prevedi_tarifu(interni_naziv):
+    """Vrati prikazni naziv tarife na trenutnom jeziku za dati
+    interni (srpski) naziv tarife. Ako prevod ne postoji, vrati
+    interni naziv nepromenjen (bolje nego da app pukne)."""
+    prevodi = _TARIFA_NAZIVI.get(interni_naziv)
+    if not prevodi:
+        return interni_naziv
+    return prevodi.get(_CURRENT_LANG, prevodi.get("sr", interni_naziv))
+
+
+def tarifa_iz_prikaza(prikazani_naziv):
+    """Obrnuto od prevedi_tarifu - iz prikazanog (prevedenog) naziva
+    nadje interni (srpski) naziv tarife, koji se koristi za racunanje
+    cene i cuvanje u bazi."""
+    for interni, prevodi in _TARIFA_NAZIVI.items():
+        if prikazani_naziv in prevodi.values():
+            return interni
+    return prikazani_naziv
+
+
 # Javni alias - main.py poziva ovo pri pokretanju aplikacije da vrati
 # prethodno izabran jezik (funkcija iznad je zadrzana zbog postojecih
 # poziva/dokumentacije unutar ovog fajla).
