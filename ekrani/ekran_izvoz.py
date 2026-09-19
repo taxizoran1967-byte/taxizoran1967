@@ -1,7 +1,11 @@
 """
 ekran_izvoz.py
-Izvoz izvestaja u PDF (za stampu) i CSV (za Excel/knjigovodju), za
+Izvoz izvestaja u PDF (za stampu) i Excel (za knjigovodju), za
 proizvoljan period (dnevni/nedeljni/mesecni/polugodisnji/godisnji).
+
+Sav tekst u samim fajlovima (naslovi, zaglavlja tabela, nazivi Excel
+listova...) je na trenutno izabranom jeziku - tekstovi su u
+servisi/izvoz_tekstovi.py.
 
 Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
 """
@@ -10,12 +14,14 @@ import os
 import calendar
 import re
 from datetime import datetime, timedelta
+from xml.sax.saxutils import escape
 
 from kivy.uix.screenmanager import Screen
 from kivy.properties import StringProperty
 
 from servisi import database as db
 from servisi import jezici
+from servisi import izvoz_tekstovi as iz
 
 
 # ============================================================
@@ -55,6 +61,13 @@ def poveži(gorivo_obj, servis_obj, troskovi_obj, vozac_obj,
     _PRIKAZI_POPUP = prikazi_popup_fn
 
 
+def _adresa_za_prikaz(adresa):
+    """Adresa iz baze za prikaz u izvestaju. Tekst 'adresa nije
+    dostupna' (koji je app sama upisala na jeziku koji je tad bio
+    izabran) prikazuje na trenutnom jeziku; prazno -> '-'."""
+    return jezici.prevedi_sacuvano(adresa, "gps_voznja.adresa_nedostupna") or "-"
+
+
 def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla):
     """Pravi profesionalni Excel (.xlsx) izvestaj za knjigovodstvo, za
     isti period koji koristi i generisi_izvestaj_pdf().
@@ -69,6 +82,9 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
         ne samo gotovi brojevi - otvara se i moze da se proveri
         odakle dolazi svaki zbir, i automatski se osvezavaju ako
         neko naknadno rucno doda/izmeni po neki red.
+
+    Nazivi listova, zaglavlja i natpisi su na trenutno izabranom
+    jeziku (formule koriste te prevedene nazive listova).
 
     Iznosi su UVEK u RSD (dinarima), onako kako se cuvaju u bazi - bez
     obzira na to da li je u samoj app-i trenutno izabran prikaz u RSD
@@ -86,6 +102,13 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     servisi_period = _STAVKE_IZMEDJU(_SERVIS_REF.stavke, pocetak_str, kraj_str)
     troskovi_period = _STAVKE_IZMEDJU(_TROSKOVI_REF.stavke, pocetak_str, kraj_str)
 
+    # Nazivi listova na trenutnom jeziku
+    NAZ_PREGLED = iz.t("sheet_pregled")
+    NAZ_VOZNJE = iz.t("sheet_voznje")
+    NAZ_GORIVO = iz.t("sheet_gorivo")
+    NAZ_SERVISI = iz.t("sheet_servisi")
+    NAZ_TROSKOVI = iz.t("sheet_troskovi")
+
     FONT_ZAGLAVLJA = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
     FILL_ZAGLAVLJA = PatternFill(start_color="3A3560", end_color="3A3560", fill_type="solid")
     FONT_NASLOV = Font(name="Calibri", bold=True, size=16, color="3A3560")
@@ -99,6 +122,8 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
         top=Side(style="thin", color="CCCCCC"), bottom=Side(style="thin", color="CCCCCC"),
     )
     RSD = '#,##0.00" RSD"'
+    KM_FMT = '#,##0.0" ' + iz.t("u_km") + '"'
+    LITARA_FMT = '#,##0.00" ' + iz.t("u_l") + '"'
     DATUM_FMT = "yyyy-mm-dd"
 
     def _datum_celija(datum_str):
@@ -124,21 +149,23 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     # LIST: Voznje
     # ------------------------------------------------------------
     ws_v = wb.active
-    ws_v.title = "Voznje"
+    ws_v.title = NAZ_VOZNJE
     _list_sa_zaglavljem(
         ws_v,
-        ["R.br.", "Datum", "Pocetak", "Kraj", "Adresa polaska", "Adresa dolaska",
-         "Km", "Tarifa", "Cena/km", "Start taksa", "Ukupna cena", "Napomena"],
-        [6, 12, 9, 9, 32, 32, 8, 20, 10, 12, 13, 30],
+        [iz.t("h_rbr"), iz.t("h_datum"), iz.t("h_pocetak"), iz.t("h_kraj"),
+         iz.t("h_adresa_polaska"), iz.t("h_adresa_dolaska"),
+         iz.t("h_km"), iz.t("h_tarifa"), iz.t("h_cena_km"), iz.t("h_start_taksa"),
+         iz.t("h_ukupna_cena"), iz.t("h_napomena")],
+        [6, 12, 9, 9, 32, 32, 8, 22, 10, 14, 14, 30],
     )
     for i, v in enumerate(voznje, start=1):
         vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else "-"
         red = i + 1
         ws_v.append([
             i, _datum_celija(v["datum"]), vreme_pocetka, v["vreme"],
-            v["od_adresa"] or "-", v["do_adresa"] or "-",
-            v["km"], v["tarifa_naziv"], v["cena_po_km"], v["start_taksa"],
-            v["ukupna_cena"], v["napomena"] or "",
+            _adresa_za_prikaz(v["od_adresa"]), _adresa_za_prikaz(v["do_adresa"]),
+            v["km"], jezici.prevedi_tarifu(v["tarifa_naziv"]), v["cena_po_km"], v["start_taksa"],
+            v["ukupna_cena"], iz.prevedi_gps_napomenu(v["napomena"]) or "",
         ])
         ws_v.cell(row=red, column=2).number_format = DATUM_FMT
         ws_v.cell(row=red, column=7).number_format = "#,##0.0"
@@ -151,17 +178,18 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     # ------------------------------------------------------------
     # LIST: Gorivo
     # ------------------------------------------------------------
-    ws_g = wb.create_sheet("Gorivo")
+    ws_g = wb.create_sheet(NAZ_GORIVO)
     _list_sa_zaglavljem(
         ws_g,
-        ["R.br.", "Datum", "Tip", "Litara", "Km na pumpi", "Cena", "Napomena"],
-        [6, 12, 12, 10, 14, 13, 32],
+        [iz.t("h_rbr"), iz.t("h_datum"), iz.t("h_vrsta"), iz.t("h_litara"),
+         iz.t("h_km_pumpa"), iz.t("h_cena"), iz.t("h_napomena")],
+        [6, 12, 12, 10, 16, 13, 32],
     )
     gorivo_sortirano = sorted(gorivo_period, key=lambda s: s.get("datum", ""))
     for i, s in enumerate(gorivo_sortirano, start=1):
         red = i + 1
         ws_g.append([
-            i, _datum_celija(s.get("datum")), s.get("tip", "-"),
+            i, _datum_celija(s.get("datum")), iz.prevedi_tip_goriva(s.get("tip", "-")),
             s.get("litara", 0), s.get("km_pumpe") or "-", s.get("cena", 0),
             s.get("napomena") or "",
         ])
@@ -174,11 +202,12 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     # ------------------------------------------------------------
     # LIST: Servisi
     # ------------------------------------------------------------
-    ws_s = wb.create_sheet("Servisi")
+    ws_s = wb.create_sheet(NAZ_SERVISI)
     _list_sa_zaglavljem(
         ws_s,
-        ["R.br.", "Datum", "Vrsta servisa", "Kilometraza", "Cena", "Napomena"],
-        [6, 12, 26, 14, 13, 32],
+        [iz.t("h_rbr"), iz.t("h_datum"), iz.t("h_vrsta_servisa"),
+         iz.t("h_kilometraza"), iz.t("h_cena"), iz.t("h_napomena")],
+        [6, 12, 26, 16, 13, 32],
     )
     servisi_sortirano = sorted(servisi_period, key=lambda s: s.get("datum", ""))
     for i, s in enumerate(servisi_sortirano, start=1):
@@ -195,17 +224,17 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     # ------------------------------------------------------------
     # LIST: Troskovi
     # ------------------------------------------------------------
-    ws_t = wb.create_sheet("Troskovi")
+    ws_t = wb.create_sheet(NAZ_TROSKOVI)
     _list_sa_zaglavljem(
         ws_t,
-        ["R.br.", "Datum", "Vrsta", "Cena", "Napomena"],
+        [iz.t("h_rbr"), iz.t("h_datum"), iz.t("h_vrsta"), iz.t("h_cena"), iz.t("h_napomena")],
         [6, 12, 22, 13, 32],
     )
     troskovi_sortirano = sorted(troskovi_period, key=lambda s: s.get("datum", ""))
     for i, s in enumerate(troskovi_sortirano, start=1):
         red = i + 1
         ws_t.append([
-            i, _datum_celija(s.get("datum")), s.get("vrsta", "-"),
+            i, _datum_celija(s.get("datum")), iz.prevedi_vrstu_troska(s.get("vrsta", "-")),
             s.get("cena", 0), s.get("napomena") or "",
         ])
         ws_t.cell(row=red, column=2).number_format = DATUM_FMT
@@ -217,8 +246,8 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     # LIST: Pregled (summary) - formule preko celih kolona drugih
     # listova, tako da rade tacno bez obzira koliko redova ima.
     # ------------------------------------------------------------
-    ws_p = wb.create_sheet("Pregled", 0)
-    ws_p.column_dimensions["A"].width = 38
+    ws_p = wb.create_sheet(NAZ_PREGLED, 0)
+    ws_p.column_dimensions["A"].width = 44
     ws_p.column_dimensions["B"].width = 24
 
     ws_p.merge_cells("A1:B1")
@@ -226,25 +255,25 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     ws_p["A1"].font = FONT_NASLOV
 
     ws_p.merge_cells("A2:B2")
-    ws_p["A2"] = f"Period: {pocetak_str} do {kraj_str}"
+    ws_p["A2"] = iz.t("period", pocetak=pocetak_str, kraj=kraj_str)
     ws_p["A2"].font = FONT_PODNASLOV
 
     red = 4
 
     linije_vozaca = []
     if _VOZAC_REF.ime_prezime:
-        linije_vozaca.append(("Ime i prezime", _VOZAC_REF.ime_prezime))
+        linije_vozaca.append((iz.t("vozac_ime"), _VOZAC_REF.ime_prezime))
     if _VOZAC_REF.broj_licence:
-        linije_vozaca.append(("Licenca", _VOZAC_REF.broj_licence))
+        linije_vozaca.append((iz.t("vozac_licenca"), _VOZAC_REF.broj_licence))
     if _VOZAC_REF.telefon:
-        linije_vozaca.append(("Telefon", _VOZAC_REF.telefon))
+        linije_vozaca.append((iz.t("vozac_telefon"), _VOZAC_REF.telefon))
     if _VOZAC_REF.vozilo:
-        linije_vozaca.append(("Vozilo", _VOZAC_REF.vozilo))
+        linije_vozaca.append((iz.t("vozac_vozilo"), _VOZAC_REF.vozilo))
     if _VOZAC_REF.tablice:
-        linije_vozaca.append(("Tablice", _VOZAC_REF.tablice))
+        linije_vozaca.append((iz.t("vozac_tablice"), _VOZAC_REF.tablice))
 
     if linije_vozaca:
-        ws_p.cell(row=red, column=1, value="Podaci o vozacu").font = FONT_SEKCIJA
+        ws_p.cell(row=red, column=1, value=iz.t("podaci_vozaca")).font = FONT_SEKCIJA
         red += 1
         for naziv, vrednost in linije_vozaca:
             ws_p.cell(row=red, column=1, value=naziv)
@@ -252,7 +281,7 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
             red += 1
         red += 1
 
-    ws_p.cell(row=red, column=1, value="Zbirni pregled (formule - vidi ostale listove)").font = FONT_SEKCIJA
+    ws_p.cell(row=red, column=1, value=iz.t("zbirni_pregled")).font = FONT_SEKCIJA
     red += 1
 
     def _red_pregleda(naziv, formula, fmt=None, bold=False):
@@ -270,17 +299,19 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
         red += 1
         return vraceni_red
 
-    red_km = _red_pregleda("Ukupno predjeno (voznje)", "=SUM(Voznje!G:G)", fmt='#,##0.0" km"')
-    _red_pregleda("Broj voznji", "=COUNT(Voznje!G:G)")
-    red_bruto = _red_pregleda("Bruto zarada (voznje)", "=SUM(Voznje!K:K)", fmt=RSD, bold=True)
-    red_gorivo = _red_pregleda("Gorivo (trosak)", "=SUM(Gorivo!F:F)", fmt=RSD)
-    _red_pregleda("   od toga - litara goriva", "=SUM(Gorivo!D:D)", fmt='#,##0.00" l"')
-    red_servisi = _red_pregleda("Servisi (trosak)", "=SUM(Servisi!E:E)", fmt=RSD)
-    red_troskovi = _red_pregleda("Ostali troskovi", "=SUM(Troskovi!D:D)", fmt=RSD)
+    # Nazivi listova u formulama su u jednostrukim navodnicima, da rade
+    # i kad naziv ima razmak ili slova van engleske abecede (npr. ruski).
+    red_km = _red_pregleda(iz.t("x_ukupno_predjeno"), f"=SUM('{NAZ_VOZNJE}'!G:G)", fmt=KM_FMT)
+    _red_pregleda(iz.t("x_broj_voznji"), f"=COUNT('{NAZ_VOZNJE}'!G:G)")
+    red_bruto = _red_pregleda(iz.t("x_bruto"), f"=SUM('{NAZ_VOZNJE}'!K:K)", fmt=RSD, bold=True)
+    red_gorivo = _red_pregleda(iz.t("x_gorivo"), f"=SUM('{NAZ_GORIVO}'!F:F)", fmt=RSD)
+    _red_pregleda(iz.t("x_litara"), f"=SUM('{NAZ_GORIVO}'!D:D)", fmt=LITARA_FMT)
+    red_servisi = _red_pregleda(iz.t("x_servisi"), f"=SUM('{NAZ_SERVISI}'!E:E)", fmt=RSD)
+    red_troskovi = _red_pregleda(iz.t("x_troskovi"), f"=SUM('{NAZ_TROSKOVI}'!D:D)", fmt=RSD)
 
     red += 1
     ws_p.row_dimensions[red].height = 30
-    c1 = ws_p.cell(row=red, column=1, value="NETO (bruto zarada - gorivo - servisi - ostali troskovi)")
+    c1 = ws_p.cell(row=red, column=1, value=iz.t("x_neto"))
     c2 = ws_p.cell(row=red, column=2, value=f"=B{red_bruto}-B{red_gorivo}-B{red_servisi}-B{red_troskovi}")
     c1.font = FONT_NETO
     c1.fill = FILL_NETO
@@ -290,7 +321,7 @@ def generisi_izvestaj_excel(naslov_izvestaja, pocetak_str, kraj_str, putanja_faj
     c2.alignment = Alignment(vertical="center")
     c2.number_format = RSD
 
-    wb.active = wb.sheetnames.index("Pregled")
+    wb.active = wb.sheetnames.index(NAZ_PREGLED)
     wb.save(putanja_fajla)
 
     return len(voznje) + len(gorivo_period) + len(servisi_period) + len(troskovi_period)
@@ -306,7 +337,8 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
 
     Ista funkcija se koristi za dnevni, nedeljni, mesecni, polugodisnji
     i godisnji izvestaj - jedina razlika je koji se pocetak_str/
-    kraj_str prosledi (to racuna _izracunaj_period u IzvozPdfScreen)."""
+    kraj_str prosledi (to racuna _izracunaj_period u IzvozPdfScreen).
+    Sav tekst u PDF-u je na trenutno izabranom jeziku."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
@@ -314,6 +346,12 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     from reportlab.lib.styles import ParagraphStyle
 
     _REGISTRUJ_FONT_ZA_PDF()
+
+    def _p(tekst, stil):
+        """Paragraph tumaci tekst kao XML/HTML oznake, pa se znakovi
+        < > & moraju 'escape'-ovati (npr. '&' u nekoj adresi ili
+        napomeni inace moze da obori pravljenje PDF-a)."""
+        return Paragraph(escape(str(tekst)), stil)
 
     voznje = db.voznje_izmedju(pocetak_str, kraj_str)
     broj, prihod, km = db.zbir_voznji(voznje)
@@ -371,27 +409,28 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
         ])
 
     elementi = []
-    elementi.append(Paragraph(naslov_izvestaja, stil_naslov))
-    elementi.append(Paragraph(f"Period: {pocetak_str} do {kraj_str}", stil_podnaslov))
+    elementi.append(_p(naslov_izvestaja, stil_naslov))
+    elementi.append(_p(iz.t("period", pocetak=pocetak_str, kraj=kraj_str), stil_podnaslov))
 
     # ------------------------------------------------------------
     # PODACI O VOZACU
     # ------------------------------------------------------------
+    dvotacka = iz.t("dvotacka")
     linije_vozaca = []
     if _VOZAC_REF.ime_prezime:
-        linije_vozaca.append(f"Ime i prezime: {_VOZAC_REF.ime_prezime}")
+        linije_vozaca.append(f"{iz.t('vozac_ime')}{dvotacka}{_VOZAC_REF.ime_prezime}")
     if _VOZAC_REF.broj_licence:
-        linije_vozaca.append(f"Licenca: {_VOZAC_REF.broj_licence}")
+        linije_vozaca.append(f"{iz.t('vozac_licenca')}{dvotacka}{_VOZAC_REF.broj_licence}")
     if _VOZAC_REF.telefon:
-        linije_vozaca.append(f"Telefon: {_VOZAC_REF.telefon}")
+        linije_vozaca.append(f"{iz.t('vozac_telefon')}{dvotacka}{_VOZAC_REF.telefon}")
     if _VOZAC_REF.vozilo:
-        linije_vozaca.append(f"Vozilo: {_VOZAC_REF.vozilo}")
+        linije_vozaca.append(f"{iz.t('vozac_vozilo')}{dvotacka}{_VOZAC_REF.vozilo}")
     if _VOZAC_REF.tablice:
-        linije_vozaca.append(f"Tablice: {_VOZAC_REF.tablice}")
+        linije_vozaca.append(f"{iz.t('vozac_tablice')}{dvotacka}{_VOZAC_REF.tablice}")
 
     if linije_vozaca:
         elementi.append(Spacer(1, 3 * mm))
-        redovi_vozaca = [[Paragraph(linija, stil_vozac)] for linija in linije_vozaca]
+        redovi_vozaca = [[_p(linija, stil_vozac)] for linija in linije_vozaca]
         box_vozaca = Table(redovi_vozaca, colWidths=[80 * mm])
         box_vozaca.setStyle(TableStyle([
             ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#3a3560")),
@@ -406,29 +445,29 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
     # SERVISI u periodu
     # ------------------------------------------------------------
     elementi.append(Spacer(1, 10 * mm))
-    elementi.append(Paragraph("Servisi vozila u periodu", stil_naslov))
+    elementi.append(_p(iz.t("servisi_naslov"), stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
     ukupno_servis = 0.0
     if servisi_period:
         zaglavlje_servis = [
-            Paragraph("R.br.", stil_zaglavlje),
-            Paragraph("Datum", stil_zaglavlje),
-            Paragraph("Vrsta servisa", stil_zaglavlje),
-            Paragraph("Kilometraza", stil_zaglavlje),
-            Paragraph("Cena", stil_zaglavlje),
-            Paragraph("Napomena", stil_zaglavlje),
+            _p(iz.t("h_rbr"), stil_zaglavlje),
+            _p(iz.t("h_datum"), stil_zaglavlje),
+            _p(iz.t("h_vrsta_servisa"), stil_zaglavlje),
+            _p(iz.t("h_kilometraza"), stil_zaglavlje),
+            _p(iz.t("h_cena"), stil_zaglavlje),
+            _p(iz.t("h_napomena"), stil_zaglavlje),
         ]
         podaci_servis = [zaglavlje_servis]
         for i, s in enumerate(sorted(servisi_period, key=lambda s: s.get("datum", "")), start=1):
             km_s = s.get("km")
             podaci_servis.append([
-                Paragraph(str(i), stil_celija),
-                Paragraph(s.get("datum", "-"), stil_celija),
-                Paragraph(s.get("vrsta", "-"), stil_celija),
-                Paragraph(f"{km_s:g} km" if km_s else "-", stil_celija),
-                Paragraph(_FORMATIRAJ_CENU(s.get("cena", 0)), stil_celija),
-                Paragraph(s.get("napomena") or "-", stil_celija),
+                _p(str(i), stil_celija),
+                _p(s.get("datum", "-"), stil_celija),
+                _p(s.get("vrsta", "-"), stil_celija),
+                _p(iz.t("fmt_km", v=f"{km_s:g}") if km_s else "-", stil_celija),
+                _p(_FORMATIRAJ_CENU(s.get("cena", 0)), stil_celija),
+                _p(s.get("napomena") or "-", stil_celija),
             ])
             ukupno_servis += s.get("cena", 0)
 
@@ -437,34 +476,34 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
         tabela_servis.setStyle(_tabela_stil())
         elementi.append(tabela_servis)
         elementi.append(Spacer(1, 6 * mm))
-        elementi.append(Paragraph(f"Ukupno potroseno na servise u periodu: {_FORMATIRAJ_CENU(ukupno_servis)}", stil_zbir))
+        elementi.append(_p(iz.t("ukupno_servisi", iznos=_FORMATIRAJ_CENU(ukupno_servis)), stil_zbir))
     else:
-        elementi.append(Paragraph("Nema unetih servisa u ovom periodu.", stil_celija))
+        elementi.append(_p(iz.t("nema_servisa"), stil_celija))
 
     # ------------------------------------------------------------
     # OSTALI _TROSKOVI_REF u periodu (parking, putarina, pranje...)
     # ------------------------------------------------------------
     elementi.append(Spacer(1, 10 * mm))
-    elementi.append(Paragraph("Ostali troskovi u periodu", stil_naslov))
+    elementi.append(_p(iz.t("troskovi_naslov"), stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
     ukupno_troskovi = 0.0
     if troskovi_period:
         zaglavlje_troskovi = [
-            Paragraph("R.br.", stil_zaglavlje),
-            Paragraph("Datum", stil_zaglavlje),
-            Paragraph("Vrsta", stil_zaglavlje),
-            Paragraph("Cena", stil_zaglavlje),
-            Paragraph("Napomena", stil_zaglavlje),
+            _p(iz.t("h_rbr"), stil_zaglavlje),
+            _p(iz.t("h_datum"), stil_zaglavlje),
+            _p(iz.t("h_vrsta"), stil_zaglavlje),
+            _p(iz.t("h_cena"), stil_zaglavlje),
+            _p(iz.t("h_napomena"), stil_zaglavlje),
         ]
         podaci_troskovi = [zaglavlje_troskovi]
         for i, s in enumerate(sorted(troskovi_period, key=lambda s: s.get("datum", "")), start=1):
             podaci_troskovi.append([
-                Paragraph(str(i), stil_celija),
-                Paragraph(s.get("datum", "-"), stil_celija),
-                Paragraph(s.get("vrsta", "-"), stil_celija),
-                Paragraph(_FORMATIRAJ_CENU(s.get("cena", 0)), stil_celija),
-                Paragraph(s.get("napomena") or "-", stil_celija),
+                _p(str(i), stil_celija),
+                _p(s.get("datum", "-"), stil_celija),
+                _p(iz.prevedi_vrstu_troska(s.get("vrsta", "-")), stil_celija),
+                _p(_FORMATIRAJ_CENU(s.get("cena", 0)), stil_celija),
+                _p(s.get("napomena") or "-", stil_celija),
             ])
             ukupno_troskovi += s.get("cena", 0)
 
@@ -473,35 +512,35 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
         tabela_troskovi.setStyle(_tabela_stil())
         elementi.append(tabela_troskovi)
         elementi.append(Spacer(1, 6 * mm))
-        elementi.append(Paragraph(f"Ukupno ostalih troskova u periodu: {_FORMATIRAJ_CENU(ukupno_troskovi)}", stil_zbir))
+        elementi.append(_p(iz.t("ukupno_troskovi", iznos=_FORMATIRAJ_CENU(ukupno_troskovi)), stil_zbir))
     else:
-        elementi.append(Paragraph("Nema unetih ostalih troskova u ovom periodu.", stil_celija))
+        elementi.append(_p(iz.t("nema_troskova"), stil_celija))
 
     # ------------------------------------------------------------
     # POTROSNJA GORIVA + svi unosi goriva u periodu
     # ------------------------------------------------------------
     elementi.append(Spacer(1, 10 * mm))
-    elementi.append(Paragraph("Potrosnja goriva", stil_naslov))
+    elementi.append(_p(iz.t("potrosnja_naslov"), stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
     if intervali_perioda:
         zaglavlje_potrosnja = [
-            Paragraph("Datum", stil_zaglavlje),
-            Paragraph("Predjeno (od proslog sipanja)", stil_zaglavlje),
-            Paragraph("Sipano", stil_zaglavlje),
-            Paragraph("Potrosnja", stil_zaglavlje),
-            Paragraph("Cena sipanja", stil_zaglavlje),
+            _p(iz.t("h_datum"), stil_zaglavlje),
+            _p(iz.t("h_predjeno"), stil_zaglavlje),
+            _p(iz.t("h_sipano"), stil_zaglavlje),
+            _p(iz.t("h_potrosnja"), stil_zaglavlje),
+            _p(iz.t("h_cena_sipanja"), stil_zaglavlje),
         ]
         podaci_potrosnja = [zaglavlje_potrosnja]
         ukupno_km_potrosnja = 0.0
         ukupno_litara_potrosnja = 0.0
         for interval in intervali_perioda:
             podaci_potrosnja.append([
-                Paragraph(interval["datum"], stil_celija),
-                Paragraph(f"{interval['km_predjeno']:g} km", stil_celija),
-                Paragraph(f"{interval['litara']:g} l", stil_celija),
-                Paragraph(f"{interval['potrosnja']:.1f} l/100km", stil_celija),
-                Paragraph(_FORMATIRAJ_CENU(interval["cena"]), stil_celija),
+                _p(interval["datum"], stil_celija),
+                _p(iz.t("fmt_km", v=f"{interval['km_predjeno']:g}"), stil_celija),
+                _p(iz.t("fmt_l", v=f"{interval['litara']:g}"), stil_celija),
+                _p(iz.t("fmt_l100", v=f"{interval['potrosnja']:.1f}"), stil_celija),
+                _p(_FORMATIRAJ_CENU(interval["cena"]), stil_celija),
             ])
             ukupno_km_potrosnja += interval["km_predjeno"]
             ukupno_litara_potrosnja += interval["litara"]
@@ -514,46 +553,45 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
 
         if ukupno_km_potrosnja > 0:
             prosek = ukupno_litara_potrosnja / ukupno_km_potrosnja * 100
-            elementi.append(Paragraph(
-                f"Prosecna potrosnja za period: {prosek:.1f} l/100km "
-                f"({ukupno_litara_potrosnja:g} l na {ukupno_km_potrosnja:g} km)",
+            elementi.append(_p(
+                iz.t(
+                    "prosek_potrosnje",
+                    prosek=f"{prosek:.1f}",
+                    litara=f"{ukupno_litara_potrosnja:g}",
+                    km=f"{ukupno_km_potrosnja:g}",
+                ),
                 stil_zbir,
             ))
     else:
-        elementi.append(Paragraph(
-            "Nema izracunate potrosnje za ovaj period - potrebna su bar dva "
-            "uzastopna sipanja sa upisanom kilometrazom (km na pumpi), pri "
-            "cemu drugo od njih pada u izabrani period.",
-            stil_celija,
-        ))
+        elementi.append(_p(iz.t("nema_potrosnje"), stil_celija))
 
     elementi.append(Spacer(1, 8 * mm))
-    elementi.append(Paragraph("Gorivo - svi unosi u periodu", stil_naslov))
+    elementi.append(_p(iz.t("gorivo_naslov"), stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
     ukupno_gorivo_cena = 0.0
     ukupno_gorivo_litara = 0.0
     if gorivo_period:
         zaglavlje_gorivo = [
-            Paragraph("R.br.", stil_zaglavlje),
-            Paragraph("Datum", stil_zaglavlje),
-            Paragraph("Vrsta", stil_zaglavlje),
-            Paragraph("Litara", stil_zaglavlje),
-            Paragraph("Km na pumpi", stil_zaglavlje),
-            Paragraph("Cena", stil_zaglavlje),
-            Paragraph("Napomena", stil_zaglavlje),
+            _p(iz.t("h_rbr"), stil_zaglavlje),
+            _p(iz.t("h_datum"), stil_zaglavlje),
+            _p(iz.t("h_vrsta"), stil_zaglavlje),
+            _p(iz.t("h_litara"), stil_zaglavlje),
+            _p(iz.t("h_km_pumpa"), stil_zaglavlje),
+            _p(iz.t("h_cena"), stil_zaglavlje),
+            _p(iz.t("h_napomena"), stil_zaglavlje),
         ]
         podaci_gorivo = [zaglavlje_gorivo]
         for i, s in enumerate(sorted(gorivo_period, key=lambda s: s.get("datum", "")), start=1):
             km_pumpe = s.get("km_pumpe")
             podaci_gorivo.append([
-                Paragraph(str(i), stil_celija),
-                Paragraph(s.get("datum", "-"), stil_celija),
-                Paragraph(s.get("tip", "-"), stil_celija),
-                Paragraph(f"{s.get('litara', 0):g} l", stil_celija),
-                Paragraph(f"{km_pumpe:g} km" if km_pumpe else "-", stil_celija),
-                Paragraph(_FORMATIRAJ_CENU(s.get("cena", 0)), stil_celija),
-                Paragraph(s.get("napomena") or "-", stil_celija),
+                _p(str(i), stil_celija),
+                _p(s.get("datum", "-"), stil_celija),
+                _p(iz.prevedi_tip_goriva(s.get("tip", "-")), stil_celija),
+                _p(iz.t("fmt_l", v=f"{s.get('litara', 0):g}"), stil_celija),
+                _p(iz.t("fmt_km", v=f"{km_pumpe:g}") if km_pumpe else "-", stil_celija),
+                _p(_FORMATIRAJ_CENU(s.get("cena", 0)), stil_celija),
+                _p(s.get("napomena") or "-", stil_celija),
             ])
             ukupno_gorivo_cena += s.get("cena", 0)
             ukupno_gorivo_litara += s.get("litara", 0)
@@ -563,39 +601,39 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
         tabela_gorivo.setStyle(_tabela_stil())
         elementi.append(tabela_gorivo)
         elementi.append(Spacer(1, 6 * mm))
-        elementi.append(Paragraph(f"Ukupno potroseno na gorivo u periodu: {_FORMATIRAJ_CENU(ukupno_gorivo_cena)}", stil_zbir))
-        elementi.append(Paragraph(f"Ukupno litara u periodu: {ukupno_gorivo_litara:g} l", stil_zbir))
+        elementi.append(_p(iz.t("ukupno_gorivo", iznos=_FORMATIRAJ_CENU(ukupno_gorivo_cena)), stil_zbir))
+        elementi.append(_p(iz.t("ukupno_litara", litara=f"{ukupno_gorivo_litara:g}"), stil_zbir))
     else:
-        elementi.append(Paragraph("Nema unetih goriva u ovom periodu.", stil_celija))
+        elementi.append(_p(iz.t("nema_goriva"), stil_celija))
 
     # ------------------------------------------------------------
     # VOZNJE u periodu
     # ------------------------------------------------------------
     elementi.append(Spacer(1, 10 * mm))
-    elementi.append(Paragraph("Voznje u periodu", stil_naslov))
+    elementi.append(_p(iz.t("voznje_naslov"), stil_naslov))
     elementi.append(Spacer(1, 5 * mm))
 
     zaglavlje = [
-        Paragraph("R.br.", stil_zaglavlje),
-        Paragraph("Datum", stil_zaglavlje),
-        Paragraph("Pocetak", stil_zaglavlje),
-        Paragraph("Kraj", stil_zaglavlje),
-        Paragraph("Adresa polaska", stil_zaglavlje),
-        Paragraph("Adresa dolaska", stil_zaglavlje),
-        Paragraph("Cena", stil_zaglavlje),
+        _p(iz.t("h_rbr"), stil_zaglavlje),
+        _p(iz.t("h_datum"), stil_zaglavlje),
+        _p(iz.t("h_pocetak"), stil_zaglavlje),
+        _p(iz.t("h_kraj"), stil_zaglavlje),
+        _p(iz.t("h_adresa_polaska"), stil_zaglavlje),
+        _p(iz.t("h_adresa_dolaska"), stil_zaglavlje),
+        _p(iz.t("h_cena"), stil_zaglavlje),
     ]
     podaci_tabele = [zaglavlje]
 
     for i, v in enumerate(voznje, start=1):
         vreme_pocetka = v["vreme_pocetka"] if ("vreme_pocetka" in v.keys() and v["vreme_pocetka"]) else "-"
         red = [
-            Paragraph(str(i), stil_celija),
-            Paragraph(v["datum"], stil_celija),
-            Paragraph(vreme_pocetka, stil_celija),
-            Paragraph(v["vreme"], stil_celija),
-            Paragraph(v["od_adresa"] or "-", stil_celija),
-            Paragraph(v["do_adresa"] or "-", stil_celija),
-            Paragraph(_FORMATIRAJ_CENU(v["ukupna_cena"]), stil_celija),
+            _p(str(i), stil_celija),
+            _p(v["datum"], stil_celija),
+            _p(vreme_pocetka, stil_celija),
+            _p(v["vreme"], stil_celija),
+            _p(_adresa_za_prikaz(v["od_adresa"]), stil_celija),
+            _p(_adresa_za_prikaz(v["do_adresa"]), stil_celija),
+            _p(_FORMATIRAJ_CENU(v["ukupna_cena"]), stil_celija),
         ]
         podaci_tabele.append(red)
 
@@ -607,17 +645,14 @@ def generisi_izvestaj_pdf(naslov_izvestaja, pocetak_str, kraj_str, putanja_fajla
         elementi.append(tabela)
         elementi.append(Spacer(1, 8 * mm))
     else:
-        elementi.append(Paragraph("Nema voznji u ovom periodu.", stil_celija))
+        elementi.append(_p(iz.t("nema_voznji"), stil_celija))
         elementi.append(Spacer(1, 8 * mm))
 
-    elementi.append(Paragraph(f"Ukupan broj voznji: {broj}", stil_zbir))
-    elementi.append(Paragraph(f"Ukupno predjeno (voznje): {km:.1f} km", stil_zbir))
-    elementi.append(Paragraph(f"Ukupna zarada za period: {_FORMATIRAJ_CENU(prihod)}", stil_zbir))
+    elementi.append(_p(iz.t("ukupan_broj", broj=broj), stil_zbir))
+    elementi.append(_p(iz.t("ukupno_predjeno", km=f"{km:.1f}"), stil_zbir))
+    elementi.append(_p(iz.t("ukupna_zarada", iznos=_FORMATIRAJ_CENU(prihod)), stil_zbir))
     neto_ukupno = prihod - ukupno_gorivo_cena - ukupno_servis - ukupno_troskovi
-    elementi.append(Paragraph(
-        f"Neto (zarada - gorivo - servisi - ostali troskovi): {_FORMATIRAJ_CENU(neto_ukupno)}",
-        stil_zbir,
-    ))
+    elementi.append(_p(iz.t("neto", iznos=_FORMATIRAJ_CENU(neto_ukupno)), stil_zbir))
 
     doc.build(elementi)
 
@@ -629,6 +664,7 @@ def _izracunaj_period(tip, unos):
     'Polugodisnje', 'Godisnje') i teksta koji je korisnik uneo, vraca
     (pocetak_str, kraj_str, naslov) - pocetak/kraj u formatu GGGG-MM-DD,
     oba kraja ukljucena, spremni da se proslede generisi_izvestaj_pdf().
+    Naslov je na trenutno izabranom jeziku.
     Baca ValueError sa razumljivom porukom ako format unosa ne odgovara
     izabranom tipu perioda."""
     unos = unos.strip()
@@ -637,7 +673,7 @@ def _izracunaj_period(tip, unos):
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", unos):
             raise ValueError(jezici._t("izvoz.greska_format_dan"))
         pocetak = kraj = unos
-        naslov = f"Dnevni izvestaj - {unos}"
+        naslov = iz.t("naslov_dnevno", datum=unos)
         return pocetak, kraj, naslov
 
     if tip == "Nedeljno":
@@ -651,7 +687,7 @@ def _izracunaj_period(tip, unos):
         kraj_dt = pocetak_dt + timedelta(days=6)
         pocetak = pocetak_dt.strftime("%Y-%m-%d")
         kraj = kraj_dt.strftime("%Y-%m-%d")
-        naslov = f"Nedeljni izvestaj - {pocetak} do {kraj}"
+        naslov = iz.t("naslov_nedeljno", pocetak=pocetak, kraj=kraj)
         return pocetak, kraj, naslov
 
     if tip == "Mesecno":
@@ -664,7 +700,7 @@ def _izracunaj_period(tip, unos):
         pocetak = f"{godina_str}-{mesec_str}-01"
         poslednji_dan = calendar.monthrange(godina_i, mesec_i)[1]
         kraj = f"{godina_str}-{mesec_str}-{poslednji_dan:02d}"
-        naslov = f"Mesecni izvestaj - {unos}"
+        naslov = iz.t("naslov_mesecno", mesec=unos)
         return pocetak, kraj, naslov
 
     if tip == "Polugodisnje":
@@ -674,11 +710,11 @@ def _izracunaj_period(tip, unos):
         if pol_str == "1":
             pocetak = f"{godina_str}-01-01"
             kraj = f"{godina_str}-06-30"
-            naslov = f"Polugodisnji izvestaj - {godina_str} (januar-jun)"
+            naslov = iz.t("naslov_polug1", godina=godina_str)
         else:
             pocetak = f"{godina_str}-07-01"
             kraj = f"{godina_str}-12-31"
-            naslov = f"Polugodisnji izvestaj - {godina_str} (jul-decembar)"
+            naslov = iz.t("naslov_polug2", godina=godina_str)
         return pocetak, kraj, naslov
 
     if tip == "Godisnje":
@@ -686,7 +722,7 @@ def _izracunaj_period(tip, unos):
             raise ValueError(jezici._t("izvoz.greska_format_god"))
         pocetak = f"{unos}-01-01"
         kraj = f"{unos}-12-31"
-        naslov = f"Godisnji izvestaj - {unos}"
+        naslov = iz.t("naslov_godisnje", godina=unos)
         return pocetak, kraj, naslov
 
     raise ValueError(jezici._t("izvoz.greska_nepoznat_tip"))
