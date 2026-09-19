@@ -60,8 +60,18 @@ class KalkulatorScreen(Screen):
 
     @property
     def tarife_lista(self):
-        return list(_DEFAULT_TARIFE.keys())
+        """Nazivi tarifa PREVEDENI na trenutni jezik (za prikaz u
+        Spinner-u). Interni nazivi (srpski kljucevi iz _DEFAULT_TARIFE)
+        se koriste samo za racunanje i cuvanje - vidi _tarifa_kljuc()."""
+        return [jezici.prevedi_tarifu(k) for k in _DEFAULT_TARIFE.keys()]
+
     editing_id = None
+
+    def _tarifa_kljuc(self):
+        """Vraca INTERNI (srpski) naziv tarife koja je trenutno izabrana
+        u Spinner-u - to je naziv koji se koristi za racunanje cene i
+        koji se cuva u bazi uz voznju."""
+        return jezici.tarifa_iz_prikaza(self.ids.spinner_tarifa.text)
 
     def on_pre_enter(self, *args):
         self._osvezi_prevod()
@@ -74,8 +84,8 @@ class KalkulatorScreen(Screen):
             self.ids.input_do.text = v.get("do_adresa") or ""
             self.ids.input_napomena.text = v.get("napomena") or ""
             tarifa = v.get("tarifa_naziv")
-            if tarifa in self.tarife_lista and "spinner_tarifa" in self.ids:
-                self.ids.spinner_tarifa.text = tarifa
+            if tarifa in _DEFAULT_TARIFE and "spinner_tarifa" in self.ids:
+                self.ids.spinner_tarifa.text = jezici.prevedi_tarifu(tarifa)
             self.dugme_tekst = jezici._t("kalkulator.sacuvaj_izmenu")
             self.izracunaj()
             EDIT_VOZNJA = None
@@ -83,7 +93,7 @@ class KalkulatorScreen(Screen):
             self.editing_id = None
             self.dugme_tekst = jezici._t("kalkulator.sacuvaj_voznju")
             if _CENE_REF.nocna_aktivna and "spinner_tarifa" in self.ids:
-                self.ids.spinner_tarifa.text = "Nocna (22-07h)"
+                self.ids.spinner_tarifa.text = jezici.prevedi_tarifu("Nocna (22-07h)")
                 self.izracunaj()
 
     def _osvezi_prevod(self):
@@ -99,6 +109,15 @@ class KalkulatorScreen(Screen):
         self.hint_od = jezici._t("kalkulator.od_hint")
         self.hint_do = jezici._t("kalkulator.do_hint")
         self.hint_napomena = jezici._t("kalkulator.napomena_hint")
+
+        # Spinner tarifa: osvezi nazive na trenutni jezik, ali zadrzi
+        # istu izabranu tarifu (prepoznaje se preko internog naziva).
+        spinner = self.ids.get("spinner_tarifa")
+        if spinner is not None:
+            izabrana = jezici.tarifa_iz_prikaza(spinner.text)
+            spinner.values = self.tarife_lista
+            spinner.text = jezici.prevedi_tarifu(izabrana)
+
         if not self.ids.input_km.text:
             self.tekst_cene = jezici._t("kalkulator.unesi_km")
 
@@ -108,7 +127,7 @@ class KalkulatorScreen(Screen):
         except (ValueError, AttributeError):
             self.tekst_cene = jezici._t("kalkulator.unesi_km")
             return
-        tarifa_naziv = self.ids.spinner_tarifa.text
+        tarifa_naziv = self._tarifa_kljuc()
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
         ukupno = _CENE_REF.start_fee + km * cena_po_km
         self.tekst_cene = jezici._t(
@@ -129,7 +148,8 @@ class KalkulatorScreen(Screen):
             self._poruka(jezici._t("kalkulator.km_veca_od_nule"))
             return
 
-        tarifa_naziv = self.ids.spinner_tarifa.text
+        # U bazu ide INTERNI (srpski) naziv tarife, ne preveden.
+        tarifa_naziv = self._tarifa_kljuc()
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
         ukupno = _CENE_REF.start_fee + km * cena_po_km
 
@@ -164,7 +184,7 @@ class KalkulatorScreen(Screen):
             self._poruka(jezici._t("kalkulator.sacuvano", cena=_FORMATIRAJ_CENU(ukupno)))
 
     def _poruka(self, tekst):
-        _PRIKAZI_POPUP("Info", tekst, size_hint=(0.8, 0.3))
+        _PRIKAZI_POPUP(jezici._t("buttons.info"), tekst, size_hint=(0.8, 0.3))
 
 KALKULATOR_KV = """
 # ============================================================
@@ -222,7 +242,7 @@ KALKULATOR_KV = """
 
                 PastelTextInput:
                     id: input_km
-                    hint_text: "npr. 8.5"
+                    hint_text: "8.5"
                     input_filter: "float"
                     on_text: root.izracunaj()
 

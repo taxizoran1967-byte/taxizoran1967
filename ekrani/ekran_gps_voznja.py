@@ -119,7 +119,7 @@ def reverse_geocode(lat, lon, callback, dijagnoza_callback=None):
         if not adresa:
             adresa = _osm_pokusaj(dnevnik)
         if not adresa:
-            adresa = "Adresa nije dostupna"
+            adresa = jezici._t("gps_voznja.adresa_nedostupna")
         Clock.schedule_once(lambda dt: callback(adresa))
         if dijagnoza_callback and dnevnik:
             tekst = "\n".join(dnevnik)

@@ -150,8 +150,15 @@ class EvidencijaScreen(Screen):
         self.ucitaj_voznje()
 
     def _napravi_red(self, v):
-        od = v["od_adresa"] or "-"
-        do = v["do_adresa"] or "-"
+        # Adresa "nije dostupna" je tekst koji je app sama upisala u bazu
+        # na jeziku koji je tad bio izabran - ovde se prikazuje na
+        # trenutnom jeziku.
+        od = jezici.prevedi_sacuvano(v["od_adresa"], "gps_voznja.adresa_nedostupna") or "-"
+        do = jezici.prevedi_sacuvano(v["do_adresa"], "gps_voznja.adresa_nedostupna") or "-"
+
+        # Naziv tarife se u bazi cuva na srpskom (interni kljuc) - za
+        # prikaz se prevodi na trenutni jezik.
+        tarifa = jezici.prevedi_tarifu(v["tarifa_naziv"])
 
         vreme_pocetka = v["vreme_pocetka"] if "vreme_pocetka" in v.keys() else None
         if vreme_pocetka:
@@ -161,7 +168,7 @@ class EvidencijaScreen(Screen):
 
         opis = (
             f"[b]{v['datum']}[/b]  {vreme_txt}\n"
-            f"{v['km']:g} km  |  {v['tarifa_naziv']}\n"
+            f"{v['km']:g} km  |  {tarifa}\n"
             f"{od}\n-> {do}\n"
             f"[color=cc8a00][b]{_FORMATIRAJ_CENU(v['ukupna_cena'])}[/b][/color]"
         )
