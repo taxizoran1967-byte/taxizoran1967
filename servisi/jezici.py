@@ -222,21 +222,33 @@ _TARIFA_NAZIVI = {
         "sr": "Osnovna (07-22h)",
         "en": "Standard (07-22h)",
         "it": "Standard (07-22h)",
+        "fr": "Standard (07h-22h)",
+        "de": "Standard (07-22 Uhr)",
+        "ru": "Стандартный (07-22ч)",
     },
     "Nocna (22-07h)": {
         "sr": "Nocna (22-07h)",
         "en": "Night (22-07h)",
         "it": "Notturna (22-07h)",
+        "fr": "Nuit (22h-07h)",
+        "de": "Nacht (22-07 Uhr)",
+        "ru": "Ночной (22-07ч)",
     },
     "Vikend": {
         "sr": "Vikend",
         "en": "Weekend",
         "it": "Weekend",
+        "fr": "Week-end",
+        "de": "Wochenende",
+        "ru": "Выходные",
     },
     "Aerodromski transfer": {
         "sr": "Aerodromski transfer",
         "en": "Airport transfer",
         "it": "Transfer aeroporto",
+        "fr": "Transfert aéroport",
+        "de": "Flughafentransfer",
+        "ru": "Трансфер в аэропорт",
     },
 }
 
