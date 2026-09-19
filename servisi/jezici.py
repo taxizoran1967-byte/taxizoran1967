@@ -261,6 +261,25 @@ def tarifa_iz_prikaza(prikazani_naziv):
     return prikazani_naziv
 
 
+def prevedi_sacuvano(vrednost, kljuc_path):
+    """Za tekst koji je APP SAMA upisala u bazu u trenutku snimanja
+    (npr. 'Adresa nije dostupna' ako GPS nije uspeo da nadje adresu) -
+    taj tekst je zapisan na jeziku koji je tada bio aktivan i ostaje
+    takav zauvek u bazi. Ova funkcija proverava da li 'vrednost'
+    odgovara prevodu kljuca 'kljuc_path' na BILO KOM od dostupnih
+    jezika, i ako da - vraca prevod tog kljuca na TRENUTNI jezik (da
+    stari zapisi izgledaju "prevedeno" i u novom jeziku). Ako vrednost
+    ne odgovara nijednom prevodu (znaci da je to prava adresa koju je
+    korisnik uneo ili GPS pronasao), vraca je nepromenjenu."""
+    if not vrednost:
+        return vrednost
+    kljucevi = kljuc_path.split(".")
+    for lang_translations in _TRANSLATIONS.values():
+        if _get_nested(lang_translations, kljucevi) == vrednost:
+            return _t(kljuc_path)
+    return vrednost
+
+
 # Javni alias - main.py poziva ovo pri pokretanju aplikacije da vrati
 # prethodno izabran jezik (funkcija iznad je zadrzana zbog postojecih
 # poziva/dokumentacije unutar ovog fajla).
