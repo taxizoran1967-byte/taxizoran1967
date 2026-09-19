@@ -125,7 +125,7 @@ class UputstvoScreen(Screen):
                 text=f"[b]{naslov_sekcije}[/b]",
                 markup=True,
                 font_size="16sp",
-                color=(0.227, 0.208, 0.376, 1),
+                color=(1, 0.92, 0.6, 1),
                 size_hint_y=None,
                 halign="left",
                 valign="middle",
@@ -140,7 +140,7 @@ class UputstvoScreen(Screen):
                 pasus_lbl = Label(
                     text=pasus,
                     font_size="13sp",
-                    color=(0.15, 0.15, 0.18, 1),
+                    color=(0.88, 0.88, 0.96, 1),
                     size_hint_y=None,
                     halign="left",
                     valign="top",
