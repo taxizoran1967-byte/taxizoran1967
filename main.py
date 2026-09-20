@@ -1102,9 +1102,18 @@ ScreenManager:
         GlobusDugme:
             source: "assets/icons/language_globus.png"
             size_hint: None, None
-            size: dp(25), dp(25)
-            pos_hint: {"right": 0.96, "y": 0.02}
+            size: dp(50), dp(50)
+            pos_hint: {"center_x": 0.88, "y": 0.06}
             on_release: app.root.current = "jezici"
+
+        Label:
+            text: "Language"
+            font_size: '11sp'
+            bold: True
+            color: 0.94, 0.93, 0.98, 1
+            size_hint: None, None
+            size: dp(70), dp(16)
+            pos_hint: {"center_x": 0.88, "y": 0.03}
 
 
 <PodesavanjaScreen>:
@@ -1515,6 +1524,22 @@ def _zapisi_gresku(tekst):
     try:
         with open(
             _crash_log_path(),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(tekst)
+
+    except Exception:
+        pass
+
+    # Kopija u javnom folderu (Preuzimanja/TaksiApp/crash_log.txt)
+    # da moze da se otvori i posalje kada aplikacija pukne.
+    try:
+        folder = _putanja_backup_foldera()
+        os.makedirs(folder, exist_ok=True)
+
+        with open(
+            os.path.join(folder, "crash_log.txt"),
             "w",
             encoding="utf-8",
         ) as f:
