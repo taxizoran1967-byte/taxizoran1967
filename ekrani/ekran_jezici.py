@@ -53,11 +53,11 @@ class JeziciScreen(Screen):
         elif lang == "ru":
             self.tekst_trenutni = "Выбранный язык: Русский 🇷🇺"
         elif lang == "pl":
-            self.tekst_trenutni = "Wybrany język: Polski 🇵🇱"
+            self.tekst_trenutni = "Wybrany język: Polski"
         elif lang == "tr":
-            self.tekst_trenutni = "Seçilen dil: Türkçe 🇹🇷"
+            self.tekst_trenutni = "Seçilen dil: Türkçe"
         elif lang == "es":
-            self.tekst_trenutni = "Idioma seleccionado: Español 🇪🇸"
+            self.tekst_trenutni = "Idioma seleccionado: Español"
         else:
             self.tekst_trenutni = f"Current language: {lang.upper()}"
 
@@ -91,15 +91,15 @@ class JeziciScreen(Screen):
             poruka_naslov = "Инфо"
             poruka_tekst = "Язык изменён на русский!"
         elif lang_code == "pl":
-            self.tekst_trenutni = "Wybrany język: Polski 🇵🇱"
+            self.tekst_trenutni = "Wybrany język: Polski"
             poruka_naslov = "Info"
             poruka_tekst = "Język zmieniono na polski!"
         elif lang_code == "tr":
-            self.tekst_trenutni = "Seçilen dil: Türkçe 🇹🇷"
+            self.tekst_trenutni = "Seçilen dil: Türkçe"
             poruka_naslov = "Bilgi"
             poruka_tekst = "Dil Türkçe olarak değiştirildi!"
         elif lang_code == "es":
-            self.tekst_trenutni = "Idioma seleccionado: Español 🇪🇸"
+            self.tekst_trenutni = "Idioma seleccionado: Español"
             poruka_naslov = "Info"
             poruka_tekst = "¡Idioma cambiado a español!"
         else:
@@ -217,7 +217,7 @@ JEZICI_KV = """
                     on_release: root.promeni_jezici("ru")
 
                 RoundButton:
-                    label_text: "Polski 🇵🇱"
+                    label_text: "Polski"
                     tint: 0.36, 0.46, 0.64, 1
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
@@ -225,7 +225,7 @@ JEZICI_KV = """
                     on_release: root.promeni_jezici("pl")
 
                 RoundButton:
-                    label_text: "Türkçe 🇹🇷"
+                    label_text: "Türkçe"
                     tint: 0.36, 0.46, 0.64, 1
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
@@ -233,7 +233,7 @@ JEZICI_KV = """
                     on_release: root.promeni_jezici("tr")
 
                 RoundButton:
-                    label_text: "Español 🇪🇸"
+                    label_text: "Español"
                     tint: 0.36, 0.46, 0.64, 1
                     text_color: 0.95, 0.96, 1, 1
                     size_hint_y: None
