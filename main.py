@@ -44,7 +44,6 @@ from kivy.properties import (
     ListProperty,
     NumericProperty,
 )
-from kivy.core.text import Label as CoreLabel
 from datetime import datetime, timedelta, time as dt_time
 from servisi import database as db
 from servisi import grafik_zarade
@@ -782,6 +781,33 @@ BACKGROUND_IMG = (
 # AUTOMATSKO PRILAGODJAVANJE VELICINE SLOVA (za nazive ikona)
 # ============================================================
 
+def _tekst_staje(tekst, sirina_dp, velicina_sp, max_linija):
+    """Grubo racuna da li tekst staje u max_linija redova.
+    Bez crtanja - samo racun po broju slova (bezbedno na svim telefonima)."""
+
+    sirina_slova = velicina_sp * 0.64  # prosecna sirina podebljanog slova
+    max_slova_u_redu = sirina_dp / sirina_slova
+
+    linije = 1
+    trenutno = 0
+
+    for rec in tekst.split():
+        duzina = len(rec)
+
+        if duzina > max_slova_u_redu:
+            return False  # jedna rec je sama preduga za red
+
+        if trenutno == 0:
+            trenutno = duzina
+        elif trenutno + 1 + duzina <= max_slova_u_redu:
+            trenutno += 1 + duzina
+        else:
+            linije += 1
+            trenutno = duzina
+
+    return linije <= max_linija
+
+
 def _najveci_font_koji_staje(
     tekst,
     sirina_px,
@@ -793,32 +819,14 @@ def _najveci_font_koji_staje(
     max_linija redova u zadatoj sirini. Ako ne staje ni pri
     najmanjoj, vraca najmanju."""
 
-    if not tekst or sirina_px <= 0:
-        return maks_sp
-
     try:
+        if not tekst or sirina_px <= 0:
+            return maks_sp
+
+        sirina_dp = sirina_px / dp(1)
+
         for velicina in range(maks_sp, min_sp - 1, -1):
-            px = sp(velicina)
-
-            jedan = CoreLabel(
-                text="Ag",
-                font_size=px,
-                bold=True,
-            )
-            jedan.refresh()
-            visina_jednog = jedan.texture.size[1]
-
-            vise = CoreLabel(
-                text=tekst,
-                font_size=px,
-                bold=True,
-                text_size=(sirina_px, None),
-                halign="center",
-            )
-            vise.refresh()
-            visina_teksta = vise.texture.size[1]
-
-            if visina_teksta < visina_jednog * (max_linija + 0.5):
+            if _tekst_staje(tekst, sirina_dp, velicina, max_linija):
                 return velicina
 
     except Exception:
@@ -1357,19 +1365,23 @@ class HomeMenuButton(
         Clock.schedule_once(self._prilagodi_font, 0)
 
     def _prilagodi_font(self, *args):
-        # Sirina teksta = sirina dugmeta minus levi i desni padding (4+4 dp)
-        sirina = self.width - dp(8)
+        try:
+            # Sirina teksta = sirina dugmeta minus levi i desni padding (4+4 dp)
+            sirina = self.width - dp(8)
 
-        if sirina < dp(40):
-            return
+            if sirina < dp(40):
+                return
 
-        nova = _najveci_font_koji_staje(
-            self.tekst,
-            sirina,
-        )
+            nova = _najveci_font_koji_staje(
+                self.tekst,
+                sirina,
+            )
 
-        if nova != self.velicina_fonta:
-            self.velicina_fonta = nova
+            if nova != self.velicina_fonta:
+                self.velicina_fonta = nova
+
+        except Exception:
+            pass
 
 
 class ScreenRoot(BoxLayout):
@@ -1620,6 +1632,22 @@ def _zapisi_gresku(tekst):
     try:
         with open(
             _crash_log_path(),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(tekst)
+
+    except Exception:
+        pass
+
+    # Kopija u javnom folderu (Preuzimanja/TaksiApp/crash_log.txt)
+    # da moze da se otvori i posalje kada aplikacija pukne.
+    try:
+        folder = _putanja_backup_foldera()
+        os.makedirs(folder, exist_ok=True)
+
+        with open(
+            os.path.join(folder, "crash_log.txt"),
             "w",
             encoding="utf-8",
         ) as f:
