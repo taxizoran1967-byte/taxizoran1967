@@ -1,3 +1,32 @@
+# ---- RANI ZAPIS GRESKE (hvata i greske pri samom pokretanju) ----
+import sys as _sys
+import traceback as _tb
+import os as _os
+
+
+def _rani_crash_log(exc_type, exc_value, exc_tb):
+    tekst = "".join(_tb.format_exception(exc_type, exc_value, exc_tb))
+    for folder in (
+        "/storage/emulated/0/Download/TaksiApp",
+        _os.path.join(_os.path.expanduser("~"), "TaksiApp"),
+    ):
+        try:
+            _os.makedirs(folder, exist_ok=True)
+            with open(
+                _os.path.join(folder, "crash_log.txt"),
+                "w",
+                encoding="utf-8",
+            ) as f:
+                f.write(tekst)
+            break
+        except Exception:
+            continue
+    _sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+
+_sys.excepthook = _rani_crash_log
+# ------------------------------------------------------------------
+
 """
 Taksi App - licna aplikacija za taksistu
 Kalkulator cene, evidencija voznji, dnevni/mesecni izvestaj zarade.
@@ -30,7 +59,7 @@ from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
-from kivy.metrics import dp, sp
+from kivy.metrics import dp
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -38,12 +67,7 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-from kivy.properties import (
-    StringProperty,
-    BooleanProperty,
-    ListProperty,
-    NumericProperty,
-)
+from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from datetime import datetime, timedelta, time as dt_time
 from servisi import database as db
 from servisi import grafik_zarade
@@ -778,70 +802,11 @@ BACKGROUND_IMG = (
 
 
 # ============================================================
-# AUTOMATSKO PRILAGODJAVANJE VELICINE SLOVA (za nazive ikona)
-# ============================================================
-
-def _tekst_staje(tekst, sirina_dp, velicina_sp, max_linija):
-    """Grubo racuna da li tekst staje u max_linija redova.
-    Bez crtanja - samo racun po broju slova (bezbedno na svim telefonima)."""
-
-    sirina_slova = velicina_sp * 0.64  # prosecna sirina podebljanog slova
-    max_slova_u_redu = sirina_dp / sirina_slova
-
-    linije = 1
-    trenutno = 0
-
-    for rec in tekst.split():
-        duzina = len(rec)
-
-        if duzina > max_slova_u_redu:
-            return False  # jedna rec je sama preduga za red
-
-        if trenutno == 0:
-            trenutno = duzina
-        elif trenutno + 1 + duzina <= max_slova_u_redu:
-            trenutno += 1 + duzina
-        else:
-            linije += 1
-            trenutno = duzina
-
-    return linije <= max_linija
-
-
-def _najveci_font_koji_staje(
-    tekst,
-    sirina_px,
-    max_linija=2,
-    maks_sp=16,
-    min_sp=9,
-):
-    """Vraca najvecu velicinu slova (u sp) pri kojoj tekst staje u
-    max_linija redova u zadatoj sirini. Ako ne staje ni pri
-    najmanjoj, vraca najmanju."""
-
-    try:
-        if not tekst or sirina_px <= 0:
-            return maks_sp
-
-        sirina_dp = sirina_px / dp(1)
-
-        for velicina in range(maks_sp, min_sp - 1, -1):
-            if _tekst_staje(tekst, sirina_dp, velicina, max_linija):
-                return velicina
-
-    except Exception:
-        return maks_sp
-
-    return min_sp
-
-
-# ============================================================
 # KV
 # ============================================================
 
 KV = """
 #:import dp kivy.metrics.dp
-#:import sp kivy.metrics.sp
 
 ScreenManager:
     LockScreen:
@@ -1081,7 +1046,7 @@ ScreenManager:
 
     Label:
         text: root.tekst
-        font_size: sp(root.velicina_fonta)
+        font_size: '16sp'
         bold: True
         color: 0.94, 0.93, 0.98, 1
         halign: "center"
@@ -1105,29 +1070,6 @@ ScreenManager:
 <GlobusDugme@ButtonBehavior+Image>:
     allow_stretch: True
     keep_ratio: True
-
-
-<GlobusMeni@ButtonBehavior+BoxLayout>:
-    orientation: "vertical"
-    spacing: dp(2)
-
-    Image:
-        source: "assets/icons/language_globus.png"
-        allow_stretch: True
-        keep_ratio: True
-        size_hint_y: None
-        height: dp(50)
-
-    Label:
-        text: "Language"
-        font_size: '11sp'
-        bold: True
-        color: 0.94, 0.93, 0.98, 1
-        halign: "center"
-        valign: "middle"
-        text_size: self.size
-        size_hint_y: None
-        height: dp(16)
 
 
 <HomeScreen>:
@@ -1186,11 +1128,21 @@ ScreenManager:
                         tekst: root.tekst_uputstvo
                         on_release: app.root.current = "uputstvo"
 
-        GlobusMeni:
+        GlobusDugme:
+            source: "assets/icons/language_globus.png"
             size_hint: None, None
-            size: dp(70), dp(72)
-            pos_hint: {"right": 0.97, "y": 0.035}
+            size: dp(50), dp(50)
+            pos_hint: {"center_x": 0.88, "y": 0.06}
             on_release: app.root.current = "jezici"
+
+        Label:
+            text: "Language"
+            font_size: '11sp'
+            bold: True
+            color: 0.94, 0.93, 0.98, 1
+            size_hint: None, None
+            size: dp(70), dp(16)
+            pos_hint: {"center_x": 0.88, "y": 0.03}
 
 
 <PodesavanjaScreen>:
@@ -1347,41 +1299,10 @@ class HomeMenuButton(
     ButtonBehavior,
     BoxLayout
 ):
-    """Dugme na pocetnom ekranu i u podesavanjima.
-
-    Velicina slova se sama smanjuje ako je naziv (na bilo kom jeziku)
-    predug da stane u dva reda, da se slova ne preklapaju."""
+    """Dugme na pocetnom ekranu."""
 
     icon_src = StringProperty("")
     tekst = StringProperty("")
-    velicina_fonta = NumericProperty(16)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.bind(
-            tekst=self._prilagodi_font,
-            width=self._prilagodi_font,
-        )
-        Clock.schedule_once(self._prilagodi_font, 0)
-
-    def _prilagodi_font(self, *args):
-        try:
-            # Sirina teksta = sirina dugmeta minus levi i desni padding (4+4 dp)
-            sirina = self.width - dp(8)
-
-            if sirina < dp(40):
-                return
-
-            nova = _najveci_font_koji_staje(
-                self.tekst,
-                sirina,
-            )
-
-            if nova != self.velicina_fonta:
-                self.velicina_fonta = nova
-
-        except Exception:
-            pass
 
 
 class ScreenRoot(BoxLayout):
