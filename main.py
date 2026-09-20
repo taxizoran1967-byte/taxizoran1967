@@ -42,10 +42,10 @@ from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.properties import StringProperty, BooleanProperty, ListProperty
 from datetime import datetime, timedelta, time as dt_time
-
 from servisi import database as db
 from servisi import grafik_zarade
 from servisi import jezici
+from servisi import kalkulacije
 from ekrani import ekran_navigacija
 from ekrani import ekran_google_api
 from ekrani import ekran_profil
@@ -440,41 +440,17 @@ def _stavke_izmedju(stavke, pocetak_str, kraj_str):
     ]
 
 
-def _izracunaj_potrosnju_intervale(sve_stavke_goriva):
-    """Racuna potrosnju goriva (l/100km) izmedju uzastopnih sipanja, na
-    osnovu kilometraze sa pumpe (km_pumpe). Uzima se CELA istorija
-    goriva (ne samo izabrani period) da bi se ispravno uparila dva
-    uzastopna sipanja, cak i kad jedno od njih pada van perioda.
 
-    Vraca listu recnika sa kljucevima: datum, km_predjeno, litara,
-    potrosnja (l/100km), cena. 'datum' je datum DRUGOG (kasnijeg) od
-    dva uzastopna sipanja - to je datum kad je taj interval "zavrsen".
-
-    Sipanja bez upisane kilometraze (km_pumpe) se preskacu - ne mogu
-    uci u racunicu jer nemaju tacku od koje bi se merila predjena
-    kilometraza."""
-    sa_km = [s for s in sve_stavke_goriva if s.get("km_pumpe")]
-    sa_km.sort(key=lambda s: (s["km_pumpe"], s.get("datum", "")))
-
-    intervali = []
-    for prethodno, trenutno in zip(sa_km, sa_km[1:]):
-        km_predjeno = trenutno["km_pumpe"] - prethodno["km_pumpe"]
-        if km_predjeno <= 0:
-            continue
-        litara = trenutno.get("litara", 0)
-        intervali.append({
-            "datum": trenutno.get("datum", "-"),
-            "km_predjeno": km_predjeno,
-            "litara": litara,
-            "potrosnja": litara / km_predjeno * 100,
-            "cena": trenutno.get("cena", 0),
-        })
-    return intervali
 
 
 grafik_zarade.poveži_gorivo_servis(_stavke_izmedju, _izracunaj_potrosnju_intervale, GORIVO, SERVIS, TROSKOVI)
 
-
+def _izracunaj_potrosnju_intervale(sve_stavke_goriva):
+    """Racuna potrosnju goriva - prava logika je u
+    servisi/kalkulacije.py (odvojeno da bi moglo da se testira bez
+    Kivy-a). Ovaj omotac ostaje ovde jer ga druge funkcije u ovom
+    fajlu vec ocekuju pod ovim imenom."""
+    return kalkulacije.izracunaj_potrosnju_intervale(sve_stavke_goriva)
 
 
 
