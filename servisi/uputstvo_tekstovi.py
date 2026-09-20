@@ -6,7 +6,7 @@ jezicima aplikacije.
 Svaki jezik je lista sekcija; svaka sekcija je (naslov, [pasusi]).
 Redosled i broj sekcija/pasusa je isti u svim jezicima.
 
-Kad se doda novi jezik: napravi novu listu (npr. ES_SADRZAJ) i upisi je
+Kad se doda novi jezik: napravi novu listu (npr. PT_SADRZAJ) i upisi je
 u recnike SADRZAJ i PODNASLOV na dnu fajla. Ako za neki jezik nema
 uputstva, ekran prikazuje srpsku verziju.
 """
@@ -683,6 +683,342 @@ RU_SADRZAJ = [
     ]),
 ]
 
+PL_SADRZAJ = [
+    ("Pierwsze uruchomienie i blokada odciskiem palca", [
+        "Gdy po raz pierwszy otworzysz aplikację, od razu pojawi się ekran główny - blokada odciskiem palca jest domyślnie wyłączona.",
+        "Jeśli w Ustawieniach włączysz Bezpieczeństwo (odcisk palca), przy następnym uruchomieniu aplikacji zobaczysz najpierw ekran z prośbą o przyłożenie palca do czytnika. Bez poprawnego odcisku nie możesz przejść dalej.",
+        "Jeśli telefon nie ma czytnika linii papilarnych albo w ustawieniach systemowych telefonu nie zarejestrowano żadnego odcisku, aplikacja automatycznie Cię wpuszcza i tylko informuje dlaczego - nie ma ryzyka, że na stałe zablokujesz się poza aplikacją.",
+        "Blokada jest sprawdzana tylko przy uruchomieniu aplikacji (zimny start), a nie przy każdym powrocie z tła - dzięki temu nie przerywa Ci w trakcie trwającego przejazdu (np. gdy odbierzesz połączenie).",
+        "Włącza się / wyłącza w Ustawienia -> Bezpieczeństwo (odcisk palca).",
+    ]),
+    ("Ekran główny", [
+        "Przejazd GPS (auto) - otwiera automatyczne śledzenie przejazdu przez GPS.",
+        "Rozpocznij przejazd (ręcznie) - otwiera Kalkulator do ręcznego wpisania przejazdu.",
+        "Historia przejazdów - otwiera Historię, listę wszystkich przejazdów z wyszukiwarką.",
+        "Raport - przegląd zarobków dziennych/tygodniowych/miesięcznych.",
+        "Profil kierowcy - dane osobowe i dane pojazdu.",
+        "Ustawienia - wszystkie pozostałe menu aplikacji.",
+        "Instrukcja - ekran, który właśnie czytasz.",
+    ]),
+    ("Przejazd GPS (automatyczny wpis) - najczęstsza opcja", [
+        "1. Opcjonalnie, przed naciśnięciem 'Rozpocznij przejazd' możesz wpisać adres docelowy - jeśli go wpiszesz, zaraz po rozpoczęciu przejazdu otworzy się nawigacja Google krok po kroku do tego adresu.",
+        "2. Naciśnij ROZPOCZNIJ PRZEJAZD. Za pierwszym razem aplikacja poprosi o zgodę na lokalizację, a potem zacznie mierzyć dystans na żywo.",
+        "3. Ekran w trakcie przejazdu pokazuje adres odbioru, przejechane kilometry, czas trwania i aktualną cenę.",
+        "4. Gdy dojedziesz, naciśnij ZAKOŃCZ PRZEJAZD - aplikacja sama znajdzie aktualny adres i zapisze przejazd w Historii.",
+        "Przejazd GPS używa tylko taryfy Standardowej lub Nocnej, zależnie od przełącznika w Ustawienia -> Taryfa nocna (nie zmienia się automatycznie według godziny). W przypadku Weekendu lub Transferu na lotnisko użyj ręcznego wpisu (Kalkulator).",
+        "Aplikacja odfiltrowuje słabą dokładność GPS - ignoruje punkty o dokładności gorszej niż 50 m, mikroskoki poniżej 10 m i nierealne skoki prędkości powyżej 180 km/h, aby dystans nie był sztucznie zawyżony.",
+        "Jeśli GPS nie zdoła zmierzyć dystansu, na ekranie zakończenia przejazdu jest pole do ręcznego wpisania km jako zapasowe.",
+    ]),
+    ("Kalkulator (ręczny wpis przejazdu)", [
+        "Dla przejazdów, których nie śledzisz na żywo przez GPS, albo gdy potrzebujesz taryfy, której przejazd GPS nie obsługuje (Weekend, Transfer na lotnisko).",
+        "1. Wybierz taryfę z listy rozwijanej.",
+        "2. Wpisz dystans - cena od razu przelicza się poniżej.",
+        "3. Adres odbioru, adres docelowy i uwagi są opcjonalne.",
+        "4. Naciśnij Zapisz przejazd.",
+        "Jeśli Taryfa nocna jest włączona, ekran po otwarciu automatycznie proponuje taryfę Nocną - nadal możesz ją ręcznie zmienić dla tego konkretnego przejazdu.",
+    ]),
+    ("Ewidencja (historia przejazdów)", [
+        "Pokazuje wszystkie zapisane przejazdy, od najnowszych - data, czas rozpoczęcia/zakończenia, dystans, taryfa, adresy i cena.",
+        "Wyszukiwanie można łączyć: tekst (adresy i uwagi), okres (data od / data do, format RRRR-MM-DD) oraz zakres ceny (cena od / cena do). Naciśnięcie Szukaj wyświetla też sumę dla wyników. Resetuj przywraca pełną listę.",
+        "Każdy przejazd ma dwa przyciski: Edytuj (otwiera Kalkulator wypełniony tymi danymi) i Usuń (trwale usuwa przejazd, bez potwierdzenia - uważaj).",
+    ]),
+    ("Raport zarobków", [
+        "Trzy karty z podsumowaniami: Dzisiaj (lista dzisiejszych przejazdów + suma), Ten tydzień (łączne zarobki za bieżący tydzień), Ten miesiąc (łączne zarobki za bieżący miesiąc).",
+        "Stąd przycisk Eksportuj PDF prowadzi do ekranu eksportu raportu.",
+    ]),
+    ("Wykres zarobków", [
+        "Graficzny podgląd w czasie. Okres: Dzienny / Tygodniowy / Miesięczny. Widok: Zarobki lub Kilometry.",
+        "Strzałki < i > przesuwają po poprzednich/kolejnych okresach. Dotknięcie punktu na wykresie pokazuje dokładną kwotę za ten dzień/tydzień/miesiąc.",
+        "Pod wykresem: dodatkowe statystyki i, gdy są dane, przegląd wydatków na paliwo i serwis za ten okres.",
+        "Dostęp przez Ustawienia -> Wykres zarobków.",
+    ]),
+    ("Eksport raportów (PDF / Excel)", [
+        "Ekran Raport -> Eksportuj PDF. Wybierz rodzaj okresu (Dzienny, Tygodniowy, Miesięczny, Półroczny, Roczny) i wpisz okres w wymaganym formacie.",
+        "Eksportuj PDF - tworzy PDF do druku/przeglądu z danymi kierowcy, serwisem, pozostałymi kosztami, zużyciem paliwa, wszystkimi przejazdami i wierszem podsumowania na końcu (liczba przejazdów, łączne km, zarobki brutto oraz NETTO = zarobki - paliwo - serwis - pozostałe koszty).",
+        "Eksportuj Excel - tworzy plik Excel z 5 arkuszami i formułami, przeznaczony dla księgowego, aby mógł go otworzyć w Excelu i samodzielnie sumować/filtrować.",
+        "Oba pliki są zapisywane w Downloads/TaksiApp na telefonie (ten sam folder co kopia zapasowa) - wymagane jest uprawnienie 'dostęp do wszystkich plików' (Ustawienia -> Kopia zapasowa danych).",
+    ]),
+    ("Ceny / Taryfy", [
+        "Zmienia cenę za kilometr dla wszystkich czterech taryf (Standardowa, Nocna, Weekend, Transfer na lotnisko) oraz opłatę startową.",
+        "Naciśnięcie Zapisz ceny stosuje je do WSZYSTKICH kolejnych przejazdów - nie zmienia wstecznie już zapisanych przejazdów.",
+    ]),
+    ("Taryfa nocna (przełącznik)", [
+        "Jeden przełącznik: gdy jest włączony, zarówno Kalkulator, jak i przejazd GPS automatycznie używają taryfy Nocnej (w Kalkulatorze nadal możesz ręcznie zmienić taryfę dla pojedynczego przejazdu).",
+        "Nie włącza się sam według godziny - włączasz i wyłączasz go ręcznie, gdy zaczyna/kończy się Twoja nocna zmiana.",
+    ]),
+    ("Paliwo", [
+        "Ewidencja tankowań: rodzaj (Benzyna/LPG), ilość (litry), cena, przebieg na stacji (opcjonalnie, ale WAŻNE - bez niego nie da się obliczyć zużycia ani nie działa przypomnienie o serwisie), uwaga.",
+        "Na górze ekranu widać łączne wydatki na paliwo (osobno benzyna, osobno LPG). Zużycie w l/100km jest obliczane automatycznie z różnicy przebiegu między dwoma kolejnymi tankowaniami, które mają wpisany przebieg.",
+    ]),
+    ("Serwis pojazdu", [
+        "Ewidencja serwisów (wymiana oleju, hamulce itd.) - rodzaj, cena, przebieg, uwaga.",
+        "Przypomnienie o serwisie: ustawiasz interwał (np. co 10000 km), a aplikacja sama śledzi, ile przejechano od ostatniego serwisu - porównując przebieg ostatniego serwisu z najnowszym przebiegiem wpisanym przy Paliwie (a nie z łącznymi km z przejazdów). Karta zmienia kolor: zielona (wszystko OK), żółta (zostało mniej niż 20% interwału), czerwona (czas na serwis).",
+        "Jeśli nie ma jeszcze wystarczających danych (co najmniej jeden serwis Z przebiegiem i co najmniej jedno tankowanie Z przebiegiem na stacji), karta tylko informuje, że danych jest za mało.",
+    ]),
+    ("Pozostałe koszty", [
+        "Dla wszystkiego, co nie jest paliwem/serwisem: Parking, Opłaty drogowe, Mycie, Inne - cena i uwaga. Te koszty wchodzą do obliczenia NETTO w raporcie PDF.",
+    ]),
+    ("Profil kierowcy", [
+        "Dane osobowe (imię, telefon, licencja, tablice, pojazd), które pojawiają się w nagłówku raportu PDF, a także data wygaśnięcia rejestracji i data wygaśnięcia ubezpieczenia.",
+        "Karta na dole śledzi obie daty: szara (nie wpisano), zielona (ponad 30 dni do wygaśnięcia), żółta (30 dni lub mniej), czerwona (już wygasła - pokazuje, ile dni zaległości).",
+    ]),
+    ("Nawigacja", [
+        "Niezależny ekran do szybkiego otwierania nawigacji Google do dowolnego adresu - wpisz adres i naciśnij 'Otwórz nawigację'. Automatycznie rusza krok po kroku z Twojej aktualnej pozycji GPS.",
+    ]),
+    ("Google API", [
+        "Opcjonalne pole na klucz Google Geocoding API. Jeśli go nie wpiszesz, aplikacja nadal działa normalnie - do wyszukiwania adresów używa darmowej usługi OpenStreetMap. Usługa Google jest tylko dokładniejsza w niektórych przypadkach. Klucz tworzy się na console.cloud.google.com (Geocoding API).",
+    ]),
+    ("Waluta", [
+        "Wybiera się tylko, w jakiej walucie ceny są WYŚWIETLANE w aplikacji - w tle wszystko jest zawsze liczone i zapisywane w RSD (dinarach), niezależnie od tego wyboru. Przyciski: Wyświetlaj w RSD lub Wyświetlaj w EUR.",
+        "Kurs odświeża się automatycznie raz dziennie (przy pierwszym otwarciu aplikacji danego dnia). Przycisk Odśwież kurs teraz służy do ręcznego odświeżenia, np. jeśli wczoraj nie było internetu.",
+    ]),
+    ("Kopia zapasowa danych", [
+        "Zapisuje WSZYSTKIE dane (przejazdy, paliwo, serwis, koszty, profil kierowcy) w jednym pliku poza samą aplikacją, w Downloads/TaksiApp - zostaje na telefonie nawet po usunięciu/ponownej instalacji aplikacji.",
+        "Przyznaj dostęp do plików - daje aplikacji uprawnienie Androida do zapisu w tym publicznym folderze (pyta się raz).",
+        "Aplikacja sama robi świeżą kopię raz dziennie przy uruchomieniu, po cichu, bez komunikatu. Zapisz kopię teraz służy do ręcznej kopii, kiedy chcesz.",
+        "Przywróć dane z kopii zapasowej - wczytuje wszystkie dane z pliku kopii (używane przy zmianie telefonu lub po ponownej instalacji).",
+        "Udostępnij kopię (Drive, WhatsApp...) - otwiera systemowe menu udostępniania, aby wysłać plik kopii do siebie mailem, przez Google Drive, WhatsApp itd.",
+        "Przy zmianie telefonu: zrób kopię na starym -> prześlij plik (WhatsApp/Drive/USB) do tego samego folderu na nowym -> zainstaluj aplikację -> naciśnij 'Przywróć dane'.",
+    ]),
+    ("Bezpieczeństwo (odcisk palca)", [
+        "Włącza/wyłącza blokadę aplikacji odciskiem palca przy uruchomieniu - szczegółowo wyjaśnione na początku tej instrukcji. Ekran informuje też, czy Twój telefon w ogóle ma zarejestrowany odcisk.",
+    ]),
+    ("Połączenie / Dyspozytor", [
+        "Prowadzisz listę dyspozytorów z godzinami ich zmian, dzwonisz do nich jednym dotknięciem i na pierwszy rzut oka widzisz, czyja zmiana jest w tej chwili aktywna.",
+    ]),
+    ("Najczęstsze problemy", [
+        "GPS nie pokazuje dystansu -> sprawdź zgodę na lokalizację (Ustawienia telefonu -> Aplikacje -> Downtown Taxi -> Uprawnienia -> Lokalizacja -> Zezwól) oraz czy GPS jest włączony w telefonie.",
+        "Nie mogę wyeksportować PDF/Excel -> Ustawienia -> Kopia zapasowa danych -> 'Przyznaj dostęp do plików'.",
+        "Odcisk palca nie działa -> sprawdź, czy telefon w ogóle ma czytnik linii papilarnych i czy odcisk jest zarejestrowany w ustawieniach systemowych telefonu - bez tego aplikacja automatycznie Cię wpuszcza.",
+        "Przypomnienie o serwisie mówi 'za mało danych' -> potrzebny jest co najmniej jeden serwis Z wpisanym przebiegiem i co najmniej jedno tankowanie Z wpisanym przebiegiem na stacji.",
+        "Ceny nie zgadzają się z nowymi taryfami -> nowe ceny obowiązują tylko dla przejazdów WPISANYCH PO zmianie, nie zmieniają wstecznie już zapisanych przejazdów.",
+    ]),
+]
+
+TR_SADRZAJ = [
+    ("İlk açılış ve parmak izi kilidi", [
+        "Uygulamayı ilk kez açtığınızda ana ekran doğrudan görünür - parmak izi kilidi varsayılan olarak kapalıdır.",
+        "Ayarlar'da Güvenlik (parmak izi) seçeneğini açarsanız, uygulamayı bir sonraki açışınızda önce parmağınızı sensöre koymanızı isteyen bir ekran görürsünüz. Başarılı bir parmak izi olmadan devam edemezsiniz.",
+        "Telefonda parmak izi okuyucu yoksa ya da telefonun sistem ayarlarında hiç parmak izi kayıtlı değilse, uygulama sizi otomatik olarak içeri alır ve yalnızca nedenini bildirir - uygulamanın dışında kalıcı olarak kilitlenme riski yoktur.",
+        "Kilit yalnızca uygulama başlarken (soğuk başlangıç) kontrol edilir, arka plandan her dönüşte değil - bu yüzden devam eden bir yolculuğun ortasında sizi kesmez (örneğin bir arama gelirse).",
+        "Ayarlar -> Güvenlik (parmak izi) bölümünden açılır/kapatılır.",
+    ]),
+    ("Ana ekran", [
+        "GPS yolculuğu (otomatik) - GPS ile otomatik yolculuk takibini açar.",
+        "Yolculuğu başlat (manuel) - yolculuğu elle girmek için Hesaplayıcı'yı açar.",
+        "Yolculuk geçmişi - Geçmişi, aramalı tüm yolculuk listesini açar.",
+        "Rapor - günlük/haftalık/aylık kazanç özeti.",
+        "Sürücü profili - kişisel ve araç bilgileri.",
+        "Ayarlar - uygulamanın diğer tüm menüleri.",
+        "Kullanım kılavuzu - şu an okuduğunuz ekran.",
+    ]),
+    ("GPS yolculuğu (otomatik giriş) - en sık kullanılan seçenek", [
+        "1. İsteğe bağlı olarak, 'Yolculuğu başlat'a basmadan önce varış adresini girebilirsiniz - girerseniz yolculuk başlar başlamaz Google navigasyon bu adrese adım adım açılır.",
+        "2. YOLCULUĞU BAŞLAT'a basın. Uygulama ilk seferde konum izni ister, ardından mesafeyi canlı ölçmeye başlar.",
+        "3. Yolculuk sırasında ekran kalkış adresini, katedilen kilometreyi, süreyi ve güncel fiyatı gösterir.",
+        "4. Vardığınızda YOLCULUĞU BİTİR'e basın - uygulama güncel adresi kendisi bulur ve yolculuğu Geçmiş'e kaydeder.",
+        "GPS yolculuğu yalnızca Standart veya Gece tarifesini kullanır; bu, Ayarlar -> Gece tarifesi bölümündeki anahtara bağlıdır (saate göre otomatik değişmez). Hafta sonu veya Havalimanı transferi için elle girişi (Hesaplayıcı) kullanın.",
+        "Uygulama zayıf GPS doğruluğunu filtreler - 50 m'den kötü doğruluktaki noktaları, 10 m altındaki mikro sıçramaları ve 180 km/sa üzerindeki gerçekçi olmayan hız sıçramalarını yok sayar; böylece mesafe yapay olarak şişmez.",
+        "GPS mesafeyi ölçemezse, yolculuk bitiş ekranında yedek olarak km'yi elle girebileceğiniz bir alan vardır.",
+    ]),
+    ("Hesaplayıcı (yolculuğu elle girme)", [
+        "GPS ile canlı takip etmediğiniz yolculuklar için ya da GPS yolculuğunun desteklemediği bir tarifeye (Hafta sonu, Havalimanı transferi) ihtiyaç duyduğunuzda.",
+        "1. Açılır menüden bir tarife seçin.",
+        "2. Mesafeyi girin - fiyat hemen altta yeniden hesaplanır.",
+        "3. Kalkış adresi, varış adresi ve not isteğe bağlıdır.",
+        "4. Yolculuğu kaydet'e basın.",
+        "Gece tarifesi açıksa, ekran açılırken otomatik olarak Gece tarifesini önerir - o yolculuk için yine de elle değiştirebilirsiniz.",
+    ]),
+    ("Geçmiş (yolculuk kayıtları)", [
+        "Kaydedilen tüm yolculukları en yeniden başlayarak gösterir - tarih, başlangıç/bitiş saati, mesafe, tarife, adresler ve fiyat.",
+        "Arama birleştirilebilir: metin (adresler ve not), dönem (başlangıç tarihi / bitiş tarihi, YYYY-AA-GG biçimi) ve fiyat aralığı (en düşük fiyat / en yüksek fiyat). Ara'ya basmak sonuçların toplamını da gösterir. Sıfırla tam listeyi geri getirir.",
+        "Her yolculuğun iki düğmesi vardır: Düzenle (Hesaplayıcı'yı bu verilerle dolu olarak açar) ve Sil (yolculuğu kalıcı olarak siler, onay sormaz - dikkat).",
+    ]),
+    ("Kazanç raporu", [
+        "Toplamları gösteren üç kart: Bugün (bugünkü yolculukların listesi + toplam), Bu hafta (geçerli haftanın toplam kazancı), Bu ay (geçerli ayın toplam kazancı).",
+        "Buradan PDF olarak dışa aktar düğmesi rapor dışa aktarma ekranına götürür.",
+    ]),
+    ("Kazanç grafiği", [
+        "Zaman içinde görsel bir gösterim. Dönem: Günlük / Haftalık / Aylık. Görünüm: Kazanç veya Kilometre.",
+        "< ve > okları önceki/sonraki dönemler arasında gezdirir. Grafikteki bir noktaya dokunmak o gün/hafta/ay için tam tutarı gösterir.",
+        "Grafiğin altında: ek istatistikler ve veri varsa o dönemin yakıt ve servis harcamalarının özeti.",
+        "Ayarlar -> Kazanç grafiği üzerinden açılır.",
+    ]),
+    ("Rapor dışa aktarma (PDF / Excel)", [
+        "Rapor ekranı -> PDF olarak dışa aktar. Dönem türünü seçin (Günlük, Haftalık, Aylık, Yarıyıllık, Yıllık) ve dönemi istenen biçimde girin.",
+        "PDF olarak dışa aktar - sürücü bilgileri, servis, diğer giderler, yakıt tüketimi, tüm yolculuklar ve sonda bir özet satırı (yolculuk sayısı, toplam km, brüt kazanç ve NET = kazanç - yakıt - servis - diğer giderler) içeren, yazdırma/inceleme için bir PDF oluşturur.",
+        "Excel olarak dışa aktar - 5 sayfalı ve formüllü bir Excel dosyası oluşturur; muhasebecinizin Excel'de açıp kendisinin toplayıp/filtrelemesi için tasarlanmıştır.",
+        "İki dosya da telefonda Downloads/TaksiApp klasörüne kaydedilir (yedekle aynı klasör) - 'tüm dosyalara erişim' izni gerekir (Ayarlar -> Veri yedekleme).",
+    ]),
+    ("Fiyatlar / Tarifeler", [
+        "Dört tarifenin tümü (Standart, Gece, Hafta sonu, Havalimanı transferi) için kilometre başına fiyatı ve açılış ücretini değiştirir.",
+        "Fiyatları kaydet'e basmak bunları TÜM sonraki yolculuklara uygular - daha önce kaydedilmiş yolculukları geriye dönük değiştirmez.",
+    ]),
+    ("Gece tarifesi (anahtar)", [
+        "Tek bir anahtar: açıkken hem Hesaplayıcı hem de GPS yolculuğu otomatik olarak Gece tarifesini kullanır (Hesaplayıcı'da tek bir yolculuk için tarifeyi yine de elle değiştirebilirsiniz).",
+        "Saate göre kendiliğinden açılmaz - gece vardiyanız başlarken/biterken siz elle açıp kapatırsınız.",
+    ]),
+    ("Yakıt", [
+        "Yakıt alım kaydı: tür (Benzin/LPG), miktar (litre), fiyat, pompadaki kilometre (isteğe bağlı ama ÖNEMLİ - bu olmadan tüketim hesaplanamaz ve servis hatırlatıcısı çalışmaz), not.",
+        "Ekranın üstünde toplam yakıt harcaması görünür (benzin ve LPG ayrı ayrı). l/100km cinsinden tüketim, kilometresi girilmiş iki ardışık yakıt alımı arasındaki kilometre farkından otomatik hesaplanır.",
+    ]),
+    ("Araç servisi", [
+        "Servis kaydı (yağ değişimi, frenler vb.) - tür, fiyat, kilometre, not.",
+        "Servis hatırlatıcısı: bir aralık belirlersiniz (örneğin her 10000 km'de bir) ve uygulama son servisten beri ne kadar yol yapıldığını kendisi izler - son servisin kilometresini Yakıt bölümünde girilen en son kilometreyle karşılaştırarak (yolculuklardaki toplam km ile değil). Kart renk değiştirir: yeşil (her şey yolunda), sarı (aralığın %20'sinden az kaldı), kırmızı (servis zamanı).",
+        "Henüz yeterli veri yoksa (kilometreli en az bir servis ve pompadaki kilometresi girilmiş en az bir yakıt kaydı), kart yalnızca yeterli veri olmadığını söyler.",
+    ]),
+    ("Diğer giderler", [
+        "Yakıt/servis dışındaki her şey için: Otopark, Geçiş ücreti, Yıkama, Diğer - fiyat ve not. Bu giderler PDF raporundaki NET hesabına dahil edilir.",
+    ]),
+    ("Sürücü profili", [
+        "PDF raporunun başlığında görünen kişisel bilgiler (ad, telefon, lisans, plaka, araç) ile ruhsat bitiş tarihi ve sigorta bitiş tarihi.",
+        "Alttaki kart iki tarihi de izler: gri (girilmemiş), yeşil (bitişe 30 günden fazla var), sarı (30 gün veya daha az), kırmızı (süresi zaten dolmuş - kaç gün gecikildiğini gösterir).",
+    ]),
+    ("Navigasyon", [
+        "Google navigasyonu herhangi bir adrese hızlıca açmak için bağımsız bir ekran - adresi girin ve 'Navigasyonu aç'a basın. Şu anki GPS konumunuzdan otomatik olarak adım adım yönlendirmeye başlar.",
+    ]),
+    ("Google API", [
+        "Google Geocoding API anahtarı için isteğe bağlı bir alan. Girmezseniz uygulama yine normal çalışır - adresleri bulmak için ücretsiz OpenStreetMap hizmetini kullanır. Google'ın hizmeti yalnızca bazı durumlarda daha doğrudur. Anahtar console.cloud.google.com adresinde oluşturulur (Geocoding API).",
+    ]),
+    ("Para birimi", [
+        "Burada yalnızca fiyatların uygulamada hangi para biriminde GÖSTERİLECEĞİ seçilir - arka planda her şey bu seçimden bağımsız olarak her zaman RSD (dinar) cinsinden hesaplanır ve saklanır. Düğmeler: RSD olarak göster veya EUR olarak göster.",
+        "Kur günde bir kez otomatik yenilenir (o gün uygulamayı ilk açtığınızda). Kuru şimdi yenile düğmesi, örneğin dün internet yoksa, elle yenilemek içindir.",
+    ]),
+    ("Veri yedekleme", [
+        "TÜM verileri (yolculuklar, yakıt, servis, giderler, sürücü profili) uygulamanın dışında, Downloads/TaksiApp içinde tek bir dosyaya kaydeder - uygulama silinse/yeniden kurulsa bile telefonda kalır.",
+        "Dosya erişimi ver - uygulamaya bu herkese açık klasöre yazması için Android izni verir (bir kez sorulur).",
+        "Uygulama her gün açılışta kendi kendine, sessizce ve mesaj vermeden yeni bir yedek alır. Yedeği şimdi kaydet, istediğiniz zaman elle yedek almak içindir.",
+        "Verileri yedekten geri yükle - tüm verileri yedek dosyasından yükler (telefon değiştirirken veya yeniden kurulumdan sonra kullanılır).",
+        "Yedeği paylaş (Drive, WhatsApp...) - yedek dosyasını kendinize e-posta, Google Drive, WhatsApp vb. ile göndermek için sistemin paylaşım menüsünü açar.",
+        "Telefon değiştirirken: eskisinde yedek alın -> dosyayı (WhatsApp/Drive/USB) yenisindeki aynı klasöre aktarın -> uygulamayı kurun -> 'Verileri geri yükle'ye basın.",
+    ]),
+    ("Güvenlik (parmak izi)", [
+        "Uygulamanın açılışta parmak izi kilidini açar/kapatır - bu kılavuzun başında ayrıntılı olarak anlatılmıştır. Ekran ayrıca telefonunuzda hiç kayıtlı parmak izi olup olmadığını da söyler.",
+    ]),
+    ("Arama / Dispeçer", [
+        "Vardiya saatleriyle birlikte bir dispeçer listesi tutarsınız, tek dokunuşla onları arar ve şu anda kimin vardiyasının aktif olduğunu bir bakışta görürsünüz.",
+    ]),
+    ("En sık karşılaşılan sorunlar", [
+        "GPS kilometreyi göstermiyor -> konum iznini (Telefon Ayarları -> Uygulamalar -> Downtown Taxi -> İzinler -> Konum -> İzin ver) ve telefonda GPS'in açık olup olmadığını kontrol edin.",
+        "PDF/Excel dışa aktaramıyorum -> Ayarlar -> Veri yedekleme -> 'Dosya erişimi ver'.",
+        "Parmak izi çalışmıyor -> telefonda parmak izi okuyucu olup olmadığını ve telefonun sistem ayarlarında parmak izinin kayıtlı olup olmadığını kontrol edin - bunlar yoksa uygulama sizi otomatik olarak içeri alır.",
+        "Servis hatırlatıcısı 'yeterli veri yok' diyor -> kilometresi girilmiş en az bir servis ve pompadaki kilometresi girilmiş en az bir yakıt kaydı gerekir.",
+        "Fiyatlar yeni tarifelerle uyuşmuyor -> yeni fiyatlar yalnızca değişiklikten SONRA GİRİLEN yolculuklar için geçerlidir, daha önce kaydedilmiş yolculukları geriye dönük değiştirmez.",
+    ]),
+]
+
+ES_SADRZAJ = [
+    ("Primer inicio y bloqueo con huella dactilar", [
+        "La primera vez que abres la aplicación aparece directamente la pantalla de inicio: el bloqueo con huella está desactivado por defecto.",
+        "Si activas Seguridad (huella dactilar) en Ajustes, la próxima vez que inicies la aplicación verás primero una pantalla que te pide colocar el dedo en el sensor. Sin una huella válida no puedes continuar.",
+        "Si el teléfono no tiene lector de huellas, o no hay ninguna huella registrada en los ajustes del sistema del teléfono, la aplicación te deja pasar automáticamente y solo te avisa del motivo: no hay riesgo de quedarte bloqueado fuera de la aplicación de forma permanente.",
+        "El bloqueo solo se comprueba al iniciar la aplicación (arranque en frío), no cada vez que vuelves desde segundo plano, así que no te interrumpe en mitad de un viaje (por ejemplo, si recibes una llamada).",
+        "Se activa/desactiva en Ajustes -> Seguridad (huella dactilar).",
+    ]),
+    ("Pantalla de inicio", [
+        "Viaje con GPS (auto) - abre el seguimiento automático del viaje mediante GPS.",
+        "Iniciar viaje (manual) - abre la Calculadora para introducir un viaje manualmente.",
+        "Historial de viajes - abre el Historial, la lista de todos los viajes con búsqueda.",
+        "Informe - resumen de ganancias diario/semanal/mensual.",
+        "Perfil del conductor - datos personales y del vehículo.",
+        "Ajustes - todos los demás menús de la aplicación.",
+        "Instrucciones - la pantalla que estás leyendo ahora.",
+    ]),
+    ("Viaje con GPS (registro automático) - la opción más habitual", [
+        "1. Opcionalmente, antes de pulsar 'Iniciar viaje' puedes introducir la dirección de destino: si lo haces, en cuanto empiece el viaje se abre la navegación de Google paso a paso hacia esa dirección.",
+        "2. Pulsa INICIAR VIAJE. La primera vez la aplicación pide permiso de ubicación y luego empieza a medir la distancia en directo.",
+        "3. Durante el viaje, la pantalla muestra la dirección de recogida, los kilómetros recorridos, la duración y el precio actual.",
+        "4. Cuando llegues, pulsa TERMINAR VIAJE: la aplicación encuentra sola la dirección actual y guarda el viaje en el Historial.",
+        "El viaje con GPS solo usa la tarifa Estándar o Nocturna, según el interruptor de Ajustes -> Tarifa nocturna (no cambia automáticamente según la hora). Para Fin de semana o Traslado al aeropuerto usa la introducción manual (Calculadora).",
+        "La aplicación filtra la mala precisión del GPS: ignora los puntos con una precisión peor de 50 m, los microsaltos de menos de 10 m y los saltos de velocidad irreales superiores a 180 km/h, para que la distancia no se infle falsamente.",
+        "Si el GPS no logra medir la distancia, la pantalla de fin de viaje tiene un campo para introducir los km manualmente como respaldo.",
+    ]),
+    ("Calculadora (introducir un viaje manualmente)", [
+        "Para viajes que no sigues en directo con el GPS, o cuando necesitas una tarifa que el viaje con GPS no admite (Fin de semana, Traslado al aeropuerto).",
+        "1. Elige una tarifa en el menú desplegable.",
+        "2. Introduce la distancia: el precio se recalcula al instante debajo.",
+        "3. La dirección de recogida, la de destino y la nota son opcionales.",
+        "4. Pulsa Guardar viaje.",
+        "Si la Tarifa nocturna está activada, la pantalla propone automáticamente la tarifa Nocturna al abrirse; aun así puedes cambiarla manualmente para ese viaje concreto.",
+    ]),
+    ("Historial (lista de viajes)", [
+        "Muestra todos los viajes guardados, los más recientes primero: fecha, hora de inicio/fin, distancia, tarifa, direcciones y precio.",
+        "La búsqueda se puede combinar: texto (direcciones y nota), período (fecha desde / fecha hasta, formato AAAA-MM-DD) y rango de precio (precio desde / precio hasta). Al pulsar Buscar también se muestra el total de los resultados. Restablecer devuelve la lista completa.",
+        "Cada viaje tiene dos botones: Editar (abre la Calculadora rellenada con esos datos) y Eliminar (borra el viaje de forma permanente, sin confirmación: ten cuidado).",
+    ]),
+    ("Informe de ganancias", [
+        "Tres tarjetas con totales: Hoy (lista de los viajes de hoy + total), Esta semana (ganancias totales de la semana en curso), Este mes (ganancias totales del mes en curso).",
+        "Desde aquí, el botón Exportar PDF lleva a la pantalla de exportación del informe.",
+    ]),
+    ("Gráfico de ganancias", [
+        "Una vista gráfica a lo largo del tiempo. Período: Diario / Semanal / Mensual. Vista: Ganancias o Kilómetros.",
+        "Las flechas < y > se desplazan por los períodos anteriores/siguientes. Al tocar un punto del gráfico se muestra el importe exacto de ese día/semana/mes.",
+        "Debajo del gráfico: estadísticas adicionales y, cuando hay datos, un resumen del gasto en combustible y mantenimiento de ese período.",
+        "Se accede desde Ajustes -> Gráfico de ganancias.",
+    ]),
+    ("Exportación de informes (PDF / Excel)", [
+        "Pantalla Informe -> Exportar PDF. Elige el tipo de período (Diario, Semanal, Mensual, Semestral, Anual) e introduce el período en el formato solicitado.",
+        "Exportar PDF - crea un PDF para imprimir/revisar con los datos del conductor, mantenimiento, otros gastos, consumo de combustible, todos los viajes y una fila de resumen al final (número de viajes, km totales, ganancias brutas y NETO = ganancias - combustible - mantenimiento - otros gastos).",
+        "Exportar Excel - crea un archivo Excel con 5 hojas y fórmulas, pensado para que tu contable lo abra en Excel y sume/filtre por su cuenta.",
+        "Ambos archivos se guardan en Downloads/TaksiApp del teléfono (la misma carpeta que la copia de seguridad); hace falta el permiso 'acceso a todos los archivos' (Ajustes -> Copia de seguridad).",
+    ]),
+    ("Precios / Tarifas", [
+        "Cambia el precio por kilómetro de las cuatro tarifas (Estándar, Nocturna, Fin de semana, Traslado al aeropuerto) además de la bajada de bandera.",
+        "Al pulsar Guardar precios se aplican a TODOS los viajes posteriores; no cambia con efecto retroactivo los viajes ya guardados.",
+    ]),
+    ("Tarifa nocturna (interruptor)", [
+        "Un único interruptor: cuando está activado, tanto la Calculadora como el viaje con GPS usan automáticamente la tarifa Nocturna (en la Calculadora puedes seguir cambiando la tarifa manualmente para un viaje concreto).",
+        "No se activa solo según la hora: lo activas y desactivas tú manualmente cuando empieza/termina tu turno de noche.",
+    ]),
+    ("Combustible", [
+        "Registro de repostajes: tipo (Gasolina/GLP), cantidad (litros), precio, kilometraje en el surtidor (opcional pero IMPORTANTE: sin él no se puede calcular el consumo ni funciona el recordatorio de mantenimiento), nota.",
+        "En la parte superior de la pantalla se ve el gasto total en combustible (gasolina y GLP por separado). El consumo en l/100km se calcula automáticamente a partir de la diferencia de kilometraje entre dos repostajes consecutivos que tengan el kilometraje introducido.",
+    ]),
+    ("Mantenimiento del vehículo", [
+        "Registro de mantenimiento (cambio de aceite, frenos, etc.): tipo, precio, kilometraje, nota.",
+        "Recordatorio de mantenimiento: estableces un intervalo (por ejemplo, cada 10000 km) y la aplicación controla sola cuánto has recorrido desde el último mantenimiento, comparando el kilometraje del último mantenimiento con el kilometraje más reciente introducido en Combustible (no con los km totales de los viajes). La tarjeta cambia de color: verde (todo bien), amarillo (queda menos del 20 % del intervalo), rojo (es hora del mantenimiento).",
+        "Si aún no hay datos suficientes (al menos un mantenimiento CON kilometraje y al menos un repostaje CON kilometraje del surtidor), la tarjeta solo indica que no hay datos suficientes.",
+    ]),
+    ("Otros gastos", [
+        "Para todo lo que no sea combustible/mantenimiento: Aparcamiento, Peajes, Lavado, Otros: precio y nota. Estos gastos entran en el cálculo del NETO del informe en PDF.",
+    ]),
+    ("Perfil del conductor", [
+        "Datos personales (nombre, teléfono, licencia, matrícula, vehículo) que aparecen en el encabezado del informe en PDF, además de la fecha de vencimiento de la matriculación y la fecha de vencimiento del seguro.",
+        "La tarjeta de abajo controla ambas fechas: gris (no introducida), verde (más de 30 días para el vencimiento), amarillo (30 días o menos), rojo (ya vencida: indica cuántos días de retraso).",
+    ]),
+    ("Navegación", [
+        "Una pantalla independiente para abrir rápidamente la navegación de Google hacia cualquier dirección: introduce la dirección y pulsa 'Abrir navegación'. Empieza automáticamente paso a paso desde tu posición GPS actual.",
+    ]),
+    ("Google API", [
+        "Un campo opcional para la clave de la API de Google Geocoding. Si no la introduces, la aplicación sigue funcionando con normalidad: usa el servicio gratuito OpenStreetMap para encontrar direcciones. El servicio de Google solo es más preciso en algunos casos. La clave se crea en console.cloud.google.com (Geocoding API).",
+    ]),
+    ("Moneda", [
+        "Aquí solo se elige cómo se MUESTRAN los precios en la aplicación: en segundo plano todo se calcula y guarda siempre en RSD (dinares), independientemente de esta elección. Botones: Mostrar en RSD o Mostrar en EUR.",
+        "El tipo de cambio se actualiza automáticamente una vez al día (la primera vez que abres la aplicación ese día). El botón Actualizar tipo de cambio ahora sirve para actualizarlo manualmente, por ejemplo si ayer no había internet.",
+    ]),
+    ("Copia de seguridad", [
+        "Guarda TODOS los datos (viajes, combustible, mantenimiento, gastos, perfil del conductor) en un único archivo fuera de la propia aplicación, en Downloads/TaksiApp: permanece en el teléfono incluso después de borrar/reinstalar la aplicación.",
+        "Conceder acceso a archivos - da a la aplicación el permiso de Android para escribir en esa carpeta pública (se pide una sola vez).",
+        "La aplicación hace sola una copia nueva una vez al día al iniciarse, en silencio y sin mensaje. Guardar copia ahora sirve para hacer una copia manual cuando quieras.",
+        "Restaurar datos desde una copia - carga todos los datos del archivo de copia (se usa al cambiar de teléfono o tras una reinstalación).",
+        "Compartir copia (Drive, WhatsApp...) - abre el menú de compartir del sistema para enviarte el archivo de copia por correo, Google Drive, WhatsApp, etc.",
+        "Al cambiar de teléfono: haz una copia en el antiguo -> pasa el archivo (WhatsApp/Drive/USB) a la misma carpeta del nuevo -> instala la aplicación -> pulsa 'Restaurar datos'.",
+    ]),
+    ("Seguridad (huella dactilar)", [
+        "Activa/desactiva el bloqueo de la aplicación con huella dactilar al iniciar; se explica en detalle al principio de estas instrucciones. La pantalla también te indica si tu teléfono tiene alguna huella registrada.",
+    ]),
+    ("Llamar / Operador", [
+        "Llevas una lista de operadores con los horarios de sus turnos, los llamas con un solo toque y ves de un vistazo cuyo turno está activo en este momento.",
+    ]),
+    ("Problemas más habituales", [
+        "El GPS no muestra los kilómetros -> comprueba el permiso de ubicación (Ajustes del teléfono -> Aplicaciones -> Downtown Taxi -> Permisos -> Ubicación -> Permitir) y si el GPS está activado en el teléfono.",
+        "No puedo exportar PDF/Excel -> Ajustes -> Copia de seguridad -> 'Conceder acceso a archivos'.",
+        "La huella dactilar no funciona -> comprueba si el teléfono tiene lector de huellas y si hay una huella registrada en los ajustes del sistema del teléfono; si no, la aplicación te deja pasar automáticamente.",
+        "El recordatorio de mantenimiento dice 'no hay datos suficientes' -> hace falta al menos un mantenimiento CON kilometraje introducido y al menos un repostaje CON kilometraje del surtidor introducido.",
+        "Los precios no coinciden con las nuevas tarifas -> los precios nuevos solo valen para los viajes INTRODUCIDOS DESPUÉS del cambio; no cambian con efecto retroactivo los viajes ya guardados.",
+    ]),
+]
+
 
 # ============================================================
 # Sve jezike na jednom mestu
@@ -695,6 +1031,9 @@ SADRZAJ = {
     "fr": FR_SADRZAJ,
     "de": DE_SADRZAJ,
     "ru": RU_SADRZAJ,
+    "pl": PL_SADRZAJ,
+    "tr": TR_SADRZAJ,
+    "es": ES_SADRZAJ,
 }
 
 # Podnaslov ispod naslova u PDF verziji uputstva
@@ -705,4 +1044,7 @@ PODNASLOV = {
     "fr": "Taxi Zoran - application de suivi des courses et des dépenses",
     "de": "Taxi Zoran - App zur Erfassung von Fahrten und Ausgaben",
     "ru": "Taxi Zoran - приложение для учёта поездок и расходов",
+    "pl": "Taxi Zoran - aplikacja do ewidencji przejazdów i kosztów",
+    "tr": "Taxi Zoran - yolculuk ve gider kayıt uygulaması",
+    "es": "Taxi Zoran - aplicación para registrar viajes y gastos",
 }
