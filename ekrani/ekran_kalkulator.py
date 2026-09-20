@@ -13,6 +13,7 @@ from kivy.app import App
 
 from servisi import database as db
 from servisi import jezici
+from servisi import kalkulacije
 
 
 # Kad korisnik klikne "Izmeni" na voznji u Evidenciji (ekran_evidencija.py
@@ -129,7 +130,7 @@ class KalkulatorScreen(Screen):
             return
         tarifa_naziv = self._tarifa_kljuc()
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
-        ukupno = _CENE_REF.start_fee + km * cena_po_km
+        ukupno = kalkulacije.izracunaj_cenu_voznje(km, cena_po_km, _CENE_REF.start_fee)
         self.tekst_cene = jezici._t(
             "kalkulator.cena_prikaz",
             cena=_FORMATIRAJ_CENU(ukupno),
@@ -151,7 +152,7 @@ class KalkulatorScreen(Screen):
         # U bazu ide INTERNI (srpski) naziv tarife, ne preveden.
         tarifa_naziv = self._tarifa_kljuc()
         cena_po_km = _CENE_REF.tarife.get(tarifa_naziv, _CENE_REF.tarife["Osnovna (07-22h)"])
-        ukupno = _CENE_REF.start_fee + km * cena_po_km
+        ukupno = kalkulacije.izracunaj_cenu_voznje(km, cena_po_km, _CENE_REF.start_fee)
 
         if self.editing_id is not None:
             db.obrisi_voznju(self.editing_id)
