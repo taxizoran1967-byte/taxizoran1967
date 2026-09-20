@@ -1,7 +1,8 @@
 """
 ekran_jezici.py
 Ekran za izbor jezika - korisnik bira izmedju srpskog, engleskog,
-italijanskog, francuskog, nemackog i ruskog jezika.
+italijanskog, francuskog, nemackog, ruskog, poljskog, turskog i
+spanskog jezika.
 
 Izdvojeno iz main.py - isti obrazac kao grafik_zarade.py.
 """
@@ -23,7 +24,7 @@ _PRIKAZI_POPUP = None  # main._prikazi_popup_poruku
 # njih samo prikazuje poruku "U izradi", ne menja stvarni jezik app-a.
 # Trenutno su svi jezici prevedeni, pa je lista prazna. Ako se u
 # buduce doda novi jezik pre nego sto bude preveden, upisi ga ovde
-# (npr. "es": "Español 🇪🇸") i u dugmetu pozovi root.jezik_u_izradi("es").
+# (npr. "pt": "Português 🇵🇹") i u dugmetu pozovi root.jezik_u_izradi("pt").
 JEZICI_U_IZRADI = {}
 
 
@@ -51,6 +52,12 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Ausgewählte Sprache: Deutsch 🇩🇪"
         elif lang == "ru":
             self.tekst_trenutni = "Выбранный язык: Русский 🇷🇺"
+        elif lang == "pl":
+            self.tekst_trenutni = "Wybrany język: Polski 🇵🇱"
+        elif lang == "tr":
+            self.tekst_trenutni = "Seçilen dil: Türkçe 🇹🇷"
+        elif lang == "es":
+            self.tekst_trenutni = "Idioma seleccionado: Español 🇪🇸"
         else:
             self.tekst_trenutni = f"Current language: {lang.upper()}"
 
@@ -83,6 +90,18 @@ class JeziciScreen(Screen):
             self.tekst_trenutni = "Выбранный язык: Русский 🇷🇺"
             poruka_naslov = "Инфо"
             poruka_tekst = "Язык изменён на русский!"
+        elif lang_code == "pl":
+            self.tekst_trenutni = "Wybrany język: Polski 🇵🇱"
+            poruka_naslov = "Info"
+            poruka_tekst = "Język zmieniono na polski!"
+        elif lang_code == "tr":
+            self.tekst_trenutni = "Seçilen dil: Türkçe 🇹🇷"
+            poruka_naslov = "Bilgi"
+            poruka_tekst = "Dil Türkçe olarak değiştirildi!"
+        elif lang_code == "es":
+            self.tekst_trenutni = "Idioma seleccionado: Español 🇪🇸"
+            poruka_naslov = "Info"
+            poruka_tekst = "¡Idioma cambiado a español!"
         else:
             self.tekst_trenutni = f"Current language: {lang_code.upper()}"
             poruka_naslov = "Info"
@@ -196,6 +215,30 @@ JEZICI_KV = """
                     size_hint_y: None
                     height: dp(52)
                     on_release: root.promeni_jezici("ru")
+
+                RoundButton:
+                    label_text: "Polski 🇵🇱"
+                    tint: 0.36, 0.46, 0.64, 1
+                    text_color: 0.95, 0.96, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.promeni_jezici("pl")
+
+                RoundButton:
+                    label_text: "Türkçe 🇹🇷"
+                    tint: 0.36, 0.46, 0.64, 1
+                    text_color: 0.95, 0.96, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.promeni_jezici("tr")
+
+                RoundButton:
+                    label_text: "Español 🇪🇸"
+                    tint: 0.36, 0.46, 0.64, 1
+                    text_color: 0.95, 0.96, 1, 1
+                    size_hint_y: None
+                    height: dp(52)
+                    on_release: root.promeni_jezici("es")
 
                 Widget:
 """
