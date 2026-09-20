@@ -2,10 +2,37 @@
 import sys as _sys
 import traceback as _tb
 import os as _os
+import time as _time
+
+
+def _prikazi_gresku_na_ekranu(tekst):
+    """Na Android-u prikazuje prozor sa tekstom greske (da moze da se
+    slika ekran), jer se fajl ne moze uvek upisati."""
+    try:
+        from jnius import autoclass
+        from android.runnable import run_on_ui_thread
+
+        Aktivnost = autoclass("org.kivy.android.PythonActivity").mActivity
+        Gradjevinar = autoclass("android.app.AlertDialog$Builder")
+        String = autoclass("java.lang.String")
+
+        @run_on_ui_thread
+        def _dijalog():
+            b = Gradjevinar(Aktivnost)
+            b.setTitle(String("GRESKA - slikaj ovaj ekran"))
+            b.setMessage(String(tekst[-1800:]))
+            b.setCancelable(True)
+            b.show()
+
+        _dijalog()
+        _time.sleep(180)
+    except Exception:
+        pass
 
 
 def _rani_crash_log(exc_type, exc_value, exc_tb):
     tekst = "".join(_tb.format_exception(exc_type, exc_value, exc_tb))
+
     for folder in (
         "/storage/emulated/0/Download/TaksiApp",
         _os.path.join(_os.path.expanduser("~"), "TaksiApp"),
@@ -21,6 +48,8 @@ def _rani_crash_log(exc_type, exc_value, exc_tb):
             break
         except Exception:
             continue
+
+    _prikazi_gresku_na_ekranu(tekst)
     _sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 
