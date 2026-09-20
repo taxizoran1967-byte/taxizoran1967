@@ -848,10 +848,7 @@ ScreenManager:
 
 <FieldLabel@Label>:
     size_hint_y: None
-    height: max(
-        self.texture_size[1] + dp(6),
-        dp(22)
-    )
+    height: max(self.texture_size[1] + dp(6), dp(22))
     halign: "left"
     valign: "middle"
     text_size: self.width, None
@@ -915,10 +912,7 @@ ScreenManager:
 <MenuButton>:
     orientation: "horizontal"
     size_hint_y: None
-    height: max(
-        dp(72),
-        label_menu_tekst.texture_size[1] + dp(24)
-    )
+    height: max(dp(72), label_menu_tekst.texture_size[1] + dp(24))
     spacing: dp(16)
     padding: dp(12)
 
