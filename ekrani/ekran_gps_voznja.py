@@ -30,6 +30,7 @@ from kivy.clock import Clock
 
 from servisi import database as db
 from servisi import jezici
+from servisi import kalkulacije
 from servisi.gps_logika import (
     haversine_km,
     AktivnaVoznjaState,
@@ -571,7 +572,7 @@ class GpsVoznjaScreen(Screen):
             "Nocna (22-07h)" if _CENE_REF.nocna_aktivna else "Osnovna (07-22h)",
             _CENE_REF.tarife["Osnovna (07-22h)"],
         )
-        cena = _CENE_REF.start_fee + AKTIVNA_VOZNJA.km * cena_po_km
+        cena = kalkulacije.izracunaj_cenu_voznje(AKTIVNA_VOZNJA.km, cena_po_km, _CENE_REF.start_fee)
         self.tekst_cena = jezici._t("gps_voznja.cena", cena=_FORMATIRAJ_CENU(cena))
 
         if AKTIVNA_VOZNJA.pocetak_adresa and AKTIVNA_VOZNJA.pocetak_adresa != jezici._t("gps_voznja.trazim_lokaciju"):
@@ -614,7 +615,7 @@ class GpsVoznjaScreen(Screen):
             "Nocna (22-07h)" if _CENE_REF.nocna_aktivna else "Osnovna (07-22h)",
             _CENE_REF.tarife["Osnovna (07-22h)"],
         )
-        ukupno = _CENE_REF.start_fee + km * cena_po_km
+        ukupno = kalkulacije.izracunaj_cenu_voznje(km, cena_po_km, _CENE_REF.start_fee)
         tarifa_naziv = "Nocna (22-07h)" if _CENE_REF.nocna_aktivna else "Osnovna (07-22h)"
 
         polazak_adresa = AKTIVNA_VOZNJA.pocetak_adresa or jezici._t("gps_voznja.adresa_nedostupna")
