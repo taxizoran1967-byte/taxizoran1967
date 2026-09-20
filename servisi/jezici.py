@@ -227,6 +227,7 @@ _TARIFA_NAZIVI = {
         "ru": "Стандартный (07-22ч)",
         "pl": "Standardowa (07-22h)",
         "tr": "Standart (07-22h)",
+        "es": "Estándar (07-22h)",
     },
     "Nocna (22-07h)": {
         "sr": "Nocna (22-07h)",
@@ -237,6 +238,7 @@ _TARIFA_NAZIVI = {
         "ru": "Ночной (22-07ч)",
         "pl": "Nocna (22-07h)",
         "tr": "Gece (22-07h)",
+        "es": "Nocturna (22-07h)",
     },
     "Vikend": {
         "sr": "Vikend",
@@ -247,6 +249,7 @@ _TARIFA_NAZIVI = {
         "ru": "Выходные",
         "pl": "Weekend",
         "tr": "Hafta sonu",
+        "es": "Fin de semana",
     },
     "Aerodromski transfer": {
         "sr": "Aerodromski transfer",
@@ -257,6 +260,7 @@ _TARIFA_NAZIVI = {
         "ru": "Трансфер в аэропорт",
         "pl": "Transfer na lotnisko",
         "tr": "Havalimanı transferi",
+        "es": "Traslado al aeropuerto",
     },
 }
 
