@@ -1038,6 +1038,11 @@ ScreenManager:
     multiline: False
 
 
+<GlobusDugme@ButtonBehavior+Image>:
+    allow_stretch: True
+    keep_ratio: True
+
+
 <HomeScreen>:
     name: "home"
 
