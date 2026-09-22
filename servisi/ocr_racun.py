@@ -156,26 +156,29 @@ def ocitaj_racun(putanja_slike, api_key):
 
 
 def _parsiraj_stavku_goriva(tekst):
-    """Trazi brojeve stavke goriva (kolicina, cena/l, ukupno) - NE
-    oslanja se na to da su u istom redu (OCR ih ponekad prelomi u
-    poseban red za svaki broj). Uzima sve decimalne brojeve PRE prve
-    pojave 'celkom'/'spolu'/'total'/'ukupno' (to je uvek deo stavke,
-    ne dela sa PDV rasčlanom koji dolazi posle i ima slicne brojeve)."""
-    granica = re.search(r"celkom|spolu|total|ukupno", tekst, re.IGNORECASE)
-    deo_teksta = tekst[:granica.start()] if granica else tekst
+    """Trazi kolicinu i cenu po litru VEZANO ZA OZNAKU JEDINICE (L,
+    EUR/L, RSD/L...) umesto da nagadja po redosledu brojeva u tekstu.
 
-    brojevi = []
-    for token in re.findall(r"\d+[.,]\d{2,4}", deo_teksta):
-        try:
-            brojevi.append(float(token.replace(",", ".")))
-        except ValueError:
-            continue
+    Stari pristup (uzmi prva dva decimalna broja pre reci
+    'ukupno/total/spolu') je pucao na racunima koji imaju zaglavlje sa
+    terminala PRE stavke goriva (npr. datum '22.09.2026' citan kao
+    broj '22.09', ili preautorizovani iznos kartice 'Suma: 20.00') -
+    ti brojevi imaju isti format kao kolicina/cena i lako su se
+    pogresno protumacili kao stavka goriva umesto pravih vrednosti.
 
-    if len(brojevi) >= 2:
-        litara = brojevi[0]
-        cena_po_litru = brojevi[1]
-        ukupno = brojevi[-1] if len(brojevi) >= 3 else None
-        return litara, cena_po_litru, ukupno
+    Sada trazimo tacno obrazac '<broj> L ... <broj> (VALUTA)/L' - ovo
+    je specificno za red sa gorivom i ne postoji nigde drugde na
+    racunu."""
+    obrazac = re.compile(
+        r"(\d+[.,]\d{2,4})\s*l\b[^\n]{0,20}?"
+        r"(\d+[.,]\d{2,3})\s*(?:eur|rsd|czk|kč|kc|din)?\s*/\s*l\b",
+        re.IGNORECASE,
+    )
+    m = obrazac.search(tekst)
+    if m:
+        litara = float(m.group(1).replace(",", "."))
+        cena_po_litru = float(m.group(2).replace(",", "."))
+        return litara, cena_po_litru, None
     return None, None, None
 
 
@@ -191,12 +194,15 @@ def _nadji_broj(tekst, obrasci):
 
 
 def _nadji_ukupno(tekst):
+    """Trazi red koji sadrzi rec za 'ukupno/total' i uzima POSLEDNJI
+    broj u tom redu (ne prvi) - jer u tabelama tipa 'Osnovica DPH
+    Ukupno' je tacan iznos u poslednjoj koloni, ne u prvoj."""
     for red in tekst.splitlines():
-        if re.search(r"ukupno|total|za\s*platiti|iznos|celkom|spolu", red, re.IGNORECASE):
-            m = re.search(r"(\d+[.,]\d{2,3})", red)
-            if m:
+        if re.search(r"ukupno|total|za\s*platiti|iznos|celkom|\bspolu\b|\bsuma\b", red, re.IGNORECASE):
+            brojevi = re.findall(r"(\d+[.,]\d{2,3})", red)
+            if brojevi:
                 try:
-                    return float(m.group(1).replace(",", "."))
+                    return float(brojevi[-1].replace(",", "."))
                 except ValueError:
                     continue
     return None
@@ -230,7 +236,7 @@ def _nadji_grad(tekst):
     koga sledi naziv grada, npr: '90701 Myjava Viestova 1100/3'.
     Filtrira poznate reci sa racuna (dokl/pokladni/datum...) da ne bi
     slucajno uhvatio broj dokumenta ili slicno umesto pravog grada."""
-    poklapanja = re.findall(r"\b\d{5}\s+([A-Za-zČĆŽŠĐčćžšđ]{3,})", tekst)
+    poklapanja = re.findall(r"\b\d{5}[ \t]+([A-Za-zČĆŽŠĐčćžšđ]{3,})", tekst)
     for kandidat in reversed(poklapanja):
         grad = kandidat.strip()
         grad = re.split(r"\s*-\s*", grad)[0].strip()
@@ -239,9 +245,26 @@ def _nadji_grad(tekst):
     return None
 
 
+_PREAMBULA_KLJUCNE_RECI = {
+    "potvrdenka", "terminal", "operacia", "operácia", "datum", "dátum",
+    "karta", "cislo", "číslo", "suma", "aid", "autorizacny", "autorizačný",
+    "rc", "sekvencia", "uschovajte", "platba",
+}
+
+
 def _nadji_pumpu(tekst):
+    """Trazi naziv pumpe/kompanije. Preskace pocetni blok terminala za
+    placanje karticom (linije 'Terminal:', 'Suma:', 'Datum:' i slicno)
+    koji stoji na vrhu racuna PRE stvarnog naziva firme - taj blok se
+    ranije pogresno hvatao kao 'naziv pumpe' jer nema duge nizove
+    cifara, ali to su labele/metapodaci, ne naziv pumpe."""
     for red in tekst.splitlines():
         red = red.strip()
+        if not red or ":" in red:
+            continue
+        prva_rec = re.split(r"\s", red.lower())[0].strip(",.:")
+        if prva_rec in _PREAMBULA_KLJUCNE_RECI:
+            continue
         if len(red) > 3 and not re.search(r"\d{4,}", red):
             return red[:40]
     return None
