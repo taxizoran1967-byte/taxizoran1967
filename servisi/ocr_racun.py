@@ -72,6 +72,7 @@ def _posalji_zahtev(putanja_slike, api_key):
     dodaj_polje("language", "auto")
     dodaj_polje("OCREngine", "3")
     dodaj_polje("scale", "true")
+    dodaj_polje("detectOrientation", "true")  # NOVO: auto-ispravlja okrenut/naopacki racun
 
     delovi.append(f"--{boundary}\r\n".encode())
     delovi.append(f'Content-Disposition: form-data; name="file"; filename="{naziv_fajla}"\r\n'.encode())
@@ -92,7 +93,8 @@ def _posalji_zahtev(putanja_slike, api_key):
 
 def ocitaj_racun(putanja_slike, api_key):
     """
-    Vraca dict: {"pumpa", "litara", "cena_po_litru", "ukupna_cena", "sirovi_tekst"}.
+    Vraca dict: {"pumpa", "litara", "cena_po_litru", "ukupna_cena",
+    "datum", "grad", "rotacija_ispravljena", "sirovi_tekst"}.
     Bilo koja vrednost moze biti None ako nije prepoznata.
     Baca Exception sa opisom greske ako OCR servis ne uspe da obradi sliku.
     """
@@ -108,7 +110,13 @@ def ocitaj_racun(putanja_slike, api_key):
     if not parsed_lista:
         raise Exception("OCR nije vratio nikakav tekst.")
 
-    tekst = parsed_lista[0].get("ParsedText", "")
+    prvi_rezultat = parsed_lista[0]
+    tekst = prvi_rezultat.get("ParsedText", "")
+
+    # OCR.space vraca ugao za koji je ispravio sliku pre citanja teksta
+    # (npr. "180" ako je racun bio naopacki, "0" ako nije bilo potrebno).
+    orijentacija = str(prvi_rezultat.get("TextOrientation") or "0").strip()
+    rotacija_ispravljena = orijentacija not in ("0", "", "None")
 
     stavka_litara, stavka_cena, stavka_ukupno = _parsiraj_stavku_goriva(tekst)
 
@@ -126,6 +134,7 @@ def ocitaj_racun(putanja_slike, api_key):
         "ukupna_cena": stavka_ukupno or _nadji_ukupno(tekst),
         "datum": _nadji_datum(tekst),
         "grad": _nadji_grad(tekst),
+        "rotacija_ispravljena": rotacija_ispravljena,
         "sirovi_tekst": tekst,
     }
 
