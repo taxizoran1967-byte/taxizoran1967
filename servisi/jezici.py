@@ -19,6 +19,8 @@ import json
 import os
 from pathlib import Path
 
+from servisi import fajlovi
+
 # Globalne varijable
 _CURRENT_LANG = "en"  # Podrazumevani jezik (glavni, prikazuje se pri prvoj instalaciji)
 _TRANSLATIONS = {}    # Učitani tekstovi { "sr": {...}, "en": {...} }
@@ -180,8 +182,7 @@ def _save_language_preference(lang_code):
         
         pref_file = os.path.join(app.user_data_dir, "language.json")
         
-        with open(pref_file, "w", encoding="utf-8") as f:
-            json.dump({"language": lang_code}, f, ensure_ascii=False)
+        fajlovi.sacuvaj_json(pref_file, {"language": lang_code})
     except Exception as e:
         print(f"⚠️  Greška pri čuvanju jezika: {e}")
 
@@ -201,12 +202,11 @@ def _load_language_preference():
         pref_file = os.path.join(app.user_data_dir, "language.json")
         
         if os.path.exists(pref_file):
-            with open(pref_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                lang = data.get("language", "en")
-                if lang in _TRANSLATIONS:
-                    _CURRENT_LANG = lang
-                    print(f"✅ Učitan sačuvan jezik: {lang}")
+            data = fajlovi.ucitaj_json(pref_file)
+            lang = data.get("language", "en")
+            if lang in _TRANSLATIONS:
+                _CURRENT_LANG = lang
+                print(f"✅ Učitan sačuvan jezik: {lang}")
     except Exception as e:
         print(f"⚠️  Greška pri učitavanju jezika: {e}")
 
