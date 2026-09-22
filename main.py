@@ -111,6 +111,7 @@ from servisi import grafik_zarade
 from servisi import jezici
 from servisi import kalkulacije
 from servisi import teme
+from servisi import fajlovi
 from ekrani import ekran_navigacija
 from ekrani import ekran_google_api
 from ekrani import ekran_profil
@@ -171,8 +172,7 @@ class CenePodesavanja:
     def ucitaj(self, user_data_dir):
         putanja = self._putanja(user_data_dir)
         try:
-            with open(putanja, "r", encoding="utf-8") as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(putanja)
 
             ucitane_tarife = podaci.get("tarife", {})
             for naziv in self.tarife:
@@ -197,13 +197,7 @@ class CenePodesavanja:
             "nocna_aktivna": self.nocna_aktivna,
         }
 
-        with open(putanja, "w", encoding="utf-8") as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(putanja, podaci)
 
 
 class JsonLog:
@@ -218,28 +212,13 @@ class JsonLog:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                self.stavke = json.load(f)
+            self.stavke = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
         except (FileNotFoundError, ValueError, json.JSONDecodeError):
             self.stavke = []
 
     def sacuvaj(self, user_data_dir):
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                self.stavke,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), self.stavke)
 
     def dodaj(self, user_data_dir, stavka):
         novi_id = max(
@@ -296,12 +275,7 @@ class ApiPodesavanja:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
             self.google_kljuc = podaci.get(
                 "google_kljuc",
@@ -321,17 +295,7 @@ class ApiPodesavanja:
             "ocr_kljuc": self.ocr_kljuc,
         }
 
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), podaci)
 
 
 API = ApiPodesavanja()
@@ -354,12 +318,7 @@ class VozacPodesavanja:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
             self.ime_prezime = podaci.get(
                 "ime_prezime",
@@ -404,17 +363,7 @@ class VozacPodesavanja:
             "osiguranje_datum": self.osiguranje_datum,
         }
 
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), podaci)
 
 
 VOZAC = VozacPodesavanja()
@@ -435,12 +384,7 @@ class KursPodesavanja:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
             self.valuta = podaci.get(
                 "valuta",
@@ -464,17 +408,7 @@ class KursPodesavanja:
             "datum_kursa": self.datum_kursa,
         }
 
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), podaci)
 
     def osvezi_ako_treba(
         self,
@@ -545,12 +479,7 @@ class TemaPodesavanja:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
             tema_id = podaci.get("tema", teme.OSNOVNA_TEMA)
 
@@ -562,16 +491,7 @@ class TemaPodesavanja:
 
     def sacuvaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "w",
-                encoding="utf-8",
-            ) as f:
-                json.dump(
-                    {"tema": self.tema_id},
-                    f,
-                    ensure_ascii=False,
-                )
+            fajlovi.sacuvaj_json(self._putanja(user_data_dir), {"tema": self.tema_id})
         except Exception:
             pass
 
