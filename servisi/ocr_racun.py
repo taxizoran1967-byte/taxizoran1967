@@ -10,6 +10,7 @@ se rezultat uvek prikazuje korisniku da potvrdi/ispravi pre cuvanja.
 """
 import re
 import io
+import os
 import json
 import ssl
 import uuid
@@ -36,12 +37,36 @@ def _pripremi_sliku(putanja_slike):
     kamere prave slike od 12+ megapiksela i puno ucitavanje takve
     slike u memoriju je obaralo aplikaciju na telefonu (padala je
     trenutno, jer se to desava ispod Python-a i ne moze se uhvatiti
-    sa try/except)."""
+    sa try/except).
+
+    draft() radi samo za JPEG - za PNG/HEIC i ostale formate se
+    dodaje sigurnosna provera velicine fajla i MAX_IMAGE_PIXELS
+    kocnica, da se izbegne isti native crash i za te formate.
+    """
+    velicina_mb = os.path.getsize(putanja_slike) / (1024 * 1024)
+    if velicina_mb > 15:
+        raise Exception(
+            f"Slika je prevelika ({velicina_mb:.1f} MB). "
+            "Izaberi manju sliku ili smanji rezoluciju kamere."
+        )
+
     slika = Image.open(putanja_slike)
     try:
         slika.draft("RGB", (_MAKS_DIMENZIJA, _MAKS_DIMENZIJA))
     except Exception:
         pass  # draft() radi samo za JPEG - za ostale formate samo nastavi normalno
+
+    # Sigurnosna kocnica za slike koje draft() ne moze da smanji
+    # (npr. PNG) - bez ovoga PIL pokusa da odjednom dekodira ogromnu
+    # sliku u memoriju, sto na telefonu pravi native crash koji se
+    # ne moze uhvatiti sa try/except.
+    Image.MAX_IMAGE_PIXELS = 40_000_000
+    try:
+        slika.load()
+    except Exception:
+        raise Exception(
+            "Slika ima previse piksela za bezbednu obradu na telefonu."
+        )
 
     if slika.mode != "RGB":
         slika = slika.convert("RGB")
@@ -72,7 +97,6 @@ def _posalji_zahtev(putanja_slike, api_key):
     dodaj_polje("language", "auto")
     dodaj_polje("OCREngine", "3")
     dodaj_polje("scale", "true")
-    dodaj_polje("detectOrientation", "true")  # NOVO: auto-ispravlja okrenut/naopacki racun
 
     delovi.append(f"--{boundary}\r\n".encode())
     delovi.append(f'Content-Disposition: form-data; name="file"; filename="{naziv_fajla}"\r\n'.encode())
@@ -93,8 +117,7 @@ def _posalji_zahtev(putanja_slike, api_key):
 
 def ocitaj_racun(putanja_slike, api_key):
     """
-    Vraca dict: {"pumpa", "litara", "cena_po_litru", "ukupna_cena",
-    "datum", "grad", "rotacija_ispravljena", "sirovi_tekst"}.
+    Vraca dict: {"pumpa", "litara", "cena_po_litru", "ukupna_cena", "sirovi_tekst"}.
     Bilo koja vrednost moze biti None ako nije prepoznata.
     Baca Exception sa opisom greske ako OCR servis ne uspe da obradi sliku.
     """
@@ -110,13 +133,7 @@ def ocitaj_racun(putanja_slike, api_key):
     if not parsed_lista:
         raise Exception("OCR nije vratio nikakav tekst.")
 
-    prvi_rezultat = parsed_lista[0]
-    tekst = prvi_rezultat.get("ParsedText", "")
-
-    # OCR.space vraca ugao za koji je ispravio sliku pre citanja teksta
-    # (npr. "180" ako je racun bio naopacki, "0" ako nije bilo potrebno).
-    orijentacija = str(prvi_rezultat.get("TextOrientation") or "0").strip()
-    rotacija_ispravljena = orijentacija not in ("0", "", "None")
+    tekst = parsed_lista[0].get("ParsedText", "")
 
     stavka_litara, stavka_cena, stavka_ukupno = _parsiraj_stavku_goriva(tekst)
 
@@ -134,7 +151,6 @@ def ocitaj_racun(putanja_slike, api_key):
         "ukupna_cena": stavka_ukupno or _nadji_ukupno(tekst),
         "datum": _nadji_datum(tekst),
         "grad": _nadji_grad(tekst),
-        "rotacija_ispravljena": rotacija_ispravljena,
         "sirovi_tekst": tekst,
     }
 
