@@ -192,6 +192,7 @@
     "ocr_neuspesan": "OCR nije uspeo:\n{poruka}",
     "racun_greska_polja": "Racun je procitan, ali je doslo do greske pri popunjavanju polja - javi ovu poruku da se ispravi:\n{greska}",
     "racun_ucitan": "Racun ucitan - proveri podatke pre cuvanja.",
+    "racun_bio_okrenut": "Racun je bio okrenut - proveri podatke pazljivo pre cuvanja.",
     "ocr_ne_prepoznaje": "OCR nije uspeo da prepozna kolicinu/cenu - unesi ih rucno.",
     "unesi_ispravne_brojeve": "Unesi ispravne brojeve za kolicinu i cenu.",
     "km_pumpe_broj": "Kilometraza na pumpi mora biti broj (ili ostavi prazno).",
