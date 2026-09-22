@@ -88,7 +88,7 @@ from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.boxlayout import BoxLayout
-from kivy.metrics import dp
+from kivy.metrics import dp, sp
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -96,12 +96,22 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-from kivy.properties import StringProperty, BooleanProperty, ListProperty
+from kivy.properties import (
+    StringProperty,
+    BooleanProperty,
+    ListProperty,
+    NumericProperty,
+    ObjectProperty,
+)
+from kivy.animation import Animation
+from kivy.graphics.texture import Texture
 from datetime import datetime, timedelta, time as dt_time
 from servisi import database as db
 from servisi import grafik_zarade
 from servisi import jezici
 from servisi import kalkulacije
+from servisi import teme
+from servisi import fajlovi
 from ekrani import ekran_navigacija
 from ekrani import ekran_google_api
 from ekrani import ekran_profil
@@ -120,6 +130,7 @@ from ekrani import ekran_evidencija
 from ekrani import ekran_izvestaj
 from ekrani import ekran_gps_voznja
 from ekrani import ekran_jezici
+from ekrani import ekran_izgled
 
 try:
     from androidstorage4kivy import SharedStorage, ShareSheet
@@ -161,8 +172,7 @@ class CenePodesavanja:
     def ucitaj(self, user_data_dir):
         putanja = self._putanja(user_data_dir)
         try:
-            with open(putanja, "r", encoding="utf-8") as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(putanja)
 
             ucitane_tarife = podaci.get("tarife", {})
             for naziv in self.tarife:
@@ -187,13 +197,7 @@ class CenePodesavanja:
             "nocna_aktivna": self.nocna_aktivna,
         }
 
-        with open(putanja, "w", encoding="utf-8") as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(putanja, podaci)
 
 
 class JsonLog:
@@ -208,28 +212,13 @@ class JsonLog:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                self.stavke = json.load(f)
+            self.stavke = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
         except (FileNotFoundError, ValueError, json.JSONDecodeError):
             self.stavke = []
 
     def sacuvaj(self, user_data_dir):
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                self.stavke,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), self.stavke)
 
     def dodaj(self, user_data_dir, stavka):
         novi_id = max(
@@ -286,12 +275,7 @@ class ApiPodesavanja:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
             self.google_kljuc = podaci.get(
                 "google_kljuc",
@@ -311,17 +295,7 @@ class ApiPodesavanja:
             "ocr_kljuc": self.ocr_kljuc,
         }
 
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), podaci)
 
 
 API = ApiPodesavanja()
@@ -344,12 +318,7 @@ class VozacPodesavanja:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
             self.ime_prezime = podaci.get(
                 "ime_prezime",
@@ -394,17 +363,7 @@ class VozacPodesavanja:
             "osiguranje_datum": self.osiguranje_datum,
         }
 
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), podaci)
 
 
 VOZAC = VozacPodesavanja()
@@ -425,12 +384,7 @@ class KursPodesavanja:
 
     def ucitaj(self, user_data_dir):
         try:
-            with open(
-                self._putanja(user_data_dir),
-                "r",
-                encoding="utf-8",
-            ) as f:
-                podaci = json.load(f)
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
 
             self.valuta = podaci.get(
                 "valuta",
@@ -454,17 +408,7 @@ class KursPodesavanja:
             "datum_kursa": self.datum_kursa,
         }
 
-        with open(
-            self._putanja(user_data_dir),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                podaci,
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+        fajlovi.sacuvaj_json(self._putanja(user_data_dir), podaci)
 
     def osvezi_ako_treba(
         self,
@@ -522,6 +466,37 @@ class KursPodesavanja:
 
 
 KURS = KursPodesavanja()
+
+
+class TemaPodesavanja:
+    """Pamti izabranu temu boja (Podesavanja -> Izgled)."""
+
+    def __init__(self):
+        self.tema_id = teme.OSNOVNA_TEMA
+
+    def _putanja(self, user_data_dir):
+        return os.path.join(user_data_dir, "tema.json")
+
+    def ucitaj(self, user_data_dir):
+        try:
+            podaci = fajlovi.ucitaj_json(self._putanja(user_data_dir))
+
+            tema_id = podaci.get("tema", teme.OSNOVNA_TEMA)
+
+            if tema_id in teme.TEME:
+                self.tema_id = tema_id
+
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            pass
+
+    def sacuvaj(self, user_data_dir):
+        try:
+            fajlovi.sacuvaj_json(self._putanja(user_data_dir), {"tema": self.tema_id})
+        except Exception:
+            pass
+
+
+TEMA = TemaPodesavanja()
 
 
 def formatiraj_cenu(iznos_rsd):
@@ -831,11 +806,70 @@ BACKGROUND_IMG = (
 
 
 # ============================================================
+# AUTOMATSKO PRILAGODJAVANJE VELICINE SLOVA (za nazive ikona)
+# ============================================================
+
+def _tekst_staje(tekst, sirina_dp, velicina_sp, max_linija):
+    """Grubo racuna da li tekst staje u max_linija redova.
+    Bez crtanja - samo racun po broju slova (bezbedno na svim telefonima)."""
+
+    sirina_slova = velicina_sp * 0.64  # prosecna sirina podebljanog slova
+    max_slova_u_redu = sirina_dp / sirina_slova
+
+    linije = 1
+    trenutno = 0
+
+    for rec in tekst.split():
+        duzina = len(rec)
+
+        if duzina > max_slova_u_redu:
+            return False  # jedna rec je sama preduga za red
+
+        if trenutno == 0:
+            trenutno = duzina
+        elif trenutno + 1 + duzina <= max_slova_u_redu:
+            trenutno += 1 + duzina
+        else:
+            linije += 1
+            trenutno = duzina
+
+    return linije <= max_linija
+
+
+def _najveci_font_koji_staje(
+    tekst,
+    sirina_px,
+    max_linija=2,
+    maks_sp=16,
+    min_sp=9,
+):
+    """Vraca najvecu velicinu slova (u sp) pri kojoj tekst staje u
+    max_linija redova u zadatoj sirini. Ako ne staje ni pri
+    najmanjoj, vraca najmanju."""
+
+    try:
+        if not tekst or sirina_px <= 0:
+            return maks_sp
+
+        sirina_dp = sirina_px / dp(1)
+
+        for velicina in range(maks_sp, min_sp - 1, -1):
+            if _tekst_staje(tekst, sirina_dp, velicina, max_linija):
+                return velicina
+
+    except Exception:
+        return maks_sp
+
+    return min_sp
+
+
+# ============================================================
 # KV
 # ============================================================
 
 KV = """
 #:import dp kivy.metrics.dp
+#:import sp kivy.metrics.sp
 
 ScreenManager:
     LockScreen:
@@ -861,6 +895,7 @@ ScreenManager:
     UputstvoScreen:
     DispeceriScreen:
     JeziciScreen:
+    IzgledScreen:
 
 <ScreenRoot>:
     orientation: "vertical"
@@ -868,15 +903,26 @@ ScreenManager:
     spacing: dp(16)
 
     canvas.before:
+        Color:
+            rgba: 1, 1, 1, 1
+
         Rectangle:
             source: app.background_img
             pos: self.pos
             size: self.size
 
         Color:
-            rgba: 0.04, 0.03, 0.09, 0.35
+            rgba: app.tema_pozadina
 
         Rectangle:
+            pos: self.pos
+            size: self.size
+
+        Color:
+            rgba: 1, 1, 1, 1
+
+        Rectangle:
+            texture: app.tema_gradijent
             pos: self.pos
             size: self.size
 
@@ -890,6 +936,15 @@ ScreenManager:
     halign: "left"
     text_size: self.size
     valign: "middle"
+
+    canvas.before:
+        Color:
+            rgba: app.tema_akcent
+
+        RoundedRectangle:
+            pos: self.x + dp(1), self.y - dp(2)
+            size: dp(46), dp(3)
+            radius: [dp(2)]
 
 
 <TaxiZoranNaslov@FloatLayout>:
@@ -919,7 +974,7 @@ ScreenManager:
 
     canvas.before:
         Color:
-            rgba: 0, 0, 0, 0.14
+            rgba: 0, 0, 0, 0.16
 
         RoundedRectangle:
             pos: self.x, self.y - dp(3)
@@ -927,12 +982,27 @@ ScreenManager:
             radius: [dp(20)]
 
         Color:
-            rgba: root.tint
+            rgba: app.boja(root.tint, app.tema_param)
 
         RoundedRectangle:
             pos: self.pos
             size: self.size
             radius: [dp(20)]
+
+        Color:
+            rgba: 1, 1, 1, 0.07
+
+        RoundedRectangle:
+            pos: self.x, self.center_y
+            size: self.width, self.height / 2
+            radius: [dp(20), dp(20), 0, 0]
+
+        Color:
+            rgba: app.tema_akcent[0], app.tema_akcent[1], app.tema_akcent[2], 0.30
+
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(20))
+            width: dp(1)
 
 
 <RoundButton@ButtonBehavior+BoxLayout>:
@@ -944,7 +1014,38 @@ ScreenManager:
 
     canvas.before:
         Color:
-            rgba: root.tint
+            rgba: 0, 0, 0, 0.22
+
+        RoundedRectangle:
+            pos: self.x, self.y - dp(2.5)
+            size: self.size
+            radius: [dp(16)]
+
+        Color:
+            rgba: app.boja(root.tint, app.tema_param)
+
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(16)]
+
+        Color:
+            rgba: 1, 1, 1, 0.13
+
+        RoundedRectangle:
+            pos: self.x, self.center_y
+            size: self.width, self.height / 2
+            radius: [dp(16), dp(16), 0, 0]
+
+        Color:
+            rgba: 1, 1, 1, 0.20
+
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(16))
+            width: dp(1)
+
+        Color:
+            rgba: (0, 0, 0, 0.20) if root.state == "down" else (0, 0, 0, 0)
 
         RoundedRectangle:
             pos: self.pos
@@ -1044,6 +1145,23 @@ ScreenManager:
         size_hint_y: None
         height: dp(74)
 
+        canvas.before:
+            Color:
+                rgba: app.tema_akcent[0], app.tema_akcent[1], app.tema_akcent[2], 0.16
+
+            RoundedRectangle:
+                pos: self.center_x - dp(44), self.center_y - dp(44)
+                size: dp(88), dp(88)
+                radius: [dp(24)]
+
+            Color:
+                rgba: app.tema_akcent[0], app.tema_akcent[1], app.tema_akcent[2], 0.38
+
+            RoundedRectangle:
+                pos: self.center_x - dp(40), self.center_y - dp(40)
+                size: dp(80), dp(80)
+                radius: [dp(20)]
+
         BoxLayout:
             size_hint: None, None
             size: dp(74), dp(74)
@@ -1075,7 +1193,7 @@ ScreenManager:
 
     Label:
         text: root.tekst
-        font_size: '16sp'
+        font_size: sp(root.velicina_fonta)
         bold: True
         color: 0.94, 0.93, 0.98, 1
         halign: "center"
@@ -1099,6 +1217,29 @@ ScreenManager:
 <GlobusDugme@ButtonBehavior+Image>:
     allow_stretch: True
     keep_ratio: True
+
+
+<GlobusMeni@ButtonBehavior+BoxLayout>:
+    orientation: "vertical"
+    spacing: dp(2)
+
+    Image:
+        source: "assets/icons/language_globus.png"
+        allow_stretch: True
+        keep_ratio: True
+        size_hint_y: None
+        height: dp(50)
+
+    Label:
+        text: "Language"
+        font_size: '11sp'
+        bold: True
+        color: 0.94, 0.93, 0.98, 1
+        halign: "center"
+        valign: "middle"
+        text_size: self.size
+        size_hint_y: None
+        height: dp(16)
 
 
 <HomeScreen>:
@@ -1157,21 +1298,11 @@ ScreenManager:
                         tekst: root.tekst_uputstvo
                         on_release: app.root.current = "uputstvo"
 
-        GlobusDugme:
-            source: "assets/icons/language_globus.png"
+        GlobusMeni:
             size_hint: None, None
-            size: dp(50), dp(50)
-            pos_hint: {"center_x": 0.88, "y": 0.06}
+            size: dp(70), dp(72)
+            pos_hint: {"right": 0.97, "y": 0.035}
             on_release: app.root.current = "jezici"
-
-        Label:
-            text: "Language"
-            font_size: '11sp'
-            bold: True
-            color: 0.94, 0.93, 0.98, 1
-            size_hint: None, None
-            size: dp(70), dp(16)
-            pos_hint: {"center_x": 0.88, "y": 0.03}
 
 
 <PodesavanjaScreen>:
@@ -1279,6 +1410,11 @@ ScreenManager:
                     tekst: root.tekst_sigurnost
                     on_release: app.root.current = "sigurnost"
 
+                HomeMenuButton:
+                    icon_src: "assets/icons/izgled.png"
+                    tekst: root.tekst_izgled
+                    on_release: app.root.current = "izgled"
+
 
 <PlaceholderScreen>:
     naslov: ""
@@ -1328,10 +1464,41 @@ class HomeMenuButton(
     ButtonBehavior,
     BoxLayout
 ):
-    """Dugme na pocetnom ekranu."""
+    """Dugme na pocetnom ekranu i u podesavanjima.
+
+    Velicina slova se sama smanjuje ako je naziv (na bilo kom jeziku)
+    predug da stane u dva reda, da se slova ne preklapaju."""
 
     icon_src = StringProperty("")
     tekst = StringProperty("")
+    velicina_fonta = NumericProperty(16)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.bind(
+            tekst=self._prilagodi_font,
+            width=self._prilagodi_font,
+        )
+        Clock.schedule_once(self._prilagodi_font, 0)
+
+    def _prilagodi_font(self, *args):
+        try:
+            # Sirina teksta = sirina dugmeta minus levi i desni padding (4+4 dp)
+            sirina = self.width - dp(8)
+
+            if sirina < dp(40):
+                return
+
+            nova = _najveci_font_koji_staje(
+                self.tekst,
+                sirina,
+            )
+
+            if nova != self.velicina_fonta:
+                self.velicina_fonta = nova
+
+        except Exception:
+            pass
 
 
 class ScreenRoot(BoxLayout):
@@ -1491,6 +1658,9 @@ class PodesavanjaScreen(Screen):
     tekst_sigurnost = StringProperty(
         "Sigurnost (otisak prsta)"
     )
+    tekst_izgled = StringProperty(
+        "Izgled aplikacije"
+    )
 
     def on_pre_enter(self, *args):
         self.tekst_naslov = jezici._t(
@@ -1546,6 +1716,9 @@ class PodesavanjaScreen(Screen):
         )
         self.tekst_sigurnost = jezici._t(
             "podesavanja.sigurnost"
+        )
+        self.tekst_izgled = teme.t(
+            "naslov"
         )
 
 
@@ -1771,6 +1944,11 @@ ekran_jezici.povezi(
     _prikazi_popup_poruku
 )
 
+ekran_izgled.povezi(
+    lambda tema_id: App.get_running_app().postavi_temu(tema_id),
+    lambda: TEMA.tema_id,
+)
+
 
 def _prikazi_gresku_ekran(poruka):
     """Vraca prost Kivy ekran koji ispisuje gresku."""
@@ -1817,6 +1995,73 @@ class TaksiApp(App):
     background_img = StringProperty(
         BACKGROUND_IMG
     )
+
+    # --- tema boja (Podesavanja -> Izgled) ---
+    # [pomeraj_nijanse, mnozilac_saturacije, dodatak_saturaciji, mnozilac_svetline]
+    tema_param = ListProperty([0.0, 1.0, 0.0, 1.0])
+    tema_pozadina = ListProperty([0.04, 0.03, 0.09, 0.35])
+    tema_akcent = ListProperty([0.55, 0.65, 0.95, 1.0])
+    tema_gradijent = ObjectProperty(None, allownone=True)
+
+    def boja(self, rgba, param):
+        """Boja dugmeta/kartice pomerena ka izabranoj temi (poziva se iz KV)."""
+        return teme.pomeri_boju(rgba, param)
+
+    def _osvezi_gradijent(self, *args):
+        """Pravi mekani gradijent (sjaj) od akcent boje ka providnom."""
+        try:
+            a = self.tema_akcent
+            gore = [
+                int(max(0.0, min(1.0, a[0])) * 255),
+                int(max(0.0, min(1.0, a[1])) * 255),
+                int(max(0.0, min(1.0, a[2])) * 255),
+                int(0.26 * 255),
+            ]
+            dole = [0, 0, 0, 0]
+
+            tekstura = Texture.create(size=(1, 2), colorfmt="rgba")
+            tekstura.mag_filter = "linear"
+            tekstura.min_filter = "linear"
+            tekstura.blit_buffer(
+                bytes(dole + gore),
+                colorfmt="rgba",
+                bufferfmt="ubyte",
+            )
+            self.tema_gradijent = tekstura
+
+        except Exception:
+            pass
+
+    def postavi_temu(self, tema_id, animiraj=True):
+        """Primeni temu boja - glatka animacija, izbor se pamti."""
+        if tema_id not in teme.TEME:
+            tema_id = teme.OSNOVNA_TEMA
+
+        tema = teme.TEME[tema_id]
+
+        TEMA.tema_id = tema_id
+        TEMA.sacuvaj(self.user_data_dir)
+
+        Animation.cancel_all(
+            self,
+            "tema_param",
+            "tema_pozadina",
+            "tema_akcent",
+        )
+
+        if animiraj:
+            Animation(
+                tema_param=list(tema["param"]),
+                tema_pozadina=list(tema["pozadina"]),
+                tema_akcent=list(tema["akcent"]),
+                duration=0.7,
+                t="in_out_quad",
+            ).start(self)
+        else:
+            self.tema_param = list(tema["param"])
+            self.tema_pozadina = list(tema["pozadina"])
+            self.tema_akcent = list(tema["akcent"])
+            self._osvezi_gradijent()
 
     def build(self):
 
@@ -1865,6 +2110,19 @@ class TaksiApp(App):
                 self.user_data_dir
             )
 
+            TEMA.ucitaj(
+                self.user_data_dir
+            )
+
+            self.bind(
+                tema_akcent=self._osvezi_gradijent
+            )
+
+            self.postavi_temu(
+                TEMA.tema_id,
+                animiraj=False,
+            )
+
             ekran_sigurnost.SIGURNOST.ucitaj(
                 self.user_data_dir
             )
@@ -1908,6 +2166,7 @@ class TaksiApp(App):
                 + ekran_izvestaj.IZVESTAJ_KV
                 + ekran_gps_voznja.GPS_VOZNJA_KV
                 + ekran_jezici.JEZICI_KV
+                + ekran_izgled.IZGLED_KV
             )
 
             Clock.schedule_once(
