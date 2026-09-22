@@ -166,12 +166,16 @@ def _parsiraj_stavku_goriva(tekst):
     ti brojevi imaju isti format kao kolicina/cena i lako su se
     pogresno protumacili kao stavka goriva umesto pravih vrednosti.
 
-    Sada trazimo tacno obrazac '<broj> L ... <broj> (VALUTA)/L' - ovo
-    je specificno za red sa gorivom i ne postoji nigde drugde na
-    racunu."""
+    Sada trazimo obrazac '<broj> L <sledeci decimalni broj>' - odmah
+    posle kolicine i oznake litre uvek sledi cena po litru, bilo da
+    racun posle nje ispisuje '/L' (npr. 'EUR/L') ili ne (neki racuni
+    posle cene po litru odmah stave PDV stopu, npr. '1.823 23%').
+    Zato NE trazimo obavezno '/L' - samo da izmedju kolicine i cene
+    nema drugih cifara (da ne bismo preskocili u sledeci, nepovezani
+    broj)."""
     obrazac = re.compile(
-        r"(\d+[.,]\d{2,4})\s*l\b[^\n]{0,20}?"
-        r"(\d+[.,]\d{2,3})\s*(?:eur|rsd|czk|kč|kc|din)?\s*/\s*l\b",
+        r"(\d+[.,]\d{2,4})\s*l\b"
+        r"[^\n\d]{0,15}?(\d+[.,]\d{1,3})\b",
         re.IGNORECASE,
     )
     m = obrazac.search(tekst)
