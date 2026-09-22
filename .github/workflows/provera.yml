@@ -1,0 +1,36 @@
+name: Provera pre build-a
+
+# Brze provere (bez Kivy-a i buildozer-a) - traju oko 30 sekundi.
+# Cilj: uhvatiti gresku ODMAH (los JSON, zaboravljeno dugme za novi
+# jezik, razlicit broj {parametara} izmedju jezika...), umesto da se
+# to sazna tek posle 20-30 minuta build-a ili, gore, na telefonu.
+#
+# Pokrece se pri svakom otpremanju u dev/main i na svaki Pull Request.
+# Ako ovo padne (crveni X), build APK-a i dalje moze rucno da se
+# pokrene, ali gresku je bolje prvo ispraviti.
+
+on:
+  push:
+    branches: [ dev, main ]
+  pull_request:
+    branches: [ dev, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provera:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Pokreni provera.py
+        run: python provera.py
