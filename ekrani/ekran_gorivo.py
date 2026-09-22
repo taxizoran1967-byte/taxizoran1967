@@ -153,7 +153,9 @@ class GorivoScreen(Screen):
         if napomena_delovi:
             self.ids.input_napomena_gorivo.text = ", ".join(napomena_delovi)
 
-        if litara or ukupna_cena:
+        if podaci.get("rotacija_ispravljena"):
+            self.tekst_ocr_status = jezici._t("gorivo.racun_bio_okrenut")
+        elif litara or ukupna_cena:
             self.tekst_ocr_status = jezici._t("gorivo.racun_ucitan")
         else:
             self.tekst_ocr_status = jezici._t("gorivo.ocr_ne_prepoznaje")
@@ -364,66 +366,4 @@ GORIVO_KV = """
 
                 Spinner:
                     id: spinner_tip_goriva
-                    text: "Benzin"
-                    values: ["Benzin", "TNG"]
-                    size_hint_y: None
-                    height: dp(48)
-                    background_color: 0.78, 0.80, 0.90, 1
-                    color: 0.12, 0.12, 0.24, 1
-
-                FieldLabel:
-                    text: root.tekst_datum_label
-
-                PastelTextInput:
-                    id: input_datum_gorivo
-                    hint_text: root.hint_datum
-
-                FieldLabel:
-                    text: root.tekst_kolicina
-
-                PastelTextInput:
-                    id: input_litara
-                    hint_text: root.hint_kolicina
-                    input_filter: "float"
-
-                FieldLabel:
-                    text: root.tekst_cena_label
-
-                PastelTextInput:
-                    id: input_cena_goriva
-                    hint_text: root.hint_cena
-                    input_filter: "float"
-
-                FieldLabel:
-                    text: root.tekst_km_pumpe_label
-
-                PastelTextInput:
-                    id: input_km_pumpe
-                    hint_text: root.hint_km_pumpe
-                    input_filter: "float"
-
-                FieldLabel:
-                    text: root.tekst_napomena_label
-
-                PastelTextInput:
-                    id: input_napomena_gorivo
-                    hint_text: root.hint_napomena
-
-                RoundButton:
-                    label_text: root.dugme_tekst
-                    tint: 0.30, 0.52, 0.36, 1
-                    text_color: 0.92, 1, 0.94, 1
-                    size_hint_y: None
-                    height: dp(52)
-                    on_release: root.sacuvaj_gorivo()
-
-                BoxLayout:
-                    id: lista_gorivo
-                    orientation: "vertical"
-                    size_hint_y: None
-                    height: self.minimum_height
-                    spacing: dp(10)
-                    padding: dp(4), dp(10)
-
-
-"""
+                    text: "Benzin
