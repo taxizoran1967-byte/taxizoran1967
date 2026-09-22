@@ -10,6 +10,10 @@ from datetime import datetime
 
 from kivy.uix.screenmanager import Screen
 from kivy.uix.label import Label
+from kivy.uix.popup import Popup
+from kivy.uix.boxlayout import BoxLayout
+from kivy.metrics import dp
+from kivy.factory import Factory
 from kivy.properties import StringProperty
 
 from servisi import database as db
@@ -32,6 +36,76 @@ def poveži(formatiraj_cenu_fn, napravi_red_liste_fn, prikazi_popup_fn):
     _FORMATIRAJ_CENU = formatiraj_cenu_fn
     _NAPRAVI_RED_LISTE = napravi_red_liste_fn
     _PRIKAZI_POPUP = prikazi_popup_fn
+
+
+# ============================================================
+# Tekst za potvrdu brisanja - samostalan (kao izvoz_tekstovi.py),
+# ne zavisi od assets/jezici/*.json fajlova.
+# ============================================================
+
+_POTVRDA_TEKST = {
+    "sr": {
+        "naslov": "Obrisati voznju?",
+        "poruka": "Ova voznja ce biti trajno obrisana. Ova radnja se ne moze ponistiti.",
+        "obrisi": "Obrisi",
+        "otkazi": "Otkazi",
+    },
+    "en": {
+        "naslov": "Delete this ride?",
+        "poruka": "This ride will be permanently deleted. This cannot be undone.",
+        "obrisi": "Delete",
+        "otkazi": "Cancel",
+    },
+    "it": {
+        "naslov": "Eliminare la corsa?",
+        "poruka": "Questa corsa verra eliminata definitivamente. L'operazione non puo essere annullata.",
+        "obrisi": "Elimina",
+        "otkazi": "Annulla",
+    },
+    "fr": {
+        "naslov": "Supprimer cette course ?",
+        "poruka": "Cette course sera supprimee definitivement. Cette action est irreversible.",
+        "obrisi": "Supprimer",
+        "otkazi": "Annuler",
+    },
+    "de": {
+        "naslov": "Fahrt loschen?",
+        "poruka": "Diese Fahrt wird dauerhaft geloscht. Diese Aktion kann nicht ruckgangig gemacht werden.",
+        "obrisi": "Loschen",
+        "otkazi": "Abbrechen",
+    },
+    "ru": {
+        "naslov": "Удалить поездку?",
+        "poruka": "Эта поездка будет удалена без возможности восстановления.",
+        "obrisi": "Удалить",
+        "otkazi": "Отмена",
+    },
+    "pl": {
+        "naslov": "Usunac przejazd?",
+        "poruka": "Ten przejazd zostanie trwale usuniety. Tej operacji nie mozna cofnac.",
+        "obrisi": "Usun",
+        "otkazi": "Anuluj",
+    },
+    "tr": {
+        "naslov": "Yolculuk silinsin mi?",
+        "poruka": "Bu yolculuk kalici olarak silinecek. Bu islem geri alinamaz.",
+        "obrisi": "Sil",
+        "otkazi": "Vazgec",
+    },
+    "es": {
+        "naslov": "¿Eliminar este viaje?",
+        "poruka": "Este viaje se eliminara de forma permanente. Esta accion no se puede deshacer.",
+        "obrisi": "Eliminar",
+        "otkazi": "Cancelar",
+    },
+}
+
+
+def _pt(kljuc):
+    lang = jezici.get_current_language()
+    return _POTVRDA_TEKST.get(lang, _POTVRDA_TEKST["sr"]).get(
+        kljuc, _POTVRDA_TEKST["sr"][kljuc]
+    )
 
 
 class EvidencijaScreen(Screen):
@@ -180,7 +254,7 @@ class EvidencijaScreen(Screen):
                 (jezici._t("evidencija.izmeni"), (0.36, 0.46, 0.64, 1), (0.95, 0.96, 1, 1),
                  lambda inst, v=v: self._izmeni(v)),
                 (jezici._t("evidencija.obrisi"), (0.66, 0.30, 0.34, 1), (1, 0.95, 0.95, 1),
-                 lambda inst, vid=v["id"]: self._obrisi(vid)),
+                 lambda inst, v=v: self._potvrdi_brisanje(v)),
             ],
         )
 
@@ -188,7 +262,76 @@ class EvidencijaScreen(Screen):
         ekran_kalkulator.EDIT_VOZNJA = dict(v)
         self.manager.current = "kalkulator"
 
-    def _obrisi(self, voznja_id):
+    def _potvrdi_brisanje(self, v):
+        """Prikazuje popup sa pitanjem pre trajnog brisanja voznje -
+        sprecava slucajno brisanje jednim pogresnim dodirom."""
+
+        sadrzaj = BoxLayout(
+            orientation="vertical",
+            spacing=dp(14),
+            padding=dp(18),
+        )
+
+        od = jezici.prevedi_sacuvano(v["od_adresa"], "gps_voznja.adresa_nedostupna") or "-"
+        do = jezici.prevedi_sacuvano(v["do_adresa"], "gps_voznja.adresa_nedostupna") or "-"
+
+        poruka = Label(
+            text=(
+                f"{_pt('poruka')}\n\n"
+                f"[b]{v['datum']}[/b]   {od} -> {do}\n"
+                f"{_FORMATIRAJ_CENU(v['ukupna_cena'])}"
+            ),
+            markup=True,
+            halign="center",
+            valign="middle",
+            color=(0.95, 0.95, 1, 1),
+            size_hint_y=None,
+        )
+        poruka.bind(
+            width=lambda inst, val: setattr(inst, "text_size", (val, None)),
+            texture_size=lambda inst, val: setattr(inst, "height", val[1]),
+        )
+        sadrzaj.add_widget(poruka)
+
+        dugmad = BoxLayout(
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(10),
+        )
+
+        popup = Popup(
+            title=_pt("naslov"),
+            content=sadrzaj,
+            size_hint=(0.86, None),
+            height=dp(230),
+            auto_dismiss=False,
+        )
+
+        dugme_otkazi = Factory.RoundButton(
+            label_text=_pt("otkazi"),
+            tint=(0.45, 0.45, 0.52, 1),
+            text_color=(1, 1, 1, 1),
+        )
+        dugme_otkazi.bind(on_release=lambda inst: popup.dismiss())
+
+        dugme_obrisi = Factory.RoundButton(
+            label_text=_pt("obrisi"),
+            tint=(0.70, 0.26, 0.30, 1),
+            text_color=(1, 0.95, 0.95, 1),
+        )
+        dugme_obrisi.bind(
+            on_release=lambda inst, vid=v["id"]: self._obrisi(vid, popup)
+        )
+
+        dugmad.add_widget(dugme_otkazi)
+        dugmad.add_widget(dugme_obrisi)
+        sadrzaj.add_widget(dugmad)
+
+        popup.open()
+
+    def _obrisi(self, voznja_id, popup=None):
+        if popup is not None:
+            popup.dismiss()
         db.obrisi_voznju(voznja_id)
         if self.tekst_broj_rezultata:
             self.pretrazi()
