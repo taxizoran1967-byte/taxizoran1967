@@ -21,11 +21,21 @@ import re
 import sys
 
 GRESKE = []
+UPOZORENJA = []
 
 
 def greska(poruka):
+    """Ozbiljan problem - zaustavlja build (crveni X)."""
     GRESKE.append(poruka)
     print(f"❌ {poruka}")
+
+
+def upozorenje(poruka):
+    """Nedostaje prevod i slicno - aplikacija radi (pada nazad na
+    srpski), samo se to javlja da bi se znalo da nesto treba prevesti.
+    Ne zaustavlja build."""
+    UPOZORENJA.append(poruka)
+    print(f"⚠️  {poruka}")
 
 
 def ok(poruka):
@@ -135,14 +145,16 @@ def proveri_jezike_json(koren):
         visak = kljucevi - osnovni_kljucevi
 
         if nedostaje:
-            greska(
-                f"{lang}.json: nedostaju kljucevi koje '{osnova}.json' ima: "
+            upozorenje(
+                f"{lang}.json: nedostaje prevod za {len(nedostaje)} kljuc(eva) "
+                f"koje '{osnova}.json' ima (prikazace se na srpskom): "
                 f"{', '.join(sorted(nedostaje)[:8])}"
                 + (" ..." if len(nedostaje) > 8 else "")
             )
         if visak:
-            greska(
-                f"{lang}.json: ima viska kljuceve kojih nema u '{osnova}.json': "
+            upozorenje(
+                f"{lang}.json: ima kljuceve kojih nema u '{osnova}.json' "
+                f"(nije opasno, samo neiskorisceno): "
                 f"{', '.join(sorted(visak)[:8])}"
                 + (" ..." if len(visak) > 8 else "")
             )
@@ -151,10 +163,11 @@ def proveri_jezike_json(koren):
         for kljuc, ocekivano in osnovni_param.items():
             stvarno = parametri.get(kljuc)
             if stvarno is not None and stvarno != ocekivano:
-                greska(
+                upozorenje(
                     f"{lang}.json['{kljuc}']: {{parametri}} se ne poklapaju "
                     f"sa '{osnova}.json' (ocekivano {sorted(ocekivano)}, "
-                    f"nadjeno {sorted(stvarno)})"
+                    f"nadjeno {sorted(stvarno)}) - taj deo teksta ce ostati "
+                    f"neupotpunjen na ekranu"
                 )
 
     ok(f"assets/jezici: {len(podaci)} jezika ({', '.join(sorted(podaci))}), "
@@ -213,14 +226,14 @@ def proveri_izvoz_tekstove(koren):
         kljucevi = set(recnik.keys())
         nedostaje = osnovni_kljucevi - kljucevi
         if nedostaje:
-            greska(
-                f"izvoz_tekstovi.py['{lang}']: nedostaju kljucevi "
-                f"{', '.join(sorted(nedostaje)[:8])}"
+            upozorenje(
+                f"izvoz_tekstovi.py['{lang}']: nedostaje prevod za "
+                f"{', '.join(sorted(nedostaje)[:8])} (pašce nazad na srpski)"
             )
         param = parametri_iz(recnik)
         for k, ocekivano in osnovni_param.items():
             if k in param and param[k] != ocekivano:
-                greska(
+                upozorenje(
                     f"izvoz_tekstovi.py['{lang}']['{k}']: {{parametri}} se "
                     f"ne poklapaju (ocekivano {sorted(ocekivano)}, "
                     f"nadjeno {sorted(param[k])})"
@@ -266,7 +279,7 @@ def proveri_uputstvo_tekstove(koren):
 
     nedostaje_podnaslov = set(sadrzaj) - set(podnaslov)
     if nedostaje_podnaslov:
-        greska(
+        upozorenje(
             f"uputstvo_tekstovi.py: PODNASLOV nema unos za: "
             f"{', '.join(sorted(nedostaje_podnaslov))}"
         )
@@ -350,9 +363,13 @@ def main():
         ok("Isti skup jezika svuda")
 
     print("\n" + "=" * 60)
+    if UPOZORENJA:
+        print(f"⚠️  {len(UPOZORENJA)} upozorenje(a) - nedostaju pojedinacni "
+              f"prevodi, ali aplikacija radi (pada nazad na srpski). "
+              f"Nije hitno, ali vredi jednom prevesti.")
     if GRESKE:
-        print(f"❌ Pronadjeno {len(GRESKE)} problem(a) - pogledaj crvene "
-              f"redove iznad.")
+        print(f"❌ Pronadjeno {len(GRESKE)} ozbiljan(ih) problem(a) - "
+              f"pogledaj crvene redove iznad. Build je zaustavljen.")
         sys.exit(1)
     else:
         print("✅ Sve provere prosle. Build moze da krene.")
