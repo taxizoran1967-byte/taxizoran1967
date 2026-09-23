@@ -10,6 +10,7 @@ se rezultat uvek prikazuje korisniku da potvrdi/ispravi pre cuvanja.
 """
 import re
 import io
+import os
 import json
 import ssl
 import uuid
@@ -36,12 +37,36 @@ def _pripremi_sliku(putanja_slike):
     kamere prave slike od 12+ megapiksela i puno ucitavanje takve
     slike u memoriju je obaralo aplikaciju na telefonu (padala je
     trenutno, jer se to desava ispod Python-a i ne moze se uhvatiti
-    sa try/except)."""
+    sa try/except).
+
+    draft() radi samo za JPEG - za PNG/HEIC i ostale formate se
+    dodaje sigurnosna provera velicine fajla i MAX_IMAGE_PIXELS
+    kocnica, da se izbegne isti native crash i za te formate.
+    """
+    velicina_mb = os.path.getsize(putanja_slike) / (1024 * 1024)
+    if velicina_mb > 15:
+        raise Exception(
+            f"Slika je prevelika ({velicina_mb:.1f} MB). "
+            "Izaberi manju sliku ili smanji rezoluciju kamere."
+        )
+
     slika = Image.open(putanja_slike)
     try:
         slika.draft("RGB", (_MAKS_DIMENZIJA, _MAKS_DIMENZIJA))
     except Exception:
         pass  # draft() radi samo za JPEG - za ostale formate samo nastavi normalno
+
+    # Sigurnosna kocnica za slike koje draft() ne moze da smanji
+    # (npr. PNG) - bez ovoga PIL pokusa da odjednom dekodira ogromnu
+    # sliku u memoriju, sto na telefonu pravi native crash koji se
+    # ne moze uhvatiti sa try/except.
+    Image.MAX_IMAGE_PIXELS = 40_000_000
+    try:
+        slika.load()
+    except Exception:
+        raise Exception(
+            "Slika ima previse piksela za bezbednu obradu na telefonu."
+        )
 
     if slika.mode != "RGB":
         slika = slika.convert("RGB")
@@ -130,27 +155,58 @@ def ocitaj_racun(putanja_slike, api_key):
     }
 
 
+_GORIVO_KLJUCNE_RECI = re.compile(
+    r"diesel|nafta|benzin|natural|premium|super|eurosuper|unleaded|"
+    r"lpg|tng|autogas|extra|plus\b|evo\b|formula\b",
+    re.IGNORECASE,
+)
+
+
 def _parsiraj_stavku_goriva(tekst):
-    """Trazi brojeve stavke goriva (kolicina, cena/l, ukupno) - NE
-    oslanja se na to da su u istom redu (OCR ih ponekad prelomi u
-    poseban red za svaki broj). Uzima sve decimalne brojeve PRE prve
-    pojave 'celkom'/'spolu'/'total'/'ukupno' (to je uvek deo stavke,
-    ne dela sa PDV rasčlanom koji dolazi posle i ima slicne brojeve)."""
-    granica = re.search(r"celkom|spolu|total|ukupno", tekst, re.IGNORECASE)
-    deo_teksta = tekst[:granica.start()] if granica else tekst
+    """Trazi kolicinu i cenu po litru VEZANO ZA NAZIV GORIVA (Diesel,
+    Natural, Benzin...) umesto za oznaku jedinice 'L/l'.
 
-    brojevi = []
-    for token in re.findall(r"\d+[.,]\d{2,4}", deo_teksta):
-        try:
-            brojevi.append(float(token.replace(",", ".")))
-        except ValueError:
-            continue
+    Stari pristup (prva dva decimalna broja pre 'ukupno/spolu') je
+    pucao na zaglavlju terminala PRE stavke (datum '22.09.2026' citan
+    kao broj). Sledeci pokusaj (oslanjanje na slovo 'l' za litre) je
+    pukao na OMV racunu gde je OCR pogresno procitao slovo 'l' KAO
+    CIFRU '1' (npr. '10,2900\n1 1,944 23%') - jer OCR nepouzdano
+    razlikuje malo 'l' od cifre '1' na termalnim racunima.
 
-    if len(brojevi) >= 2:
-        litara = brojevi[0]
-        cena_po_litru = brojevi[1]
-        ukupno = brojevi[-1] if len(brojevi) >= 3 else None
-        return litara, cena_po_litru, ukupno
+    Naziv goriva (kratka, poznata rec) OCR skoro nikad ne pogresi, pa
+    se on koristi kao orijentir: uzimaju se svi brojevi sa decimalnim
+    zarezom/tackom odmah posle njega, do reci 'ukupno/spolu/celkom'.
+    Pogresno procitano 'l'->'1' se samo po sebi izbacuje jer nema
+    decimalni separator, pa ne odgovara obrascu broja."""
+    m_gorivo = _GORIVO_KLJUCNE_RECI.search(tekst)
+    if m_gorivo:
+        ostatak = tekst[m_gorivo.end():]
+        granica = re.search(r"celkom|spolu|total|ukupno|suma", ostatak, re.IGNORECASE)
+        prozor = ostatak[:granica.start()] if granica else ostatak[:200]
+        brojevi = []
+        for token in re.findall(r"\d+[.,]\d{2,4}", prozor):
+            try:
+                brojevi.append(float(token.replace(",", ".")))
+            except ValueError:
+                continue
+        if len(brojevi) >= 2:
+            litara = brojevi[0]
+            cena_po_litru = brojevi[1]
+            ukupno = brojevi[2] if len(brojevi) >= 3 else None
+            return litara, cena_po_litru, ukupno
+
+    # Rezerva ako naziv goriva nije prepoznat: obrazac '<broj> L
+    # <sledeci decimalni broj>'.
+    obrazac = re.compile(
+        r"(\d+[.,]\d{2,4})\s*l\b"
+        r"[^\n\d]{0,15}?(\d+[.,]\d{1,3})\b",
+        re.IGNORECASE,
+    )
+    m = obrazac.search(tekst)
+    if m:
+        litara = float(m.group(1).replace(",", "."))
+        cena_po_litru = float(m.group(2).replace(",", "."))
+        return litara, cena_po_litru, None
     return None, None, None
 
 
@@ -166,12 +222,15 @@ def _nadji_broj(tekst, obrasci):
 
 
 def _nadji_ukupno(tekst):
+    """Trazi red koji sadrzi rec za 'ukupno/total' i uzima POSLEDNJI
+    broj u tom redu (ne prvi) - jer u tabelama tipa 'Osnovica DPH
+    Ukupno' je tacan iznos u poslednjoj koloni, ne u prvoj."""
     for red in tekst.splitlines():
-        if re.search(r"ukupno|total|za\s*platiti|iznos|celkom|spolu", red, re.IGNORECASE):
-            m = re.search(r"(\d+[.,]\d{2,3})", red)
-            if m:
+        if re.search(r"ukupno|total|za\s*platiti|iznos|celkom|\bspolu\b|\bsuma\b", red, re.IGNORECASE):
+            brojevi = re.findall(r"(\d+[.,]\d{2,3})", red)
+            if brojevi:
                 try:
-                    return float(m.group(1).replace(",", "."))
+                    return float(brojevi[-1].replace(",", "."))
                 except ValueError:
                     continue
     return None
@@ -205,7 +264,10 @@ def _nadji_grad(tekst):
     koga sledi naziv grada, npr: '90701 Myjava Viestova 1100/3'.
     Filtrira poznate reci sa racuna (dokl/pokladni/datum...) da ne bi
     slucajno uhvatio broj dokumenta ili slicno umesto pravog grada."""
-    poklapanja = re.findall(r"\b\d{5}\s+([A-Za-zČĆŽŠĐčćžšđ]{3,})", tekst)
+    poklapanja = re.findall(
+        r"\b\d{5}[ \t]+([A-Za-zČĆŽŠĐčćžšđÁÉÍÓÚÝÄÔĽĹŔŇŤĎáéíóúýäôľĺŕňťď]{3,})",
+        tekst,
+    )
     for kandidat in reversed(poklapanja):
         grad = kandidat.strip()
         grad = re.split(r"\s*-\s*", grad)[0].strip()
@@ -214,9 +276,26 @@ def _nadji_grad(tekst):
     return None
 
 
+_PREAMBULA_KLJUCNE_RECI = {
+    "potvrdenka", "terminal", "operacia", "operácia", "datum", "dátum",
+    "karta", "cislo", "číslo", "suma", "aid", "autorizacny", "autorizačný",
+    "rc", "sekvencia", "uschovajte", "platba",
+}
+
+
 def _nadji_pumpu(tekst):
+    """Trazi naziv pumpe/kompanije. Preskace pocetni blok terminala za
+    placanje karticom (linije 'Terminal:', 'Suma:', 'Datum:' i slicno)
+    koji stoji na vrhu racuna PRE stvarnog naziva firme - taj blok se
+    ranije pogresno hvatao kao 'naziv pumpe' jer nema duge nizove
+    cifara, ali to su labele/metapodaci, ne naziv pumpe."""
     for red in tekst.splitlines():
         red = red.strip()
+        if not red or ":" in red:
+            continue
+        prva_rec = re.split(r"\s", red.lower())[0].strip(",.:")
+        if prva_rec in _PREAMBULA_KLJUCNE_RECI:
+            continue
         if len(red) > 3 and not re.search(r"\d{4,}", red):
             return red[:40]
     return None
