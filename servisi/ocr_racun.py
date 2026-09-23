@@ -155,24 +155,48 @@ def ocitaj_racun(putanja_slike, api_key):
     }
 
 
+_GORIVO_KLJUCNE_RECI = re.compile(
+    r"diesel|nafta|benzin|natural|premium|super|eurosuper|unleaded|"
+    r"lpg|tng|autogas|extra|plus\b|evo\b|formula\b",
+    re.IGNORECASE,
+)
+
+
 def _parsiraj_stavku_goriva(tekst):
-    """Trazi kolicinu i cenu po litru VEZANO ZA OZNAKU JEDINICE (L,
-    EUR/L, RSD/L...) umesto da nagadja po redosledu brojeva u tekstu.
+    """Trazi kolicinu i cenu po litru VEZANO ZA NAZIV GORIVA (Diesel,
+    Natural, Benzin...) umesto za oznaku jedinice 'L/l'.
 
-    Stari pristup (uzmi prva dva decimalna broja pre reci
-    'ukupno/total/spolu') je pucao na racunima koji imaju zaglavlje sa
-    terminala PRE stavke goriva (npr. datum '22.09.2026' citan kao
-    broj '22.09', ili preautorizovani iznos kartice 'Suma: 20.00') -
-    ti brojevi imaju isti format kao kolicina/cena i lako su se
-    pogresno protumacili kao stavka goriva umesto pravih vrednosti.
+    Stari pristup (prva dva decimalna broja pre 'ukupno/spolu') je
+    pucao na zaglavlju terminala PRE stavke (datum '22.09.2026' citan
+    kao broj). Sledeci pokusaj (oslanjanje na slovo 'l' za litre) je
+    pukao na OMV racunu gde je OCR pogresno procitao slovo 'l' KAO
+    CIFRU '1' (npr. '10,2900\n1 1,944 23%') - jer OCR nepouzdano
+    razlikuje malo 'l' od cifre '1' na termalnim racunima.
 
-    Sada trazimo obrazac '<broj> L <sledeci decimalni broj>' - odmah
-    posle kolicine i oznake litre uvek sledi cena po litru, bilo da
-    racun posle nje ispisuje '/L' (npr. 'EUR/L') ili ne (neki racuni
-    posle cene po litru odmah stave PDV stopu, npr. '1.823 23%').
-    Zato NE trazimo obavezno '/L' - samo da izmedju kolicine i cene
-    nema drugih cifara (da ne bismo preskocili u sledeci, nepovezani
-    broj)."""
+    Naziv goriva (kratka, poznata rec) OCR skoro nikad ne pogresi, pa
+    se on koristi kao orijentir: uzimaju se svi brojevi sa decimalnim
+    zarezom/tackom odmah posle njega, do reci 'ukupno/spolu/celkom'.
+    Pogresno procitano 'l'->'1' se samo po sebi izbacuje jer nema
+    decimalni separator, pa ne odgovara obrascu broja."""
+    m_gorivo = _GORIVO_KLJUCNE_RECI.search(tekst)
+    if m_gorivo:
+        ostatak = tekst[m_gorivo.end():]
+        granica = re.search(r"celkom|spolu|total|ukupno|suma", ostatak, re.IGNORECASE)
+        prozor = ostatak[:granica.start()] if granica else ostatak[:200]
+        brojevi = []
+        for token in re.findall(r"\d+[.,]\d{2,4}", prozor):
+            try:
+                brojevi.append(float(token.replace(",", ".")))
+            except ValueError:
+                continue
+        if len(brojevi) >= 2:
+            litara = brojevi[0]
+            cena_po_litru = brojevi[1]
+            ukupno = brojevi[2] if len(brojevi) >= 3 else None
+            return litara, cena_po_litru, ukupno
+
+    # Rezerva ako naziv goriva nije prepoznat: obrazac '<broj> L
+    # <sledeci decimalni broj>'.
     obrazac = re.compile(
         r"(\d+[.,]\d{2,4})\s*l\b"
         r"[^\n\d]{0,15}?(\d+[.,]\d{1,3})\b",
@@ -240,7 +264,10 @@ def _nadji_grad(tekst):
     koga sledi naziv grada, npr: '90701 Myjava Viestova 1100/3'.
     Filtrira poznate reci sa racuna (dokl/pokladni/datum...) da ne bi
     slucajno uhvatio broj dokumenta ili slicno umesto pravog grada."""
-    poklapanja = re.findall(r"\b\d{5}[ \t]+([A-Za-zČĆŽŠĐčćžšđ]{3,})", tekst)
+    poklapanja = re.findall(
+        r"\b\d{5}[ \t]+([A-Za-zČĆŽŠĐčćžšđÁÉÍÓÚÝÄÔĽĹŔŇŤĎáéíóúýäôľĺŕňťď]{3,})",
+        tekst,
+    )
     for kandidat in reversed(poklapanja):
         grad = kandidat.strip()
         grad = re.split(r"\s*-\s*", grad)[0].strip()
