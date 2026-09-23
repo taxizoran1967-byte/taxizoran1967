@@ -129,6 +129,20 @@ class GorivoScreen(Screen):
         except Exception as e:
             self.tekst_ocr_status = ""
             self._poruka(jezici._t("gorivo.racun_greska_polja", greska=e))
+            return
+
+        # PRIVREMENO ZA DIJAGNOSTIKU: prikazuje sirov OCR tekst posle
+        # SVAKOG skeniranja (uspesnog ili ne), da bi se moglo tacno
+        # videti sta OCR.space stvarno vraca za razlicite formate
+        # racuna (Slovnaft, OMV, REAL-K...) bez nagadjanja na osnovu
+        # fotografije racuna. Ukloniti ovaj blok kad parsiranje bude
+        # stabilno za sve poznate formate.
+        sirovi = podaci.get("sirovi_tekst") or "(prazno)"
+        _PRIKAZI_POPUP(
+            "OCR sirovi tekst (za dijagnostiku)",
+            sirovi[:2000],
+            size_hint=(0.92, 0.85),
+        )
 
     def _primeni_ocr_podatke(self, podaci):
         litara = podaci.get("litara")
